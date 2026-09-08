@@ -1,0 +1,57 @@
+ANDROID MANIFEST — LINES TO ADD
+================================
+
+Do NOT replace your AndroidManifest.xml with this file.
+
+Meta's tooling generates Assets/Plugins/Android/AndroidManifest.xml for you
+(Meta > Tools > Update AndroidManifest.xml). It contains the passthrough and
+hand-tracking entries your project needs. Overwriting it will silently break
+passthrough, and you will spend an evening working out why.
+
+Instead, open that existing file and add the one line below.
+
+
+1. INSIDE <manifest>, alongside the other <uses-feature> entries
+---------------------------------------------------------------
+
+    <uses-feature android:name="android.software.midi" android:required="false" />
+
+
+Why required="false":
+
+  With required="true" the app refuses to install on any device that does not
+  declare the MIDI feature. If Horizon OS on your Quest 2 does not declare it,
+  you would get an install failure with no explanation instead of the app
+  starting up and telling you clearly that MIDI is unavailable.
+
+  Keep it false. MidiBridge.init() reports the problem in plain language on the
+  debug panel, and you can act on it.
+
+
+2. NO PERMISSIONS ARE NEEDED
+-----------------------------
+
+USB MIDI through android.media.midi does not require a runtime permission and
+does not show a permission dialog. The MIDI service owns the USB device on
+your behalf.
+
+If you end up on the UsbManager fallback route (because the MIDI feature is
+absent), that route DOES require the runtime USB permission dialog, plus:
+
+    <uses-feature android:name="android.hardware.usb.host" android:required="false" />
+
+Add that only if you get there.
+
+
+3. FINISHED MANIFEST — WHAT TO CHECK
+-------------------------------------
+
+After Meta's tool runs and you have added the line above, the file should
+contain, among the Meta entries:
+
+    <uses-feature android:name="android.software.midi" android:required="false" />
+    <uses-feature android:name="com.oculus.feature.PASSTHROUGH" android:required="true" />
+
+If the passthrough line disappears after you edit the file, you overwrote
+Meta's manifest. Re-run Meta > Tools > Update AndroidManifest.xml and add your
+one line again.
