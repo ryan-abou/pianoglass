@@ -83,6 +83,16 @@ namespace PianoGlass.Piano
 
         private void Rebuild(PianoKeyLayout layout)
         {
+            // Nudging fires this every frame while the stick is held. Destroying
+            // and recreating 88 GameObjects at 72 fps would tank the frame rate
+            // and churn the GC, so when the key set is unchanged just move what
+            // is already there.
+            if (layout != null && _renderers.Count == layout.KeyCount)
+            {
+                Reposition(layout);
+                return;
+            }
+
             foreach (var r in _renderers.Values)
                 if (r != null) Destroy(r.gameObject);
             _renderers.Clear();
@@ -119,6 +129,19 @@ namespace PianoGlass.Piano
             }
 
             Debug.Log($"[Highlighter] built {_renderers.Count} keys");
+        }
+
+        /// <summary>Move existing key objects to a shifted layout. No allocation,
+        /// no Destroy — safe to call every frame while nudging.</summary>
+        private void Reposition(PianoKeyLayout layout)
+        {
+            foreach (var kv in layout.Keys)
+            {
+                if (!_renderers.TryGetValue(kv.Key, out var renderer) || renderer == null) continue;
+                PianoKey key = kv.Value;
+                renderer.transform.SetPositionAndRotation(
+                    key.Center + layout.Up * surfaceOffset, key.Rotation);
+            }
         }
 
         private void OnNoteOn(int note, int velocity, double time)

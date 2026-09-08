@@ -52,12 +52,19 @@ namespace PianoGlass.Piano
         {
             Stage.AwaitingLowest  => $"Touch the front edge of the LOWEST key ({NoteName(lowestNote)}) and pull the trigger",
             Stage.AwaitingHighest => $"Now the HIGHEST key ({NoteName(highestNote)})",
-            Stage.Calibrated      => "Calibrated. Press and hold both triggers to redo it.",
+            Stage.Calibrated      => "Calibrated.  sticks = nudge   B = redo   stick click = clear nudge",
             _                     => "Press the trigger to start calibration"
         };
 
         private Vector3 _lowPoint;
         private Vector3 _highPoint;
+
+        /// <summary>World-space correction applied to both captured points.
+        /// Absorbs the difference between the controller anchor and where the
+        /// tip physically touched — a constant error that shifts the whole
+        /// keyboard without distorting the spacing between keys.</summary>
+        private Vector3 _nudge;
+
         private string FilePath => Path.Combine(Application.persistentDataPath, fileName);
 
         private void Reset()
@@ -134,9 +141,24 @@ namespace PianoGlass.Piano
         [ContextMenu("Recalibrate")]
         public void Recalibrate()
         {
+            // Read the nudge before dropping the layout — NudgeMillimetres needs
+            // the layout's axes to express it.
+            Vector3 keptNudge = NudgeMillimetres;
             Layout = null;
             CurrentStage = Stage.AwaitingLowest;
-            Debug.Log("[Calibration] restarting");
+            Debug.Log($"[Calibration] restarting (keeping nudge {keptNudge} mm)");
+        }
+
+        /// <summary>Throw away the fine-adjust and go back to the raw captured
+        /// points. Use when the correction is plainly wrong rather than slightly
+        /// off — after switching controllers, say.</summary>
+        [ContextMenu("Clear nudge")]
+        public void ClearNudge()
+        {
+            _nudge = Vector3.zero;
+            if (Layout != null) RebuildLayout();
+            Save();
+            Debug.Log("[Calibration] nudge cleared");
         }
 
         private void Apply(Vector3 low, Vector3 high)
@@ -153,15 +175,52 @@ namespace PianoGlass.Piano
             _lowPoint = low;
             _highPoint = high;
 
-            Vector3 head = headTransform != null ? headTransform.position : low + Vector3.back;
-            Layout = new PianoKeyLayout(low, high, lowestNote, highestNote, head, whiteKeyDepth);
+            // Deliberately NOT clearing the nudge here. It mostly compensates
+            // for the fixed gap between the controller's tracked origin and the
+            // plastic tip you actually touch with — a property of the hardware,
+            // not of this particular calibration. Keeping it means the next
+            // calibration lands correctly straight away instead of making you
+            // re-discover the same number. ClearNudge() exists for when it is
+            // genuinely wrong.
+            RebuildLayout();
 
             if (Layout.Warning != null) Debug.LogWarning("[Calibration] " + Layout.Warning);
 
             CurrentStage = Stage.Calibrated;
             Debug.Log($"[Calibration] done — {Layout.KeyCount} keys, " +
                       $"white key width {Layout.WhiteKeySpacing * 1000f:0.0} mm");
+        }
 
+        /// <summary>
+        /// Shift the whole keyboard, in the keyboard's own frame:
+        /// x along the keys (low to high), y up, z toward the player. Metres.
+        ///
+        /// Cheap enough to call every frame — it rebuilds the layout maths for
+        /// 88 keys, which is arithmetic on structs, not GameObjects.
+        /// </summary>
+        public void Nudge(Vector3 delta)
+        {
+            if (Layout == null) return;
+
+            _nudge += Layout.Right * delta.x
+                    + Layout.Up * delta.y
+                    + Layout.Forward * delta.z;
+
+            RebuildLayout();
+        }
+
+        /// <summary>Total correction applied so far, in millimetres, for display.</summary>
+        public Vector3 NudgeMillimetres => Layout == null
+            ? Vector3.zero
+            : new Vector3(Vector3.Dot(_nudge, Layout.Right),
+                          Vector3.Dot(_nudge, Layout.Up),
+                          Vector3.Dot(_nudge, Layout.Forward)) * 1000f;
+
+        private void RebuildLayout()
+        {
+            Vector3 head = headTransform != null ? headTransform.position : _lowPoint + Vector3.back;
+            Layout = new PianoKeyLayout(_lowPoint + _nudge, _highPoint + _nudge,
+                                        lowestNote, highestNote, head, whiteKeyDepth);
             Calibrated?.Invoke(Layout);
         }
 
@@ -175,6 +234,7 @@ namespace PianoGlass.Piano
             public Vector3 low;
             public Vector3 high;
             public Vector3 head;
+            public Vector3 nudge;
             public int lowestNote;
             public int highestNote;
             public float whiteKeyDepth;
@@ -187,6 +247,7 @@ namespace PianoGlass.Piano
             {
                 low = _lowPoint,
                 high = _highPoint,
+                nudge = _nudge,
                 head = headTransform != null ? headTransform.position : Vector3.zero,
                 lowestNote = lowestNote,
                 highestNote = highestNote,
@@ -216,12 +277,12 @@ namespace PianoGlass.Piano
                 whiteKeyDepth = data.whiteKeyDepth;
                 _lowPoint = data.low;
                 _highPoint = data.high;
+                _nudge = data.nudge;
 
-                Layout = new PianoKeyLayout(data.low, data.high, lowestNote, highestNote,
-                                            data.head, whiteKeyDepth);
+                if (headTransform == null && Camera.main != null) headTransform = Camera.main.transform;
+                RebuildLayout();
                 CurrentStage = Stage.Calibrated;
                 Debug.Log("[Calibration] loaded saved calibration");
-                Calibrated?.Invoke(Layout);
                 return true;
             }
             catch (Exception e)
