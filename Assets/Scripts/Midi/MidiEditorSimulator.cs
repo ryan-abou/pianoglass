@@ -75,6 +75,30 @@ namespace PianoGlass.Midi
                 yield return new WaitForSeconds(0.04f);
             }
         }
+
+        /// <summary>
+        /// SongTransport's restart chord (notes 21 + 22, the bottom two keys
+        /// of an 88) is below the on-screen button range by default, so
+        /// there's no other way to press it without a real keyboard. This is
+        /// that way -- fires the same NoteOn/NoteOff pair a real chord press
+        /// would.
+        /// </summary>
+        [ContextMenu("Play restart chord (21 + 22)")]
+        private void PlayRestartChord()
+        {
+            if (MidiInput.Instance == null) return;
+            StartCoroutine(RestartChordRoutine());
+        }
+
+        private System.Collections.IEnumerator RestartChordRoutine()
+        {
+            const int a = 21, b = 22;
+            MidiInput.Instance.InjectNoteOn(a);
+            MidiInput.Instance.InjectNoteOn(b);
+            yield return new WaitForSeconds(0.15f);
+            MidiInput.Instance.InjectNoteOff(a);
+            MidiInput.Instance.InjectNoteOff(b);
+        }
 #endif
     }
 }

@@ -572,6 +572,67 @@ Transform:
   m_Children: []
   m_Father: {fileID: 2107992028}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &644933870
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 644933873}
+  - component: {fileID: 644933872}
+  - component: {fileID: 644933871}
+  m_Layer: 0
+  m_Name: SongTransport
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &644933871
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 644933870}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0cd3c3130281c9e4a98062a059c67dd6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PianoGlass.Transport.OvrSongTransport
+--- !u!114 &644933872
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 644933870}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff6031f132c916f4bad1bb512764766f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PianoGlass.Transport.SongTransport
+  clock: {fileID: 1285217052}
+  calibration: {fileID: 2007997132}
+  chordNoteA: 21
+  chordNoteB: 22
+--- !u!4 &644933873
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 644933870}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &664641827
 GameObject:
   m_ObjectHideFlags: 0
@@ -1009,6 +1070,60 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1804373477}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1034278082
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1034278084}
+  - component: {fileID: 1034278083}
+  m_Layer: 0
+  m_Name: NoteHighway
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1034278083
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1034278082}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 276228e965d3d9540a4aa0c11179e2c2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PianoGlass.Highway.NoteHighway
+  calibration: {fileID: 2007997132}
+  clock: {fileID: 1285217052}
+  noteMaterial: {fileID: 2100000, guid: dff0fda6605ad8e499fbcb1b54937d0b, type: 2}
+  noteColor: {r: 0.4, g: 0.68, b: 0.95, a: 1}
+  slabThickness: 0.006
+  widthFraction: 0.9
+  leadTimeSeconds: 3
+  highwayHeight: 0.5
+  depthOffset: 0.05
+  tiltDegrees: 0
+--- !u!4 &1034278084
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1034278082}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1156380841
 GameObject:
   m_ObjectHideFlags: 0
@@ -1265,6 +1380,52 @@ MonoBehaviour:
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
   m_Version: 2
+--- !u!1 &1285217051
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1285217053}
+  - component: {fileID: 1285217052}
+  m_Layer: 0
+  m_Name: SongClock
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1285217052
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1285217051}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 948641123885b8644905dacccfec0f11, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: PianoGlass.Song::PianoGlass.Song.SongClock
+  tempoMultiplier: 1
+  playOnStart: 0
+--- !u!4 &1285217053
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1285217051}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1356427212
 GameObject:
   m_ObjectHideFlags: 0
@@ -1914,6 +2075,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a98a22769b1603f459a472d00b56254d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PianoGlass.Piano.OvrCalibrationInput
+  nudgeSpeed: 0.02
+  stickDeadzone: 0.15
   logInput: 0
 --- !u!114 &2007997132
 MonoBehaviour:
@@ -2033,3 +2196,6 @@ SceneRoots:
   - {fileID: 1156380846}
   - {fileID: 1862056470}
   - {fileID: 2007997133}
+  - {fileID: 1285217053}
+  - {fileID: 1034278084}
+  - {fileID: 644933873}
