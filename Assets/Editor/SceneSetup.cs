@@ -13,8 +13,11 @@ namespace PianoGlass.EditorTools
     /// Wires the falling-note vertical slice into SampleScene: a SongClock, a
     /// NoteHighway, and a SongTransport (+OvrSongTransport) for play/pause/
     /// restart, all pointed at whatever KeyboardCalibration is already there.
-    /// Idempotent -- run it again after changing a script and it updates the
-    /// existing objects instead of duplicating them.
+    /// Also points CalibrationPanel at the transport and clock so it can show
+    /// transport state, and adds/wires a CanvasCalibrationFollower on the
+    /// status Canvas so it registers on the keyboard instead of sitting at
+    /// its authored world position. Idempotent -- run it again after changing
+    /// a script and it updates the existing objects instead of duplicating them.
     ///
     /// Doing this by hand in the Inspector is exactly the kind of setup that
     /// silently drifts between machines and gets forgotten right before a
@@ -58,11 +61,22 @@ namespace PianoGlass.EditorTools
             // this menu item stays the single source of truth regardless.
             SetPlayOnStart(clock, false);
 
+            CalibrationPanel panel = Object.FindAnyObjectByType<CalibrationPanel>();
+            if (panel != null) WireCalibrationPanel(panel, transport, clock);
+
+            Canvas canvas = Object.FindAnyObjectByType<Canvas>();
+            if (canvas != null)
+            {
+                CanvasCalibrationFollower follower = canvas.GetComponent<CanvasCalibrationFollower>();
+                if (follower == null) follower = canvas.gameObject.AddComponent<CanvasCalibrationFollower>();
+                WireCanvasFollower(follower, calibration, highway);
+            }
+
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
 
             Debug.Log($"[SceneSetup] SongClock + NoteHighway + SongTransport wired into " +
-                      $"{scene.name} and saved.");
+                      $"{scene.name}, CalibrationPanel and the status Canvas updated, and saved.");
         }
 
         // ------------------------------------------------------------------
@@ -118,6 +132,22 @@ namespace PianoGlass.EditorTools
         {
             var so = new SerializedObject(clock);
             so.FindProperty("playOnStart").boolValue = value;
+            so.ApplyModifiedProperties();
+        }
+
+        private static void WireCalibrationPanel(CalibrationPanel panel, SongTransport transport, SongClock clock)
+        {
+            var so = new SerializedObject(panel);
+            so.FindProperty("transport").objectReferenceValue = transport;
+            so.FindProperty("clock").objectReferenceValue = clock;
+            so.ApplyModifiedProperties();
+        }
+
+        private static void WireCanvasFollower(CanvasCalibrationFollower follower, KeyboardCalibration calibration, NoteHighway highway)
+        {
+            var so = new SerializedObject(follower);
+            so.FindProperty("calibration").objectReferenceValue = calibration;
+            so.FindProperty("noteHighway").objectReferenceValue = highway;
             so.ApplyModifiedProperties();
         }
 

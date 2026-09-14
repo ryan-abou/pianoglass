@@ -40,11 +40,21 @@ namespace PianoGlass.Song
         public float Bpm { get; }
         public IReadOnlyList<SongNote> Notes { get; }
 
+        /// <summary>When the last note ends. Not just the last entry's EndTime
+        /// -- Notes isn't contractually ordered -- so this is the max over all
+        /// of them, computed once rather than on every read.</summary>
+        public double Duration { get; }
+
         public SongData(string title, float bpm, IReadOnlyList<SongNote> notes)
         {
             Title = title;
             Bpm = bpm;
             Notes = notes;
+
+            double duration = 0.0;
+            foreach (SongNote note in notes)
+                if (note.EndTime > duration) duration = note.EndTime;
+            Duration = duration;
         }
 
         // Middle C = 60, scientific pitch notation -- matches MidiInput.NoteName.

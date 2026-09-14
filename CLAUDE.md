@@ -150,16 +150,18 @@ Assets/
     KeyboardCalibration.cs            capture, nudge, persist (Meta-free)
     OvrCalibrationInput.cs            calibration's OVRInput code
     PianoKeyHighlighter.cs            real key pressed → virtual key lights
-    CalibrationPanel.cs               in-headset calibration readout
+    CalibrationPanel.cs               in-headset calibration + transport readout
+    CanvasCalibrationFollower.cs      status Canvas registered on the keyboard, not world space
   Scripts/Song/
     Song.cs                           SongNote + SongData, hard-coded 8-bar melody (own asmdef)
-    SongClock.cs                      double songTime, tempo multiplier
+    SongClock.cs                      double songTime, tempo multiplier, pre-song lead-in
+    SlabGeometry.cs                   pure slab bottom/height maths, shared by highway + tests
   Scripts/Highway/
     NoteHighway.cs                    falling-note wall, position from (noteTime − songTime)
   Scripts/Transport/
-    SongTransport.cs                  play/pause/restart + MIDI chord (Meta-free)
+    SongTransport.cs                  play/pause/restart + MIDI chord + transport state (Meta-free)
     OvrSongTransport.cs               transport's OVRInput code
-  Tests/EditMode/                     PianoKeyLayout + SongClock, run headlessly
+  Tests/EditMode/                     PianoKeyLayout + SongClock + SlabGeometry, run headlessly
 ```
 
 OVRInput now lives in two places, split the same way as calibration:
@@ -194,6 +196,19 @@ the captured points are a property of where the keyboard is).
 Sanity check: a full-size white key is **23.5 mm**, and an 88-key span is about
 **119.9 cm** centre to centre. The layout warns if the derived width strays.
 
+**The song clock's lead-in.** `SongClock.SongTime` starts at `-leadInSeconds`
+(default 3), not 0 — set in `Awake()`, not only in `Restart()`, because the
+very first `Play()` after the scene loads never calls `Restart()`. Without
+this the first note's `StartTime` (0) is already within `leadTimeSeconds` of
+due the instant play is pressed, so it never falls: the opening bars are
+skipped entirely. `NoteHighway`'s clamp maths (now `SlabGeometry.VerticalExtent`)
+need no special-casing for the resulting negative `SongTime` — bottom and top
+are affine functions of it, so the same clamp that hides a not-yet-due note
+hides one during the lead-in for free. The one consequence that does need
+handling: a silent, empty wall during the countdown reads as a broken build,
+which is why `CalibrationPanel` always shows transport state (Stopped /
+Counting in / Playing / Finished) and `SongTime` to one decimal.
+
 ---
 
 ## Traps already hit — do not re-learn these
@@ -204,6 +219,13 @@ Sanity check: a full-size white key is **23.5 mm**, and an 88-key span is about
   it the build succeeds and fails at runtime with `ClassNotFoundException`.
 - **A Screen Space - Overlay canvas is invisible in VR.** World Space, and
   scaled to ~0.001 or it is a 600-metre wall. Cost a full build cycle.
+- **A world-space Canvas left at a fixed world position, y = 0, is at floor
+  height in Quest tracking space** — unreadably low, and easy to mistake for
+  a broken build rather than a placement bug. `CanvasCalibrationFollower`
+  registers it on the calibrated keyboard instead, the same way `NoteHighway`
+  registers the note wall; before calibration exists it falls back to a
+  serialized height rather than whatever y the Canvas happened to be authored
+  at.
 - **Unity hides file extensions in the Project window.** Rename `.cs.txt` files
   in Explorer, not in Unity.
 - **Do not overwrite Meta's generated `AndroidManifest.xml`.** Add the one line

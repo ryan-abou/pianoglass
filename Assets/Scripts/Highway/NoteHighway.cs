@@ -14,9 +14,10 @@ namespace PianoGlass.Highway
     /// viewpoint is nearly edge-on, and "how far above the key is it" is the
     /// hardest depth judgement a Quest 2 can ask of someone.
     ///
-    /// A slab's height IS its note's remaining duration on screen -- see the
-    /// clamp maths in Update(). That means localScale is recomputed every
-    /// frame, not once at spawn; Build() only creates the cubes.
+    /// A slab's height IS its note's remaining duration on screen -- see
+    /// SlabGeometry.VerticalExtent, the pure function Update() calls for the
+    /// clamp maths. That means localScale is recomputed every frame, not
+    /// once at spawn; Build() only creates the cubes.
     ///
     /// Thin Cubes, not the Quad primitive: PianoKeyHighlighter hit this exact
     /// choice for the same reason -- a Quad's normal can end up facing away
@@ -56,6 +57,11 @@ namespace PianoGlass.Highway
                  "top toward the player, which is the direction that makes the " +
                  "wall easier to read from a seated view; 0 is upright.")]
         [SerializeField] private float tiltDegrees = 0f;
+
+        /// <summary>Same standoff used to place the status Canvas at the wall's
+        /// depth -- CanvasCalibrationFollower reads this rather than carrying
+        /// its own copy of the number, so the two can't drift apart.</summary>
+        public float DepthOffset => depthOffset;
 
         private SongData _song;
         private readonly List<(SongNote note, Renderer renderer)> _slabs = new List<(SongNote, Renderer)>();
@@ -167,18 +173,14 @@ namespace PianoGlass.Highway
                 if (renderer == null) continue;
                 if (!layout.TryGetKey(note.Pitch, out PianoKey key)) continue;
 
-                float top = (float)(note.EndTime - songTime) * speed;
-                float bottom = (float)(note.StartTime - songTime) * speed;
-                float b = Mathf.Max(bottom, 0f);
-                float t = Mathf.Min(top, highwayHeight);
-                float height = t - b;
+                (float b, float height) = SlabGeometry.VerticalExtent(
+                    note.StartTime, note.EndTime, songTime, speed, highwayHeight);
 
-                // This clamp alone is what culls a note that hasn't arrived
-                // yet (bottom > highwayHeight -> height <= 0) or has fully
-                // passed (top < 0 -> height <= 0), and what makes a held
+                // SlabGeometry's clamps alone are what cull a note that hasn't
+                // arrived yet, or has fully passed, and what make a held
                 // note's slab shrink into the key line as it plays rather
-                // than sliding underneath it (b pinned at 0 while t counts
-                // down). No other visibility check is needed on top of it.
+                // than sliding underneath it. No other visibility check is
+                // needed on top of it.
                 bool visible = height > 0f;
                 renderer.enabled = visible;
                 if (!visible) continue;
@@ -188,7 +190,7 @@ namespace PianoGlass.Highway
                 // far edge -- away from the player -- is Center minus half
                 // the key's own depth along Forward.
                 Vector3 farEdge = key.Center - layout.Forward * (key.Depth * 0.5f + depthOffset);
-                float centreHeight = (t + b) * 0.5f;
+                float centreHeight = b + height * 0.5f;
                 Vector3 pos = farEdge + tiltedUp * centreHeight;
 
                 renderer.transform.SetPositionAndRotation(pos, tiltRotation);

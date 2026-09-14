@@ -17,6 +17,13 @@ namespace PianoGlass.Song
         [Tooltip("1 = real time. 0.5 = half speed for practice.")]
         [SerializeField] private float tempoMultiplier = 1f;
 
+        [Tooltip("Silent countdown before the first note is due. SongTime starts " +
+                 "at -leadInSeconds, not 0 -- without it the first note is already " +
+                 "at the key line the instant play is pressed, because the highway " +
+                 "only shows notes within leadTimeSeconds of due and nothing pushes " +
+                 "the clock back before that window opens.")]
+        [SerializeField] private float leadInSeconds = 3f;
+
         [Tooltip("Start playing as soon as the scene loads. Off by default -- " +
                  "SongTransport / OvrSongTransport are what start it now, so the " +
                  "first notes sit frozen at their lead positions as a preview " +
@@ -24,7 +31,8 @@ namespace PianoGlass.Song
         [SerializeField] private bool playOnStart = false;
 
         /// <summary>Seconds elapsed in the song. This is the ONLY thing note
-        /// positions should ever be computed from.</summary>
+        /// positions should ever be computed from. Starts negative -- see
+        /// leadInSeconds -- so the first note still has to fall.</summary>
         public double SongTime { get; private set; }
 
         public bool IsPlaying { get; private set; }
@@ -33,6 +41,20 @@ namespace PianoGlass.Song
         {
             get => tempoMultiplier;
             set => tempoMultiplier = Mathf.Max(0f, value);
+        }
+
+        public float LeadInSeconds
+        {
+            get => leadInSeconds;
+            set => leadInSeconds = Mathf.Max(0f, value);
+        }
+
+        private void Awake()
+        {
+            // Set here, not just in Restart(): the very first play after the
+            // scene loads never calls Restart(), so if this only happened
+            // there, the opening bars would still have no lead-in.
+            SongTime = -leadInSeconds;
         }
 
         private void Start()
@@ -65,7 +87,9 @@ namespace PianoGlass.Song
         /// <summary>Jump to an absolute song time, e.g. restarting from a bar.</summary>
         public void Seek(double seconds) => SongTime = seconds;
 
-        /// <summary>Back to the top. Play state is left as it was.</summary>
-        public void Restart() => SongTime = 0.0;
+        /// <summary>Back to the top -- which is -leadInSeconds, not 0, so a
+        /// restart gets the same silent countdown the first play did. Play
+        /// state is left as it was.</summary>
+        public void Restart() => SongTime = -leadInSeconds;
     }
 }

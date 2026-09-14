@@ -785,6 +785,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PianoGlass.Piano.CalibrationPanel
   text: {fileID: 664641829}
   calibration: {fileID: 2007997132}
+  transport: {fileID: 644933872}
+  clock: {fileID: 1285217052}
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -1137,6 +1139,7 @@ GameObject:
   - component: {fileID: 1156380844}
   - component: {fileID: 1156380843}
   - component: {fileID: 1156380842}
+  - component: {fileID: 1156380847}
   m_Layer: 5
   m_Name: Canvas
   m_TagString: Untagged
@@ -1243,6 +1246,22 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: -0.2}
   m_SizeDelta: {x: 600, y: 600}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1156380847
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1156380841}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9bbeec37fc0ec6a4e8ee091fe81cddbd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PianoGlass.Piano.CanvasCalibrationFollower
+  calibration: {fileID: 2007997132}
+  noteHighway: {fileID: 1034278083}
+  heightAboveKeys: 0.65
+  fallbackHeight: 1.2
 --- !u!1 &1253870629
 GameObject:
   m_ObjectHideFlags: 0
@@ -1410,6 +1429,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: PianoGlass.Song::PianoGlass.Song.SongClock
   tempoMultiplier: 1
+  leadInSeconds: 3
   playOnStart: 0
 --- !u!4 &1285217053
 Transform:

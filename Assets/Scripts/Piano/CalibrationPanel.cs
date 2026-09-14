@@ -1,6 +1,8 @@
 using System.Text;
 using TMPro;
 using UnityEngine;
+using PianoGlass.Song;
+using PianoGlass.Transport;
 
 namespace PianoGlass.Piano
 {
@@ -19,6 +21,8 @@ namespace PianoGlass.Piano
     {
         [SerializeField] private TMP_Text text;
         [SerializeField] private KeyboardCalibration calibration;
+        [SerializeField] private SongTransport transport;
+        [SerializeField] private SongClock clock;
 
         private readonly StringBuilder _sb = new StringBuilder(256);
 
@@ -26,12 +30,16 @@ namespace PianoGlass.Piano
         {
             text = GetComponent<TMP_Text>();
             calibration = FindAnyObjectByType<KeyboardCalibration>();
+            transport = FindAnyObjectByType<SongTransport>();
+            clock = FindAnyObjectByType<SongClock>();
         }
 
         private void Awake()
         {
             if (text == null) text = GetComponent<TMP_Text>();
             if (calibration == null) calibration = FindAnyObjectByType<KeyboardCalibration>();
+            if (transport == null) transport = FindAnyObjectByType<SongTransport>();
+            if (clock == null) clock = FindAnyObjectByType<SongClock>();
         }
 
         private void Update()
@@ -41,6 +49,16 @@ namespace PianoGlass.Piano
             _sb.Clear();
             _sb.AppendLine("<b>PianoGlass — calibration</b>");
             _sb.AppendLine(calibration.Prompt);
+
+            // Shown unconditionally, not just once calibrated: a silent
+            // lead-in with nothing on the wall yet is easy to mistake for a
+            // broken build the moment you press play, and this is the one
+            // line that says otherwise.
+            if (transport != null && clock != null)
+            {
+                _sb.AppendLine();
+                _sb.AppendLine($"transport:  {StateLabel(transport.CurrentState)}   t = {clock.SongTime:0.0}s");
+            }
 
             if (calibration.IsCalibrated)
             {
@@ -82,5 +100,14 @@ namespace PianoGlass.Piano
             { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
 
         private static string NoteName(int note) => Names[note % 12] + (note / 12 - 1);
+
+        private static string StateLabel(SongTransport.State state) => state switch
+        {
+            SongTransport.State.Stopped    => "Stopped",
+            SongTransport.State.CountingIn => "Counting in",
+            SongTransport.State.Playing    => "Playing",
+            SongTransport.State.Finished   => "Finished",
+            _ => state.ToString()
+        };
     }
 }

@@ -20,6 +20,12 @@ namespace PianoGlass.Transport
     /// </summary>
     public class SongTransport : MonoBehaviour
     {
+        /// <summary>What the panel shows so an empty highway (silent lead-in,
+        /// or paused) doesn't read as broken. Finished takes priority over
+        /// everything else -- even a manual pause after the last note still
+        /// reads as Finished, since there's nothing left to play.</summary>
+        public enum State { Stopped, CountingIn, Playing, Finished }
+
         [Header("Wiring")]
         [SerializeField] private SongClock clock;
         [SerializeField] private KeyboardCalibration calibration;
@@ -31,11 +37,27 @@ namespace PianoGlass.Transport
         [SerializeField] private int chordNoteB = 22; // A#0
 
         private bool _chordLatched;
+        private SongData _song;
 
         private void Awake()
         {
             if (clock == null) clock = FindAnyObjectByType<SongClock>();
             if (calibration == null) calibration = FindAnyObjectByType<KeyboardCalibration>();
+            _song = SongData.TwinkleTwinkleLittleStar();
+        }
+
+        /// <summary>Derived fresh from clock + song each read, not cached --
+        /// cheap (a couple of comparisons) and the only alternative is another
+        /// piece of state that could fall out of sync with the clock.</summary>
+        public State CurrentState
+        {
+            get
+            {
+                if (clock == null) return State.Stopped;
+                if (_song != null && clock.SongTime >= _song.Duration) return State.Finished;
+                if (!clock.IsPlaying) return State.Stopped;
+                return clock.SongTime < 0.0 ? State.CountingIn : State.Playing;
+            }
         }
 
         private void OnEnable()
