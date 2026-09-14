@@ -70,6 +70,47 @@ adb logcat -s PianoGlassMidi Unity
 
 ---
 
+## Two ways to reach Unity — and they cannot both be live
+
+Only one Unity process can hold this project at a time, because Unity locks
+`Library/`. That single fact is what makes these mutually exclusive:
+
+| | Editor state it needs | What it is for |
+|---|---|---|
+| **Unity MCP** (`Edit > Project Settings > AI > Unity MCP`) | **open** | reading the live editor |
+| **`build.ps1`** | **closed** | producing and installing the APK |
+
+They are not two ways to do the same job. One inspects a running editor; the
+other ships a build. Neither replaces the headset.
+
+**Check the state before acting. It is not knowable from the filesystem:**
+
+```powershell
+Get-Process Unity -ErrorAction SilentlyContinue
+```
+
+Output means the editor is open — MCP tools work, and `build.ps1` will fail
+with a message about multiple instances that says nothing about building. No
+output means it is closed — `build.ps1` works, and MCP calls will hang or
+error. Guessing wrong costs a cycle, so confirm rather than assume.
+
+**Use the MCP connection to look, not to change.** Reading the Console,
+inspecting the hierarchy, checking what a component's fields are actually set
+to, entering play mode. Every scene-state failure in week two — a scene that
+was never wired, a build made before the wiring, a world-space Canvas left at
+y = 0, which is floor height — was invisible on disk and obvious in the editor.
+
+**Scene changes still go through `Assets/Editor/SceneSetup.cs`.** An MCP edit to
+the scene produces an unreadable 60 KB YAML diff that exists on one machine
+only. A `SceneSetup` change is reviewable C# that anyone can re-run. Use the
+MCP to verify the result, not to make it.
+
+**When one task needs both, the order is: inspect → close Unity → build →
+reopen.** Never build first and change the scene afterwards. The APK will not
+contain the scene changes, and the failure looks exactly like a code bug.
+
+---
+
 ## Hardware realities that shape the design
 
 **The Quest 2 has one USB-C port.** The MIDI keyboard and the PC cable compete
