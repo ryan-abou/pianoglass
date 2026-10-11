@@ -147,15 +147,18 @@ Assets/
     MidiEditorSimulator.cs            fake keyboard for editor work
   Scripts/Piano/
     Core/PianoKeyLayout.cs            two points → every key's position (own asmdef, see below)
+    Core/EdgeMarkerGeometry.cs        pure far-edge-bar maths for EdgeMarkers mode (own asmdef)
     KeyboardCalibration.cs            capture, nudge, persist (Meta-free)
     OvrCalibrationInput.cs            calibration's OVRInput code
-    PianoKeyHighlighter.cs            real key pressed → virtual key lights
+    PianoKeyHighlighter.cs            real key pressed → virtual key lights; display modes (Meta-free)
+    OvrKeyOverlayInput.cs             display mode + passthrough toggle OVRInput code
     CalibrationPanel.cs               in-headset calibration + transport readout
     CanvasCalibrationFollower.cs      status Canvas registered on the keyboard, not world space
   Scripts/Song/
     Song.cs                           SongNote + SongData, hard-coded 8-bar melody (own asmdef)
     SongClock.cs                      double songTime, tempo multiplier, pre-song lead-in
     SlabGeometry.cs                   pure slab bottom/height maths, shared by highway + tests
+    ActiveNoteSelector.cs             pure "is a note due soon" maths, shared by highlighter + tests
   Scripts/Highway/
     NoteHighway.cs                    falling-note wall, position from (noteTime − songTime)
   Scripts/Transport/
@@ -164,11 +167,12 @@ Assets/
   Tests/EditMode/                     PianoKeyLayout + SongClock + SlabGeometry, run headlessly
 ```
 
-OVRInput now lives in two places, split the same way as calibration:
-`OvrCalibrationInput.cs` and `OvrSongTransport.cs` are the only files that
-touch it, and each is a thin adapter over a Meta-free component
-(`KeyboardCalibration`, `SongTransport`) that does the actual work and is
-what compiles and runs in the editor.
+OVRInput now lives in three places, split the same way as calibration:
+`OvrCalibrationInput.cs`, `OvrSongTransport.cs` and `OvrKeyOverlayInput.cs`
+are the only files that touch it, and each is a thin adapter over a
+Meta-free component (`KeyboardCalibration`, `SongTransport`,
+`PianoKeyHighlighter`) that does the actual work and is what compiles and
+runs in the editor.
 
 **Why MidiBridge is Java.** `android.media.midi.MidiReceiver` is an abstract
 *class*, and Unity's `AndroidJavaProxy` can only implement *interfaces*. So the
@@ -211,6 +215,70 @@ Counting in / Playing / Finished) and `SongTime` to one decimal.
 
 ---
 
+## Passthrough and the key overlay
+
+**Passthrough configuration lives in `SceneSetup`, not the Inspector.**
+`PianoGlass/Scene/Configure Passthrough` sets, on `[BuildingBlock] Camera Rig`:
+
+- `OVRManager.isInsightPassthroughEnabled = true` (the component's own
+  "Enable Passthrough" flag).
+- An `OVRPassthroughLayer`, added if missing. `overlayType` is left alone —
+  Meta XR SDK 205.0.0 made it `[Obsolete]`/`[HideInInspector]`: flexible
+  layering is gone, and a passthrough layer is now always the single
+  background layer under the eye buffer, i.e. always Underlay already.
+- The main camera: `clearFlags = SolidColor`, background alpha forced to 0.
+- `RenderSettings.skybox = null`.
+- The project's `OVRProjectConfig.insightPassthroughSupport = Required` —
+  this is the separate, project-level "Passthrough Support" flag Meta's
+  build step reads to decide whether the generated `AndroidManifest.xml`
+  gets the passthrough `uses-feature` entries. It is not readable from the
+  `OVRManager` component in the scene; it lives in
+  `Assets/Oculus/OculusProjectConfig.asset`.
+
+Passthrough initialises **asynchronously**. Anything that must know it is
+actually visible — not just requested — has to wait for
+`OVRPassthroughLayer.PassthroughLayerResumed`, not assume success the frame
+after enabling the layer. `OvrKeyOverlayInput` does this: toggling
+passthrough on logs immediately (`passthrough requested on`), and logs again
+when the layer confirms it (`passthrough resumed`).
+
+**`PianoGlass/Scene/Configure Key Overlay`** wires `PianoKeyHighlighter` to
+the scene's `SongClock`, creates/assigns a Transparent-surface material for
+Translucent mode (`Assets/KeyOverlayTranslucent.mat`), and adds
+`OvrKeyOverlayInput` next to it.
+
+**Display modes** (`PianoKeyHighlighter.DisplayMode`, cycled with left X):
+
+| Mode | At rest | Why |
+|---|---|---|
+| `FullOverlay` | all 88 keys, opaque | the original behaviour; baseline to compare the others against |
+| `Translucent` | all 88 keys, alpha = `translucentAlpha` (0.25) | same coverage, see-through — needs the Transparent material above |
+| `ActiveKeysOnly` (default) | nothing | only a key whose note is due within `activeKeyLookaheadSeconds` (0.5 s) or is actually held lights up |
+| `EdgeMarkers` | nothing | same "only when relevant" rule as `ActiveKeysOnly`, but each key shows as a thin bar across its far portion (`edgeMarkerDepthFraction` of key depth) instead of the full key, clear of where a resting finger touches |
+
+The Quest 2 has no depth sensor, so *any* virtual slab over a key draws on
+top of the player's hand regardless of passthrough. `FullOverlay` painting
+all 88 keys at rest is what made a tester unable to see their own hands even
+once passthrough is on — `ActiveKeysOnly`/`EdgeMarkers` exist to paint only
+the key the player actually needs to find, which is why `ActiveKeysOnly` is
+the shipped default rather than `FullOverlay`.
+
+Controls, `OvrKeyOverlayInput.cs`, explicit `OVRInput.Controller.LTouch` as
+always:
+
+```
+left X            cycle display mode
+left stick click   toggle passthrough on/off (A/B it against the void)
+```
+
+Both read back from `PianoKeyHighlighter`/`OVRPassthroughLayer` and log one
+combined line (`Debug.Log($"[KeyOverlay] ... mode={...} passthrough={...}")`)
+on every change to either, so a full A/B session is readable afterwards from
+`adb logcat -s Unity` without reconnecting a headset to ask "what was I
+looking at."
+
+---
+
 ## Traps already hit — do not re-learn these
 
 - **Unity does not compile a `.java` file until you select it in the Project
@@ -248,6 +316,25 @@ Counting in / Playing / Finished) and `SongTime` to one decimal.
   the editor cleared it once. If it returns, replace `com.meta.xr.sdk.all` with
   `com.meta.xr.sdk.core` in `Packages/manifest.json` — nothing here uses audio,
   platform, interaction or voice.
+- **A camera with `Skybox` clear flags renders an opaque sky over
+  everything, passthrough included — this is what the "black void, can't see
+  my hands" report traced back to.** Enabling `OVRManager.isInsightPassthroughEnabled`
+  and adding an `OVRPassthroughLayer` does nothing if the camera still clears
+  to `Skybox`: the skybox material draws over the passthrough layer every
+  frame regardless, and if that material happens to render as black, the
+  result looks exactly like passthrough silently failing rather than like a
+  camera setting. Needs **both** halves: `clearFlags = SolidColor` with
+  background alpha `0`, **and** `RenderSettings.skybox = null` — either one
+  alone still leaves something opaque in front of the passthrough feed. Also
+  check the active URP asset's HDR flag and any `Global Volume` with active
+  post-processing overrides before assuming the camera is the whole story:
+  HDR and post-processing can each rewrite the camera's alpha channel on the
+  way out, which breaks the same compositing even with clear flags and
+  skybox both correct. (Not a problem in this project today — the Android
+  quality tier's `Mobile_RPAsset` has HDR off, and the scene's `Global
+  Volume` has post-processing disabled on the XR camera — but re-check both
+  if passthrough ever goes transparent-but-black again after someone enables
+  post-processing or switches render pipeline assets.)
 
 ---
 

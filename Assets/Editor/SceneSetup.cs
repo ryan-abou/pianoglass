@@ -27,6 +27,8 @@ namespace PianoGlass.EditorTools
     {
         private const string ScenePath = "Assets/Scenes/SampleScene.unity";
         private const string NoteMaterialPath = "Assets/NoteHighway.mat";
+        private const string TranslucentMaterialPath = "Assets/KeyOverlayTranslucent.mat";
+        private const string CameraRigName = "[BuildingBlock] Camera Rig";
 
         [MenuItem("PianoGlass/Scene/Add Falling-Note Highway")]
         public static void AddFallingNoteHighway()
@@ -77,6 +79,191 @@ namespace PianoGlass.EditorTools
 
             Debug.Log($"[SceneSetup] SongClock + NoteHighway + SongTransport wired into " +
                       $"{scene.name}, CalibrationPanel and the status Canvas updated, and saved.");
+        }
+
+        /// <summary>
+        /// Turns passthrough on: OVRManager's Enable Passthrough flag, an
+        /// Underlay OVRPassthroughLayer on the camera rig, the main camera
+        /// cleared to a fully transparent solid colour instead of the
+        /// Skybox, and the scene's skybox cleared to None.
+        ///
+        /// Also raises the project's Passthrough Support feature flag
+        /// (OVRProjectConfig) to Required -- that is the setting Meta's
+        /// build step reads to decide whether the generated AndroidManifest
+        /// gets the passthrough uses-feature entries. It lives in a
+        /// separate asset from the scene, which is why this is set here
+        /// rather than left to be inferred from the OVRManager component.
+        /// </summary>
+        [MenuItem("PianoGlass/Scene/Configure Passthrough")]
+        public static void ConfigurePassthrough()
+        {
+            Scene scene = OpenScene();
+
+            GameObject cameraRig = GameObject.Find(CameraRigName);
+            if (cameraRig == null)
+            {
+                Debug.LogError($"[SceneSetup] No '{CameraRigName}' in the scene -- add the Meta " +
+                                "Building Block camera rig first. OVRManager has nowhere to live without it.");
+                return;
+            }
+
+            OVRManager manager = cameraRig.GetComponent<OVRManager>();
+            if (manager == null)
+            {
+                Debug.LogError($"[SceneSetup] '{CameraRigName}' has no OVRManager -- expected the " +
+                                "Building Block to have added one already.");
+                return;
+            }
+
+            var managerSo = new SerializedObject(manager);
+            managerSo.FindProperty("isInsightPassthroughEnabled").boolValue = true;
+            managerSo.ApplyModifiedProperties();
+
+            // overlayType used to need setting explicitly to Underlay, but as
+            // of Meta XR SDK 205.0.0 it's [Obsolete] and [HideInInspector]:
+            // flexible layering is gone and there is only ever one background
+            // passthrough layer now, rendered beneath the eye buffer -- which
+            // is exactly Underlay, so there is nothing left to set here.
+            OVRPassthroughLayer layer = cameraRig.GetComponent<OVRPassthroughLayer>();
+            if (layer == null) layer = cameraRig.AddComponent<OVRPassthroughLayer>();
+            layer.textureOpacity = 1f;
+
+            Camera cam = Camera.main != null ? Camera.main : Object.FindAnyObjectByType<Camera>();
+            if (cam == null)
+            {
+                Debug.LogError("[SceneSetup] No camera found -- cannot set clear flags/background.");
+                return;
+            }
+
+            // Skybox clear flags render an opaque sky over everything,
+            // passthrough included -- a camera that is supposed to show
+            // passthrough must clear to a colour, and that colour's alpha
+            // must be 0 so the compositor's passthrough layer shows through
+            // instead of whatever this colour would otherwise be.
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            Color background = cam.backgroundColor;
+            background.a = 0f;
+            cam.backgroundColor = background;
+
+            // A Skybox clear mode draws this material even if nothing else
+            // references it, so it has to go too, not just the clear flags.
+            RenderSettings.skybox = null;
+
+            OVRProjectConfig config = OVRProjectConfig.CachedProjectConfig;
+            if (config != null)
+            {
+                config.insightPassthroughSupport = OVRProjectConfig.FeatureSupport.Required;
+                OVRProjectConfig.CommitProjectConfig(config);
+                AssetDatabase.SaveAssets();
+            }
+            else
+            {
+                Debug.LogWarning("[SceneSetup] OVRProjectConfig not available -- Passthrough Support " +
+                                 "feature flag left unchanged. Set it to Required by hand under " +
+                                 "Meta > Tools > Project Setup Tool, or re-run this once the editor " +
+                                 "has finished loading.");
+            }
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+
+            Debug.Log("[SceneSetup] Passthrough configured: OVRManager.isInsightPassthroughEnabled=true, " +
+                      "OVRPassthroughLayer (Underlay) on the camera rig, camera SolidColor/alpha 0, " +
+                      "skybox cleared, project Passthrough Support = Required.");
+        }
+
+        /// <summary>
+        /// Wires PianoKeyHighlighter to the SongClock its ActiveKeysOnly/
+        /// EdgeMarkers modes need, creates and assigns the Transparent-
+        /// surface material Translucent mode needs, and adds
+        /// OvrKeyOverlayInput (left X cycles the mode, left stick click
+        /// toggles passthrough) pointed at both that highlighter and
+        /// whatever OVRPassthroughLayer Configure Passthrough added.
+        /// </summary>
+        [MenuItem("PianoGlass/Scene/Configure Key Overlay")]
+        public static void ConfigureKeyOverlay()
+        {
+            Scene scene = OpenScene();
+
+            var highlighter = Object.FindAnyObjectByType<PianoKeyHighlighter>();
+            if (highlighter == null)
+            {
+                Debug.LogError("[SceneSetup] No PianoKeyHighlighter in the scene -- set up key " +
+                                "highlighting first.");
+                return;
+            }
+
+            SongClock clock = GetOrAdd<SongClock>("SongClock");
+
+            var highlighterSo = new SerializedObject(highlighter);
+            highlighterSo.FindProperty("clock").objectReferenceValue = clock;
+
+            SerializedProperty materialProp = highlighterSo.FindProperty("translucentMaterial");
+            if (materialProp.objectReferenceValue == null)
+                materialProp.objectReferenceValue = GetOrCreateTranslucentMaterial();
+
+            highlighterSo.ApplyModifiedProperties();
+
+            GameObject host = highlighter.gameObject;
+            OvrKeyOverlayInput overlayInput = host.GetComponent<OvrKeyOverlayInput>();
+            if (overlayInput == null) overlayInput = host.AddComponent<OvrKeyOverlayInput>();
+
+            GameObject cameraRig = GameObject.Find(CameraRigName);
+            OVRPassthroughLayer layer = cameraRig != null ? cameraRig.GetComponent<OVRPassthroughLayer>() : null;
+            if (layer == null)
+                Debug.LogWarning("[SceneSetup] No OVRPassthroughLayer found -- run " +
+                                 "PianoGlass/Scene/Configure Passthrough first so the stick-click " +
+                                 "toggle has something to toggle.");
+
+            var overlayInputSo = new SerializedObject(overlayInput);
+            overlayInputSo.FindProperty("highlighter").objectReferenceValue = highlighter;
+            overlayInputSo.FindProperty("passthroughLayer").objectReferenceValue = layer;
+            overlayInputSo.ApplyModifiedProperties();
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+
+            Debug.Log("[SceneSetup] Key overlay configured: PianoKeyHighlighter wired to SongClock " +
+                      "and a translucent material, OvrKeyOverlayInput added for the left X / stick-click controls.");
+        }
+
+        /// <summary>
+        /// Removes the leftover default "Cube" GameObject from Day 1 testing
+        /// -- a plain 1x1x1 primitive sitting at the scene root, unrelated to
+        /// any of the piano/overlay/highway wiring above. Idempotent: logs
+        /// and does nothing if it's already gone.
+        /// </summary>
+        [MenuItem("PianoGlass/Scene/Remove Test Cube")]
+        public static void RemoveTestCube()
+        {
+            Scene scene = OpenScene();
+
+            GameObject cube = GameObject.Find("Cube");
+            if (cube == null)
+            {
+                Debug.Log("[SceneSetup] No 'Cube' GameObject in the scene -- nothing to remove.");
+                return;
+            }
+
+            // Belt and suspenders: confirm it's the plain Day 1 test primitive
+            // (a default Cube mesh, no scripts) before deleting anything,
+            // rather than trusting the name alone.
+            bool looksLikeTestCube = cube.GetComponent<MeshFilter>() != null
+                                     && cube.GetComponents<MonoBehaviour>().Length == 0;
+            if (!looksLikeTestCube)
+            {
+                Debug.LogWarning("[SceneSetup] Found a 'Cube' GameObject, but it has scripts on it " +
+                                 "or no MeshFilter -- that doesn't look like the Day 1 test primitive. " +
+                                 "Leaving it alone; remove it by hand if you're sure.");
+                return;
+            }
+
+            Object.DestroyImmediate(cube);
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+
+            Debug.Log("[SceneSetup] Removed the leftover Day 1 test 'Cube'.");
         }
 
         // ------------------------------------------------------------------
@@ -168,6 +355,53 @@ namespace PianoGlass.EditorTools
             AssetDatabase.CreateAsset(mat, NoteMaterialPath);
             AssetDatabase.SaveAssets();
             Debug.Log($"[SceneSetup] created {NoteMaterialPath}");
+            return mat;
+        }
+
+        /// <summary>
+        /// A URP Unlit material forced into the Transparent surface type, so
+        /// the per-instance alpha PianoKeyHighlighter writes via
+        /// MaterialPropertyBlock in Translucent mode is actually honoured.
+        /// An Opaque surface (what `new Material(shader)` defaults to)
+        /// ignores alpha entirely -- silently, with nothing in the console
+        /// to explain why Translucent looks identical to FullOverlay. This
+        /// replicates by hand what toggling Surface Type to Transparent in
+        /// the inspector does (see URP's BaseShaderGUI/UnlitShader), since
+        /// that editor-only GUI code isn't something a build script can call.
+        /// </summary>
+        private static Material GetOrCreateTranslucentMaterial()
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<Material>(TranslucentMaterialPath);
+            if (existing != null) return existing;
+
+            Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
+            if (shader == null)
+            {
+                Debug.LogWarning("[SceneSetup] URP Unlit shader not found -- leaving the " +
+                                 "translucent material unassigned. Assign one by hand.");
+                return null;
+            }
+
+            var mat = new Material(shader) { name = "KeyOverlayTranslucent" };
+
+            mat.SetFloat("_Surface", 1f);  // SurfaceType.Transparent
+            mat.SetFloat("_Blend", 0f);    // BlendMode.Alpha
+            mat.SetFloat("_AlphaClip", 0f);
+            mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            mat.SetFloat("_ZWrite", 0f);
+            mat.SetOverrideTag("RenderType", "Transparent");
+            mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            mat.DisableKeyword("_ALPHATEST_ON");
+            mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            mat.DisableKeyword("_ALPHAMODULATE_ON");
+            mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            mat.SetShaderPassEnabled("DepthOnly", false);
+            mat.color = new Color(1f, 1f, 1f, 0.25f);
+
+            AssetDatabase.CreateAsset(mat, TranslucentMaterialPath);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"[SceneSetup] created {TranslucentMaterialPath}");
             return mat;
         }
     }
