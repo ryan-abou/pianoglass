@@ -69,6 +69,43 @@ namespace PianoGlass.Piano
             int highestNote,
             Vector3 playerPosition,
             float whiteKeyDepth = 0.145f)
+            : this(lowestKeyFrontEdge, highestKeyFrontEdge, lowestNote, highestNote,
+                   playerPosition - lowestKeyFrontEdge, whiteKeyDepth, facingIsDirection: true)
+        {
+        }
+
+        /// <summary>
+        /// Same layout, but facing comes from a stored toward-player
+        /// direction instead of the live head position. The head-based
+        /// constructor re-decides which way is front every time it runs, so
+        /// an untracked head on frame 1, or a stale tracking origin that puts
+        /// the head behind the key line, mirrors the keyboard front to back.
+        /// A direction captured once at calibration time cannot.
+        ///
+        /// A static factory rather than a constructor overload: an overload
+        /// taking (Vector3, Vector3, int, int, Vector3, float) would collide
+        /// with the existing one, and its meaning would differ only by name.
+        /// </summary>
+        public static PianoKeyLayout WithFacing(
+            Vector3 lowestKeyFrontEdge,
+            Vector3 highestKeyFrontEdge,
+            int lowestNote,
+            int highestNote,
+            Vector3 towardPlayer,
+            float whiteKeyDepth = 0.145f) =>
+            new PianoKeyLayout(lowestKeyFrontEdge, highestKeyFrontEdge, lowestNote, highestNote,
+                               towardPlayer, whiteKeyDepth, facingIsDirection: true);
+
+        // facingIsDirection exists only to give this constructor a distinct
+        // signature; both public paths pass a direction toward the player.
+        private PianoKeyLayout(
+            Vector3 lowestKeyFrontEdge,
+            Vector3 highestKeyFrontEdge,
+            int lowestNote,
+            int highestNote,
+            Vector3 towardPlayer,
+            float whiteKeyDepth,
+            bool facingIsDirection)
         {
             LowestNote = SnapToWhite(lowestNote, up: true);
             HighestNote = SnapToWhite(highestNote, up: false);
@@ -85,8 +122,9 @@ namespace PianoGlass.Piano
             Forward = Vector3.Cross(Right, Up).normalized;
 
             // Forward must point at the player, not away. Rather than making the
-            // user tell us, look at where their head is.
-            if (Vector3.Dot(Forward, playerPosition - lowestKeyFrontEdge) < 0f)
+            // user tell us, look at where their head is -- or, for WithFacing,
+            // at the direction captured when the keyboard was calibrated.
+            if (Vector3.Dot(Forward, towardPlayer) < 0f)
                 Forward = -Forward;
 
             Rotation = Quaternion.LookRotation(Forward, Up);
@@ -106,31 +144,56 @@ namespace PianoGlass.Piano
             Build();
         }
 
+        private const float BlackDepthFraction = 0.62f;
+        private const float BlackRise = 0.010f;   // black keys stand about 1 cm proud
+
+        /// <summary>Front-edge centre of the lowest key -- the first captured point.</summary>
+        public Vector3 LowFrontEdge => _lowFrontEdge;
+
+        /// <summary>Front-edge centre of the highest key -- the second captured point.</summary>
+        public Vector3 HighFrontEdge =>
+            _lowFrontEdge + Right * (CountWhiteKeys(LowestNote, HighestNote) - 1) * WhiteKeySpacing;
+
+        /// <summary>
+        /// Centre of a key's front edge, the edge nearest the player -- the
+        /// spot a controller tip touches. This is what a Middle C check or
+        /// correction compares the tip against. For a black key it is the
+        /// front of the black key itself, on its raised top.
+        /// </summary>
+        public Vector3 FrontEdgeCenter(int note)
+        {
+            Vector3 front = _lowFrontEdge + Right * AlongFor(note);
+            if (!IsBlackKey(note)) return front;
+
+            float blackDepth = WhiteKeyDepth * BlackDepthFraction;
+            return front - Forward * (WhiteKeyDepth - blackDepth) + Up * BlackRise;
+        }
+
+        /// <summary>Distance along Right from the lowest key's centre line to this key's.</summary>
+        private float AlongFor(int note)
+        {
+            if (!IsBlackKey(note))
+                return CountWhiteKeysBelow(LowestNote, note) * WhiteKeySpacing;
+
+            // A black key sits between the white key below and the white
+            // key above it: exactly half a white key back from the count
+            // of white keys beneath it.
+            return (CountWhiteKeysBelow(LowestNote, note) - 0.5f) * WhiteKeySpacing
+                   + BlackKeyNudge[note % 12] * WhiteKeySpacing;
+        }
+
         private void Build()
         {
             _keys.Clear();
 
-            float blackDepth = WhiteKeyDepth * 0.62f;
+            float blackDepth = WhiteKeyDepth * BlackDepthFraction;
             float blackWidth = WhiteKeySpacing * 0.55f;
-            float blackRise = 0.010f;   // black keys stand about 1 cm proud
+            float blackRise = BlackRise;
 
             for (int note = LowestNote; note <= HighestNote; note++)
             {
                 bool black = IsBlackKey(note);
-                float along;
-
-                if (black)
-                {
-                    // A black key sits between the white key below and the white
-                    // key above it: exactly half a white key back from the count
-                    // of white keys beneath it.
-                    along = (CountWhiteKeysBelow(LowestNote, note) - 0.5f) * WhiteKeySpacing;
-                    along += BlackKeyNudge[note % 12] * WhiteKeySpacing;
-                }
-                else
-                {
-                    along = CountWhiteKeysBelow(LowestNote, note) * WhiteKeySpacing;
-                }
+                float along = AlongFor(note);
 
                 float depth = black ? blackDepth : WhiteKeyDepth;
 
