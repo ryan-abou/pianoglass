@@ -85,12 +85,25 @@ namespace PianoGlass.Highway
         {
             if (calibration == null) return;
             calibration.Calibrated += OnCalibrated;
+            calibration.PlacementValidChanged += OnPlacementValidChanged;
             if (calibration.IsCalibrated) Build();
         }
 
         private void OnDisable()
         {
-            if (calibration != null) calibration.Calibrated -= OnCalibrated;
+            if (calibration == null) return;
+            calibration.Calibrated -= OnCalibrated;
+            calibration.PlacementValidChanged -= OnPlacementValidChanged;
+        }
+
+        /// <summary>Update() stops placing slabs while placement is invalid,
+        /// but would leave the ones already showing where they were -- so
+        /// hide them here, once, at the moment it becomes invalid.</summary>
+        private void OnPlacementValidChanged(bool valid)
+        {
+            if (valid) return; // Update() shows whatever is due on the next frame
+            foreach (var (_, renderer) in _slabs)
+                if (renderer != null) renderer.enabled = false;
         }
 
         private void OnCalibrated(PianoKeyLayout layout)
@@ -153,7 +166,7 @@ namespace PianoGlass.Highway
 
         private void Update()
         {
-            if (clock == null || calibration == null || !calibration.IsCalibrated || _slabs.Count == 0) return;
+            if (clock == null || calibration == null || !calibration.IsPlacementValid || _slabs.Count == 0) return;
 
             PianoKeyLayout layout = calibration.Layout;
             double songTime = clock.SongTime;

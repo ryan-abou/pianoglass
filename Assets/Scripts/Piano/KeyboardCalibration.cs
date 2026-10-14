@@ -44,8 +44,23 @@ namespace PianoGlass.Piano
         public PianoKeyLayout Layout { get; private set; }
         public bool IsCalibrated => Layout != null;
 
+        /// <summary>
+        /// Whether anything may be drawn at Layout's coordinates right now.
+        /// Separate from IsCalibrated on purpose: a layout can exist and still
+        /// be untrustworthy (mid-recalibration today; an untracked or
+        /// unlocalized anchor later). Every overlay -- keys, highway, edge
+        /// markers -- hides while this is false, so nothing is ever drawn at
+        /// stale coordinates.
+        /// </summary>
+        public bool IsPlacementValid { get; private set; }
+
         /// <summary>Fires whenever a new layout becomes available, including on load.</summary>
         public event Action<PianoKeyLayout> Calibrated;
+
+        /// <summary>Fires when IsPlacementValid changes. Not folded into
+        /// Calibrated(null): CanvasCalibrationFollower would throw on a null
+        /// layout, and PianoKeyHighlighter would destroy all 88 keys.</summary>
+        public event Action<bool> PlacementValidChanged;
 
         /// <summary>Short line to show the user during setup.</summary>
         public string Prompt => CurrentStage switch
@@ -147,6 +162,15 @@ namespace PianoGlass.Piano
             Layout = null;
             CurrentStage = Stage.AwaitingLowest;
             Debug.Log($"[Calibration] restarting (keeping nudge {keptNudge} mm)");
+            SetPlacementValid(false);
+        }
+
+        private void SetPlacementValid(bool valid)
+        {
+            if (IsPlacementValid == valid) return;
+            IsPlacementValid = valid;
+            Debug.Log($"[Calibration] placement {(valid ? "valid" : "invalid")}");
+            PlacementValidChanged?.Invoke(valid);
         }
 
         /// <summary>Throw away the fine-adjust and go back to the raw captured
@@ -222,6 +246,10 @@ namespace PianoGlass.Piano
             Layout = new PianoKeyLayout(_lowPoint + _nudge, _highPoint + _nudge,
                                         lowestNote, highestNote, head, whiteKeyDepth);
             Calibrated?.Invoke(Layout);
+
+            // After Calibrated, so consumers already hold the new layout when
+            // they are told they may show it.
+            SetPlacementValid(true);
         }
 
         // ------------------------------------------------------------------

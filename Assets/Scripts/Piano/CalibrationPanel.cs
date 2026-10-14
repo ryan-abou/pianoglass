@@ -83,7 +83,7 @@ namespace PianoGlass.Piano
                 {
                     _sb.AppendLine();
                     _sb.AppendLine("<color=#E5948A>Those were probably not the lowest and");
-                    _sb.AppendLine("highest keys. Hold both triggers to redo.</color>");
+                    _sb.AppendLine("highest keys. Press B (or left trigger) to redo.</color>");
                 }
             }
 

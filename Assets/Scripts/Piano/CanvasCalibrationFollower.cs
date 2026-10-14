@@ -34,18 +34,61 @@ namespace PianoGlass.Piano
                  "authored in the scene.")]
         [SerializeField] private float fallbackHeight = 1.2f;
 
+        [Tooltip("When placement becomes invalid (recalibrating), the panel " +
+                 "moves this far in front of the head, so the instructions " +
+                 "stay readable instead of hanging at the old keyboard's spot.")]
+        [SerializeField] private float invalidDistance = 0.8f;
+        [Tooltip("...and this far below eye level, in metres.")]
+        [SerializeField] private float invalidDrop = 0.15f;
+
         private void OnEnable()
         {
             ApplyFallbackHeight();
 
             if (calibration == null) return;
             calibration.Calibrated += OnCalibrated;
-            if (calibration.IsCalibrated) OnCalibrated(calibration.Layout);
+            calibration.PlacementValidChanged += OnPlacementValidChanged;
+            if (calibration.IsPlacementValid) OnCalibrated(calibration.Layout);
         }
 
         private void OnDisable()
         {
-            if (calibration != null) calibration.Calibrated -= OnCalibrated;
+            if (calibration == null) return;
+            calibration.Calibrated -= OnCalibrated;
+            calibration.PlacementValidChanged -= OnPlacementValidChanged;
+        }
+
+        private void OnPlacementValidChanged(bool valid)
+        {
+            if (valid)
+            {
+                if (calibration.Layout != null) OnCalibrated(calibration.Layout);
+                return;
+            }
+            PlaceInFrontOfHead();
+        }
+
+        /// <summary>Placed once at the moment placement is lost, not every
+        /// frame: a panel glued to the head is uncomfortable, and during a
+        /// recalibration the player is facing the piano anyway.</summary>
+        private void PlaceInFrontOfHead()
+        {
+            Camera head = Camera.main;
+            if (head == null)
+            {
+                ApplyFallbackHeight();
+                return;
+            }
+
+            Vector3 forward = head.transform.forward;
+            forward.y = 0f;
+            if (forward.sqrMagnitude < 1e-4f) forward = Vector3.forward;
+            forward.Normalize();
+
+            Vector3 pos = head.transform.position + forward * invalidDistance + Vector3.down * invalidDrop;
+
+            // Local +Z away from the player, the same convention OnCalibrated uses.
+            transform.SetPositionAndRotation(pos, Quaternion.LookRotation(forward, Vector3.up));
         }
 
         private void ApplyFallbackHeight()
@@ -57,6 +100,7 @@ namespace PianoGlass.Piano
 
         private void OnCalibrated(PianoKeyLayout layout)
         {
+            if (layout == null) return;
             if (!layout.TryGetKey(layout.LowestNote, out PianoKey low) ||
                 !layout.TryGetKey(layout.HighestNote, out PianoKey high))
                 return;

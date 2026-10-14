@@ -74,10 +74,11 @@ namespace PianoGlass.Transport
             MidiInput.Instance.NoteOff -= OnNoteOff;
         }
 
-        /// <summary>False while KeyboardCalibration hasn't finished -- there's
-        /// no meaningful highway to control yet, and calibration owns the
-        /// controllers' buttons and the player's attention during setup.</summary>
-        private bool CanAcceptInput => calibration != null && calibration.IsCalibrated;
+        /// <summary>False while the keyboard's placement isn't trustworthy --
+        /// mid-calibration, or (later) while an anchor is unresolved. There's
+        /// no visible highway to control then, and calibration owns the
+        /// controllers' buttons and the player's attention.</summary>
+        private bool CanAcceptInput => calibration != null && calibration.IsPlacementValid;
 
         public void TogglePlayPause()
         {
