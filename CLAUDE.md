@@ -296,9 +296,15 @@ looking at."
   at.
 - **Unity hides file extensions in the Project window.** Rename `.cs.txt` files
   in Explorer, not in Unity.
-- **Do not overwrite Meta's generated `AndroidManifest.xml`.** Add the one line
-  `<uses-feature android:name="android.software.midi" android:required="false" />`
-  by hand and leave the passthrough entries alone.
+- **Do not overwrite or hand-edit `Assets/Plugins/Android/AndroidManifest.xml`.**
+  The checked-in file has no passthrough, anchor or MIDI entries: Meta's
+  Gradle step (`OVRManifestPreprocessor`) injects passthrough and
+  `USE_ANCHOR_API` into the *merged* manifest at build time, from
+  `OculusProjectConfig.asset`. Check the APK (`aapt dump permissions`), not
+  the file. The `android.software.midi` `uses-feature` line that
+  `MANIFEST-additions.txt` describes is **not** in the manifest and is not
+  needed — MIDI works on device without it, and with `required="false"` it
+  only ever affected store filtering, never runtime behaviour.
 - **A MIDI note-on with velocity 0 is a note-off.** Most keyboards send these.
   Missed, every note sticks on forever.
 - **To *receive* from a keyboard you open its OUTPUT port**, not its input port.
