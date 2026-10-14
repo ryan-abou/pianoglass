@@ -10,6 +10,13 @@ namespace PianoGlass.Piano
     ///   Left trigger         start calibration over
     ///   Right thumbstick     slide the keyboard left/right and nearer/further
     ///   Left thumbstick up   raise or lower the keyboard
+    ///   Left thumbstick L/R  turn the keyboard about its centre (yaw)
+    ///   Left menu button     measure the controller tip (ControllerTipCalibration);
+    ///                        press again to cancel
+    ///
+    /// The left stick is axis-locked to whichever of up/down or left/right
+    /// is pushed further, so a slightly diagonal push turns *or* raises,
+    /// never both.
     ///
     /// The thumbstick nudging exists because two-point calibration gets the
     /// *scale* right immediately — spacing comes from the distance between the
@@ -33,19 +40,41 @@ namespace PianoGlass.Piano
                  "is slow enough to land on a millimetre.")]
         [SerializeField] private float nudgeSpeed = 0.02f;
 
+        [Tooltip("Degrees per second of yaw at full left-stick deflection. " +
+                 "Slow on purpose: half a degree is already ~5 mm at each end " +
+                 "of an 88-key keyboard.")]
+        [SerializeField] private float yawSpeed = 0.5f;
+
         [Tooltip("Ignore tiny stick drift below this magnitude.")]
         [SerializeField] private float stickDeadzone = 0.15f;
 
         [SerializeField] private bool logInput = false;
 
         private KeyboardCalibration _calibration;
+        private ControllerTipCalibration _tip;
         private bool _nudgedSinceSave;
 
-        private void Awake() => _calibration = GetComponent<KeyboardCalibration>();
+        private void Awake()
+        {
+            _calibration = GetComponent<KeyboardCalibration>();
+            _tip = GetComponent<ControllerTipCalibration>();
+        }
 
         private void Update()
         {
             if (_calibration == null) return;
+
+            if (_tip != null && OVRInput.GetDown(OVRInput.Button.Start, OVRInput.Controller.LTouch))
+            {
+                if (logInput) Debug.Log("[Calibration] left menu — tip calibration");
+                _tip.BeginOrCancel();
+                return;
+            }
+
+            // While the tip is being measured the right controller is held
+            // against a key and rocked; a stray trigger pull must not
+            // capture a point, nor a stick knock nudge the keyboard.
+            if (_tip != null && _tip.IsBusy) return;
 
             if (OVRInput.GetDown(OVRInput.Button.PrimaryIndexTrigger, OVRInput.Controller.RTouch))
             {
@@ -82,9 +111,13 @@ namespace PianoGlass.Piano
             Vector2 left = OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick, OVRInput.Controller.LTouch);
 
             if (right.magnitude < stickDeadzone) right = Vector2.zero;
-            if (Mathf.Abs(left.y) < stickDeadzone) left.y = 0f;
 
-            if (right == Vector2.zero && Mathf.Approximately(left.y, 0f))
+            // Axis-lock the left stick: height or yaw, whichever dominates.
+            if (Mathf.Abs(left.x) > Mathf.Abs(left.y)) left.y = 0f; else left.x = 0f;
+            if (Mathf.Abs(left.y) < stickDeadzone) left.y = 0f;
+            if (Mathf.Abs(left.x) < stickDeadzone) left.x = 0f;
+
+            if (right == Vector2.zero && left == Vector2.zero)
             {
                 // Write the file once, when the sticks come to rest, rather than
                 // every frame while adjusting.
@@ -92,14 +125,23 @@ namespace PianoGlass.Piano
                 {
                     _calibration.Save();
                     _nudgedSinceSave = false;
-                    if (logInput) Debug.Log($"[Calibration] saved nudge {_calibration.NudgeMillimetres}");
+                    Debug.Log($"[Calibration] saved nudge {_calibration.NudgeMillimetres} mm, " +
+                              $"yaw {_calibration.YawDegrees:+0.00;-0.00;0} deg");
                 }
                 return;
             }
 
-            // x: along the keys.  y: up.  z: toward the player.
-            Vector3 delta = new Vector3(right.x, left.y, right.y) * (nudgeSpeed * Time.deltaTime);
-            _calibration.Nudge(delta);
+            if (right != Vector2.zero || left.y != 0f)
+            {
+                // x: along the keys.  y: up.  z: toward the player.
+                Vector3 delta = new Vector3(right.x, left.y, right.y) * (nudgeSpeed * Time.deltaTime);
+                _calibration.Nudge(delta);
+            }
+
+            // Stick right turns the keyboard clockwise seen from above.
+            if (left.x != 0f)
+                _calibration.AdjustYaw(left.x * yawSpeed * Time.deltaTime);
+
             _nudgedSinceSave = true;
         }
     }

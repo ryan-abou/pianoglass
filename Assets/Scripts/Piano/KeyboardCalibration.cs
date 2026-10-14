@@ -42,6 +42,10 @@ namespace PianoGlass.Piano
 
         public Stage CurrentStage { get; private set; } = Stage.Idle;
         public PianoKeyLayout Layout { get; private set; }
+
+        /// <summary>The transform whose position is captured. Exposed so
+        /// ControllerTipCalibration can move it onto the real plastic tip.</summary>
+        public Transform PointerTip => pointerTip;
         public bool IsCalibrated => Layout != null;
 
         /// <summary>
@@ -67,7 +71,7 @@ namespace PianoGlass.Piano
         {
             Stage.AwaitingLowest  => $"Touch the front edge of the LOWEST key ({NoteName(lowestNote)}) and pull the trigger",
             Stage.AwaitingHighest => $"Now the HIGHEST key ({NoteName(highestNote)})",
-            Stage.Calibrated      => "Calibrated.  sticks = nudge   B = redo   stick click = clear nudge",
+            Stage.Calibrated      => "Calibrated.  sticks = nudge   left stick L/R = yaw   B = redo   stick click = clear nudge",
             _                     => "Press the trigger to start calibration"
         };
 
@@ -79,6 +83,14 @@ namespace PianoGlass.Piano
         /// tip physically touched — a constant error that shifts the whole
         /// keyboard without distorting the spacing between keys.</summary>
         private Vector3 _nudge;
+
+        /// <summary>Fine rotation about the vertical axis through the
+        /// keyboard's centre, degrees. Replaces holding the Meta button to
+        /// recenter until the piano happens to line up. Unlike the nudge it
+        /// belongs to the captured points, so a fresh capture resets it.</summary>
+        private float _yawDegrees;
+
+        public float YawDegrees => _yawDegrees;
 
         private string FilePath => Path.Combine(Application.persistentDataPath, fileName);
 
@@ -199,6 +211,9 @@ namespace PianoGlass.Piano
             _lowPoint = low;
             _highPoint = high;
 
+            // Yaw trimmed the old points; it means nothing for new ones.
+            _yawDegrees = 0f;
+
             // Deliberately NOT clearing the nudge here. It mostly compensates
             // for the fixed gap between the controller's tracked origin and the
             // plastic tip you actually touch with — a property of the hardware,
@@ -233,6 +248,26 @@ namespace PianoGlass.Piano
             RebuildLayout();
         }
 
+        /// <summary>
+        /// Turn the whole keyboard about the vertical axis through its
+        /// centre. Vertical only -- a keyboard on a stand does not roll.
+        /// Cheap enough to call every frame while the stick is held.
+        /// </summary>
+        public void AdjustYaw(float deltaDegrees)
+        {
+            if (Layout == null) return;
+            _yawDegrees = Mathf.Clamp(_yawDegrees + deltaDegrees, -10f, 10f);
+            RebuildLayout();
+        }
+
+        [ContextMenu("Clear yaw")]
+        public void ClearYaw()
+        {
+            _yawDegrees = 0f;
+            if (Layout != null) RebuildLayout();
+            Save();
+        }
+
         /// <summary>Total correction applied so far, in millimetres, for display.</summary>
         public Vector3 NudgeMillimetres => Layout == null
             ? Vector3.zero
@@ -243,7 +278,13 @@ namespace PianoGlass.Piano
         private void RebuildLayout()
         {
             Vector3 head = headTransform != null ? headTransform.position : _lowPoint + Vector3.back;
-            Layout = new PianoKeyLayout(_lowPoint + _nudge, _highPoint + _nudge,
+
+            // Yaw first, about the captured points' own centre, then the
+            // nudge -- so the nudge, which Nudge() builds from the layout's
+            // axes, is never itself rotated a second time.
+            var turned = AnchoredKeyboard.RotateYaw(new KeyboardGeometry(_lowPoint, _highPoint, Vector3.zero), _yawDegrees);
+
+            Layout = new PianoKeyLayout(turned.LowFront + _nudge, turned.HighFront + _nudge,
                                         lowestNote, highestNote, head, whiteKeyDepth);
             Calibrated?.Invoke(Layout);
 
@@ -266,6 +307,9 @@ namespace PianoGlass.Piano
             public int lowestNote;
             public int highestNote;
             public float whiteKeyDepth;
+            // Added with yaw fine-adjust. Absent in older files, which
+            // JsonUtility reads as 0 -- exactly "no yaw".
+            public float yawDegrees;
         }
 
         public void Save()
@@ -279,7 +323,8 @@ namespace PianoGlass.Piano
                 head = headTransform != null ? headTransform.position : Vector3.zero,
                 lowestNote = lowestNote,
                 highestNote = highestNote,
-                whiteKeyDepth = whiteKeyDepth
+                whiteKeyDepth = whiteKeyDepth,
+                yawDegrees = _yawDegrees
             };
 
             try
@@ -306,6 +351,7 @@ namespace PianoGlass.Piano
                 _lowPoint = data.low;
                 _highPoint = data.high;
                 _nudge = data.nudge;
+                _yawDegrees = float.IsNaN(data.yawDegrees) ? 0f : Mathf.Clamp(data.yawDegrees, -10f, 10f);
 
                 if (headTransform == null && Camera.main != null) headTransform = Camera.main.transform;
                 RebuildLayout();

@@ -228,6 +228,55 @@ namespace PianoGlass.EditorTools
         }
 
         /// <summary>
+        /// Adds ControllerTipCalibration next to KeyboardCalibration (left
+        /// menu button measures where the controller tip really is) and
+        /// points it, and CalibrationPanel, at the right objects. Yaw
+        /// fine-adjust needs no wiring -- it lives in KeyboardCalibration and
+        /// OvrCalibrationInput already. Idempotent.
+        /// </summary>
+        [MenuItem("PianoGlass/Scene/Configure Calibration Tools")]
+        public static void ConfigureCalibrationTools()
+        {
+            Scene scene = OpenScene();
+
+            var calibration = Object.FindAnyObjectByType<KeyboardCalibration>();
+            if (calibration == null)
+            {
+                Debug.LogError("[SceneSetup] No KeyboardCalibration in the scene -- nothing to attach tip calibration to.");
+                return;
+            }
+
+            var calibrationSo = new SerializedObject(calibration);
+            var pointerTip = calibrationSo.FindProperty("pointerTip").objectReferenceValue as Transform;
+            if (pointerTip == null || pointerTip.parent == null)
+                Debug.LogWarning("[SceneSetup] KeyboardCalibration.pointerTip is unassigned or has no parent -- " +
+                                 "tip calibration samples the parent (controller) pose and will refuse to run.");
+
+            GameObject host = calibration.gameObject;
+            var tip = host.GetComponent<ControllerTipCalibration>();
+            if (tip == null) tip = host.AddComponent<ControllerTipCalibration>();
+
+            var tipSo = new SerializedObject(tip);
+            tipSo.FindProperty("pointerTip").objectReferenceValue = pointerTip;
+            tipSo.ApplyModifiedProperties();
+
+            CalibrationPanel panel = Object.FindAnyObjectByType<CalibrationPanel>();
+            if (panel != null)
+            {
+                var panelSo = new SerializedObject(panel);
+                panelSo.FindProperty("tip").objectReferenceValue = tip;
+                panelSo.ApplyModifiedProperties();
+            }
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+
+            Debug.Log("[SceneSetup] Calibration tools configured: ControllerTipCalibration on " +
+                      $"'{host.name}' (pointerTip = {(pointerTip != null ? pointerTip.name : "none")}), " +
+                      $"CalibrationPanel {(panel != null ? "wired" : "not found")}.");
+        }
+
+        /// <summary>
         /// Removes the leftover default "Cube" GameObject from Day 1 testing
         /// -- a plain 1x1x1 primitive sitting at the scene root, unrelated to
         /// any of the piano/overlay/highway wiring above. Idempotent: logs

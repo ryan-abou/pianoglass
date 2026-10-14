@@ -787,6 +787,7 @@ MonoBehaviour:
   calibration: {fileID: 2007997132}
   transport: {fileID: 644933872}
   clock: {fileID: 1285217052}
+  tip: {fileID: 2007997135}
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -1262,6 +1263,8 @@ MonoBehaviour:
   noteHighway: {fileID: 1034278083}
   heightAboveKeys: 0.65
   fallbackHeight: 1.2
+  invalidDistance: 0.8
+  invalidDrop: 0.15
 --- !u!1 &1253870629
 GameObject:
   m_ObjectHideFlags: 0
@@ -2012,6 +2015,7 @@ GameObject:
   - component: {fileID: 2007997131}
   - component: {fileID: 2007997130}
   - component: {fileID: 2007997134}
+  - component: {fileID: 2007997135}
   m_Layer: 0
   m_Name: Calibration
   m_TagString: Untagged
@@ -2058,6 +2062,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PianoGlass.Piano.OvrCalibrationInput
   nudgeSpeed: 0.02
+  yawSpeed: 0.5
   stickDeadzone: 0.15
   logInput: 0
 --- !u!114 &2007997132
@@ -2109,6 +2114,24 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PianoGlass.Piano.OvrKeyOverlayInput
   highlighter: {fileID: 2007997130}
   passthroughLayer: {fileID: 1356923014}
+--- !u!114 &2007997135
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2007997129}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6d60f9bbf5f71aa42bf76b33a340bf15, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PianoGlass.Piano.ControllerTipCalibration
+  pointerTip: {fileID: 1356427213}
+  settleSeconds: 1.5
+  recordSeconds: 10
+  sampleRate: 30
+  maxRmsMm: 3
+  maxOffsetMetres: 0.15
 --- !u!1 &2021435340
 GameObject:
   m_ObjectHideFlags: 0
