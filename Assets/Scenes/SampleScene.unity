@@ -2016,6 +2016,7 @@ GameObject:
   - component: {fileID: 2007997130}
   - component: {fileID: 2007997134}
   - component: {fileID: 2007997135}
+  - component: {fileID: 2007997136}
   m_Layer: 0
   m_Name: Calibration
   m_TagString: Untagged
@@ -2132,6 +2133,26 @@ MonoBehaviour:
   sampleRate: 30
   maxRmsMm: 3
   maxOffsetMetres: 0.15
+--- !u!114 &2007997136
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2007997129}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 04d4528f5e7653f4c8f7b0b2e0a8b694, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PianoGlass.Piano.OvrAnchorSpike
+  calibration: {fileID: 2007997132}
+  tip: {fileID: 2007997135}
+  markerMaterial: {fileID: 2100000, guid: dff0fda6605ad8e499fbcb1b54937d0b, type: 2}
+  localizeTimeoutSeconds: 10
+  eraseHoldSeconds: 1.5
+  gripThreshold: 0.6
+  jumpMetres: 0.05
+  jumpDegrees: 2
 --- !u!1 &2021435340
 GameObject:
   m_ObjectHideFlags: 0

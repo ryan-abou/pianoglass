@@ -277,6 +277,46 @@ namespace PianoGlass.EditorTools
         }
 
         /// <summary>
+        /// Adds the development-only spatial-anchor test harness
+        /// (OvrAnchorSpike: right grip create+save, left grip load, both grips
+        /// held erase) next to KeyboardCalibration, wired to it, to the
+        /// ControllerTipCalibration (so it stays quiet while the tip is
+        /// measured) and to NoteHighway.mat for its markers. The component
+        /// disables itself in release builds. Idempotent.
+        /// </summary>
+        [MenuItem("PianoGlass/Scene/Configure Anchor Spike")]
+        public static void ConfigureAnchorSpike()
+        {
+            Scene scene = OpenScene();
+
+            var calibration = Object.FindAnyObjectByType<KeyboardCalibration>();
+            if (calibration == null)
+            {
+                Debug.LogError("[SceneSetup] No KeyboardCalibration in the scene -- the anchor spike needs a keyboard to anchor.");
+                return;
+            }
+
+            GameObject host = calibration.gameObject;
+            var spike = host.GetComponent<OvrAnchorSpike>();
+            if (spike == null) spike = host.AddComponent<OvrAnchorSpike>();
+
+            var so = new SerializedObject(spike);
+            so.FindProperty("calibration").objectReferenceValue = calibration;
+            so.FindProperty("tip").objectReferenceValue = host.GetComponent<ControllerTipCalibration>();
+            SerializedProperty materialProp = so.FindProperty("markerMaterial");
+            if (materialProp.objectReferenceValue == null)
+                materialProp.objectReferenceValue = GetOrCreateNoteMaterial();
+            so.ApplyModifiedProperties();
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+
+            Debug.Log($"[SceneSetup] Anchor spike configured on '{host.name}' " +
+                      $"(tip {(host.GetComponent<ControllerTipCalibration>() != null ? "wired" : "missing")}, " +
+                      $"marker material {(materialProp.objectReferenceValue != null ? materialProp.objectReferenceValue.name : "none")}).");
+        }
+
+        /// <summary>
         /// Removes the leftover default "Cube" GameObject from Day 1 testing
         /// -- a plain 1x1x1 primitive sitting at the scene root, unrelated to
         /// any of the piano/overlay/highway wiring above. Idempotent: logs
