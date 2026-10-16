@@ -294,6 +294,17 @@ looking at."
   registers the note wall; before calibration exists it falls back to a
   serialized height rather than whatever y the Canvas happened to be authored
   at.
+- **A running adb server breaks headless Unity. Run `adb kill-server` before
+  every batchmode run** — tests, a `SceneSetup` method via `-executeMethod`,
+  and `build.ps1`. With an adb server already up, batchmode Unity exits
+  `-1073740791` (`0xC0000409`) right after "Native extension for Android
+  target not found", before any test or method runs — it looks like a code or
+  scene bug and is neither. Unity's Android module starts that adb server
+  itself and it outlives Unity, so the *second* headless run after anything
+  Android-related (including `build.ps1 -Install`) is the one that crashes.
+  The same lingering adb child is why `build.ps1`'s `Start-Process -Wait` can
+  hang long after Unity has exited: `-Wait` waits for the whole process tree.
+  `-PassThru` plus `$p.WaitForExit()` waits for Unity alone.
 - **Unity hides file extensions in the Project window.** Rename `.cs.txt` files
   in Explorer, not in Unity.
 - **Do not overwrite or hand-edit `Assets/Plugins/Android/AndroidManifest.xml`.**
@@ -301,10 +312,11 @@ looking at."
   Gradle step (`OVRManifestPreprocessor`) injects passthrough and
   `USE_ANCHOR_API` into the *merged* manifest at build time, from
   `OculusProjectConfig.asset`. Check the APK (`aapt dump permissions`), not
-  the file. The `android.software.midi` `uses-feature` line that
-  `MANIFEST-additions.txt` describes is **not** in the manifest and is not
-  needed — MIDI works on device without it, and with `required="false"` it
-  only ever affected store filtering, never runtime behaviour.
+  the file. There is **no** `android.software.midi` `uses-feature` line and
+  none is needed — MIDI works on device without it, and with
+  `required="false"` it only ever affected store filtering, never runtime
+  behaviour. `MANIFEST-additions.txt` says what the file holds and how to
+  check the merged APK.
 - **A MIDI note-on with velocity 0 is a note-off.** Most keyboards send these.
   Missed, every note sticks on forever.
 - **To *receive* from a keyboard you open its OUTPUT port**, not its input port.
