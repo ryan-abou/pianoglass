@@ -7,8 +7,10 @@ namespace PianoGlass.Piano
 {
     /// <summary>
     /// Development-build-only test harness for spatial anchors (P-01..P-03).
-    /// Not the anchored-calibration feature: nothing reads what it writes,
-    /// and useAnchoredCalibration stays false. It exists to answer, on the
+    /// Not the anchored-calibration feature: nothing reads what it writes.
+    /// Since Phase 4 the component is disabled in the scene (SceneSetup,
+    /// Configure Anchored Calibration) -- its grips would clash with the
+    /// Phase 5 corrections -- and the code is kept. It existed to answer, on the
     /// real headset, "does an anchor saved at the piano come back on the
     /// piano after a relaunch / recenter / reboot, and how long does it take".
     ///

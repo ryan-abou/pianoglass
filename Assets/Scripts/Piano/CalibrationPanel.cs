@@ -24,6 +24,9 @@ namespace PianoGlass.Piano
         [SerializeField] private SongTransport transport;
         [SerializeField] private SongClock clock;
         [SerializeField] private ControllerTipCalibration tip;
+        [Tooltip("Anchored calibration. Its status is shown here because the " +
+                 "player has no PC attached -- a logcat-only message is invisible.")]
+        [SerializeField] private CalibrationFlowController flow;
 
         private readonly StringBuilder _sb = new StringBuilder(256);
 
@@ -34,6 +37,7 @@ namespace PianoGlass.Piano
             transport = FindAnyObjectByType<SongTransport>();
             clock = FindAnyObjectByType<SongClock>();
             tip = FindAnyObjectByType<ControllerTipCalibration>();
+            flow = FindAnyObjectByType<CalibrationFlowController>();
         }
 
         private void Awake()
@@ -43,6 +47,7 @@ namespace PianoGlass.Piano
             if (transport == null) transport = FindAnyObjectByType<SongTransport>();
             if (clock == null) clock = FindAnyObjectByType<SongClock>();
             if (tip == null) tip = FindAnyObjectByType<ControllerTipCalibration>();
+            if (flow == null) flow = FindAnyObjectByType<CalibrationFlowController>();
         }
 
         private void Update()
@@ -64,6 +69,23 @@ namespace PianoGlass.Piano
             }
 
             _sb.AppendLine(calibration.Prompt);
+
+            if (flow != null && flow.Active)
+            {
+                string colour = flow.Status switch
+                {
+                    AnchorPanelStatus.Ready          => "#A9C67C",
+                    AnchorPanelStatus.Untracked      => "#E5948A",
+                    AnchorPanelStatus.LocalizeFailed => "#E5948A",
+                    AnchorPanelStatus.NotFound       => "#E5948A",
+                    _                                => "#E8D48A",
+                };
+                _sb.AppendLine($"anchor:     <color={colour}>{flow.StatusLine}</color>");
+                // Cleared by every success, so whatever is here is current --
+                // including "not saved" while the keys are showing.
+                if (!string.IsNullOrEmpty(flow.LastProblem))
+                    _sb.AppendLine($"<color=#E5948A>{flow.LastProblem}</color>");
+            }
 
             if (tip != null)
             {

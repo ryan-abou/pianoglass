@@ -788,6 +788,7 @@ MonoBehaviour:
   transport: {fileID: 644933872}
   clock: {fileID: 1285217052}
   tip: {fileID: 2007997135}
+  flow: {fileID: 2007997137}
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -2017,6 +2018,8 @@ GameObject:
   - component: {fileID: 2007997134}
   - component: {fileID: 2007997135}
   - component: {fileID: 2007997136}
+  - component: {fileID: 2007997138}
+  - component: {fileID: 2007997137}
   m_Layer: 0
   m_Name: Calibration
   m_TagString: Untagged
@@ -2140,7 +2143,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2007997129}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 04d4528f5e7653f4c8f7b0b2e0a8b694, type: 3}
   m_Name: 
@@ -2151,6 +2154,37 @@ MonoBehaviour:
   localizeTimeoutSeconds: 10
   eraseHoldSeconds: 1.5
   gripThreshold: 0.6
+  jumpMetres: 0.05
+  jumpDegrees: 2
+--- !u!114 &2007997137
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2007997129}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 57a8a1b6e8c3d5849ba620e2da0ef66d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PianoGlass.Piano.CalibrationFlowController
+  calibration: {fileID: 2007997132}
+  anchorManager: {fileID: 2007997138}
+  useAnchoredCalibration: 1
+  localizeTimeoutSeconds: 10
+  maxLocalizeAttempts: 3
+--- !u!114 &2007997138
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2007997129}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5ea60fd19f638a240a4f0cdf1a6bc2ae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PianoGlass.Piano.PianoAnchorManager
   jumpMetres: 0.05
   jumpDegrees: 2
 --- !u!1 &2021435340

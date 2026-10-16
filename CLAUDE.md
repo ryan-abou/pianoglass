@@ -154,6 +154,10 @@ Assets/
     OvrKeyOverlayInput.cs             display mode + passthrough toggle OVRInput code
     CalibrationPanel.cs               in-headset calibration + transport readout
     CanvasCalibrationFollower.cs      status Canvas registered on the keyboard, not world space
+    Core/AnchoredCalibrationSession.cs  anchored calibration end to end: CalibrationFlow + anchor I/O + profile writes (own asmdef, tested)
+    CalibrationFlowController.cs      Unity shell for the session; KeyboardCalibration's placement owner (dev builds only)
+    PianoAnchorManager.cs             LateUpdate: re-publishes the layout when the bound anchor moves > 1 mm / 0.1 deg
+    OvrAnchorServiceRegistration.cs   hands the controller OvrPianoAnchorService on device (editor uses the fake)
   Scripts/Song/
     Song.cs                           SongNote + SongData, hard-coded 8-bar melody (own asmdef)
     SongClock.cs                      double songTime, tempo multiplier, pre-song lead-in

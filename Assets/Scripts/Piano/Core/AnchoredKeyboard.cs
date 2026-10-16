@@ -271,6 +271,26 @@ namespace PianoGlass.Piano
         }
 
         // ------------------------------------------------------------------
+        // Following a live anchor
+        // ------------------------------------------------------------------
+
+        /// <summary>Below this the anchor has not really moved: the runtime's
+        /// pose jitters by fractions of a millimetre frame to frame, and
+        /// rebuilding 88 keys for that is wasted work.</summary>
+        public const float RebuildMetres = 0.001f;
+        public const float RebuildDegrees = 0.1f;
+
+        /// <summary>True when <paramref name="now"/> is more than
+        /// <paramref name="metres"/> or <paramref name="degrees"/> away from
+        /// <paramref name="last"/> -- the pose the current layout was built
+        /// from. Compared against that pose, not last frame's, so slow drift
+        /// accumulates until it crosses the threshold instead of hiding
+        /// under it forever.</summary>
+        public static bool PoseMoved(Pose last, Pose now, float metres = RebuildMetres, float degrees = RebuildDegrees) =>
+            (now.position - last.position).sqrMagnitude > metres * metres ||
+            Quaternion.Angle(last.rotation, now.rotation) > degrees;
+
+        // ------------------------------------------------------------------
 
         public static Vector3 Horizontal(Vector3 v) => new Vector3(v.x, 0f, v.z);
 

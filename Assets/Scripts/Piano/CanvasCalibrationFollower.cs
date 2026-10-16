@@ -40,6 +40,12 @@ namespace PianoGlass.Piano
         [SerializeField] private float invalidDistance = 0.8f;
         [Tooltip("...and this far below eye level, in metres.")]
         [SerializeField] private float invalidDrop = 0.15f;
+        [Tooltip("While placement is invalid, re-place the panel in front of the " +
+                 "head once it is more than this many degrees out of view. Wide " +
+                 "enough that reaching for the lowest or highest key does not " +
+                 "make it jump; there so a launch facing away from the piano " +
+                 "still shows 'localizing' somewhere you can read it.")]
+        [SerializeField] private float invalidRefollowDegrees = 70f;
 
         private void OnEnable()
         {
@@ -68,8 +74,32 @@ namespace PianoGlass.Piano
             PlaceInFrontOfHead();
         }
 
-        /// <summary>Placed once at the moment placement is lost, not every
-        /// frame: a panel glued to the head is uncomfortable, and during a
+        /// <summary>
+        /// Anchored mode starts every launch with placement invalid (the
+        /// anchor is still localizing) and the head not yet tracked, so the
+        /// one-off placement below is often behind the player or at the
+        /// origin. Re-place only when the panel is well out of view -- never
+        /// a panel glued to the head.
+        /// </summary>
+        private void LateUpdate()
+        {
+            if (calibration == null || calibration.IsPlacementValid) return;
+            Camera head = Camera.main;
+            if (head == null) return;
+
+            Vector3 toPanel = transform.position - head.transform.position;
+            Vector3 forward = head.transform.forward;
+            toPanel.y = 0f;
+            forward.y = 0f;
+            if (toPanel.sqrMagnitude < 1e-4f || forward.sqrMagnitude < 1e-4f) return;
+
+            if (Vector3.Angle(forward, toPanel) > invalidRefollowDegrees || toPanel.magnitude > 3f)
+                PlaceInFrontOfHead();
+        }
+
+        /// <summary>Placed once at the moment placement is lost (and again by
+        /// LateUpdate only if it ends up far out of view), not every frame: a
+        /// panel glued to the head is uncomfortable, and during a
         /// recalibration the player is facing the piano anyway.</summary>
         private void PlaceInFrontOfHead()
         {

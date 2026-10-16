@@ -317,6 +317,65 @@ namespace PianoGlass.EditorTools
         }
 
         /// <summary>
+        /// Phase 4: the real overlays follow a spatial anchor. Adds
+        /// PianoAnchorManager and CalibrationFlowController next to
+        /// KeyboardCalibration (useAnchoredCalibration on -- it only takes
+        /// effect in development builds), points CalibrationPanel at the
+        /// controller so anchor status shows in the headset, and disables
+        /// OvrAnchorSpike: its grip bindings would clash with the Phase 5
+        /// corrections, and two things creating anchors from one keyboard is
+        /// one too many. The spike's code and component stay, disabled.
+        /// Idempotent.
+        /// </summary>
+        [MenuItem("PianoGlass/Scene/Configure Anchored Calibration")]
+        public static void ConfigureAnchoredCalibration()
+        {
+            Scene scene = OpenScene();
+
+            var calibration = Object.FindAnyObjectByType<KeyboardCalibration>();
+            if (calibration == null)
+            {
+                Debug.LogError("[SceneSetup] No KeyboardCalibration in the scene -- nothing to anchor.");
+                return;
+            }
+
+            GameObject host = calibration.gameObject;
+            var manager = host.GetComponent<PianoAnchorManager>();
+            if (manager == null) manager = host.AddComponent<PianoAnchorManager>();
+
+            var controller = host.GetComponent<CalibrationFlowController>();
+            if (controller == null) controller = host.AddComponent<CalibrationFlowController>();
+
+            var so = new SerializedObject(controller);
+            so.FindProperty("calibration").objectReferenceValue = calibration;
+            so.FindProperty("anchorManager").objectReferenceValue = manager;
+            so.FindProperty("useAnchoredCalibration").boolValue = true;
+            so.ApplyModifiedProperties();
+
+            CalibrationPanel panel = Object.FindAnyObjectByType<CalibrationPanel>();
+            if (panel != null)
+            {
+                var panelSo = new SerializedObject(panel);
+                panelSo.FindProperty("flow").objectReferenceValue = controller;
+                panelSo.ApplyModifiedProperties();
+            }
+
+            var spike = host.GetComponent<OvrAnchorSpike>();
+            if (spike != null)
+            {
+                spike.enabled = false;
+                EditorUtility.SetDirty(spike);
+            }
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+
+            Debug.Log($"[SceneSetup] Anchored calibration configured on '{host.name}': PianoAnchorManager + " +
+                      $"CalibrationFlowController, CalibrationPanel {(panel != null ? "wired" : "not found")}, " +
+                      $"OvrAnchorSpike {(spike != null ? "disabled" : "not present")}.");
+        }
+
+        /// <summary>
         /// Removes the leftover default "Cube" GameObject from Day 1 testing
         /// -- a plain 1x1x1 primitive sitting at the scene root, unrelated to
         /// any of the piano/overlay/highway wiring above. Idempotent: logs
