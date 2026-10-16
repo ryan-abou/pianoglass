@@ -71,7 +71,7 @@ namespace PianoGlass.EditorTools
             {
                 CanvasCalibrationFollower follower = canvas.GetComponent<CanvasCalibrationFollower>();
                 if (follower == null) follower = canvas.gameObject.AddComponent<CanvasCalibrationFollower>();
-                WireCanvasFollower(follower, calibration, highway);
+                WireCanvasFollower(follower, calibration);
             }
 
             EditorSceneManager.MarkSceneDirty(scene);
@@ -386,6 +386,7 @@ namespace PianoGlass.EditorTools
             var so = new SerializedObject(highway);
             so.FindProperty("calibration").objectReferenceValue = calibration;
             so.FindProperty("clock").objectReferenceValue = clock;
+            so.FindProperty("depthOffset").floatValue = HighwayDepthOffset;
 
             SerializedProperty materialProp = so.FindProperty("noteMaterial");
             if (materialProp.objectReferenceValue == null)
@@ -419,11 +420,19 @@ namespace PianoGlass.EditorTools
             so.ApplyModifiedProperties();
         }
 
-        private static void WireCanvasFollower(CanvasCalibrationFollower follower, KeyboardCalibration calibration, NoteHighway highway)
+        /// <summary>The note wall and the status panel used to share one
+        /// standoff (NoteHighway.depthOffset, 0.05 in the scene). The wall now
+        /// sits HighwayDepthOffset behind the keys -- 40 mm closer to the
+        /// player -- while the panel keeps PanelDepthOffset, exactly where it
+        /// was. Both set here so the scene cannot keep a stale override.</summary>
+        private const float HighwayDepthOffset = 0.010f;
+        private const float PanelDepthOffset = 0.05f;
+
+        private static void WireCanvasFollower(CanvasCalibrationFollower follower, KeyboardCalibration calibration)
         {
             var so = new SerializedObject(follower);
             so.FindProperty("calibration").objectReferenceValue = calibration;
-            so.FindProperty("noteHighway").objectReferenceValue = highway;
+            so.FindProperty("depthOffset").floatValue = PanelDepthOffset;
             so.ApplyModifiedProperties();
         }
 

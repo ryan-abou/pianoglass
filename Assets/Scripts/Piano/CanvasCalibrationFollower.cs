@@ -1,4 +1,3 @@
-using PianoGlass.Highway;
 using UnityEngine;
 
 namespace PianoGlass.Piano
@@ -20,11 +19,12 @@ namespace PianoGlass.Piano
     {
         [Header("Wiring")]
         [SerializeField] private KeyboardCalibration calibration;
-        [Tooltip("Read for its DepthOffset only, so the panel sits at the same " +
-                 "depth as the note wall without a second copy of that number.")]
-        [SerializeField] private NoteHighway noteHighway;
 
         [Header("Placement")]
+        [Tooltip("Standoff behind the keys' far edge, in metres. Its own number, " +
+                 "not NoteHighway's: the wall moved 40 mm toward the player and " +
+                 "the panel deliberately did not, so the two no longer share one.")]
+        [SerializeField] private float depthOffset = 0.05f;
         [Tooltip("Height above the key plane once calibrated, in metres. 0.65 m " +
                  "clears the top of the default 0.5 m note wall.")]
         [SerializeField] private float heightAboveKeys = 0.65f;
@@ -110,8 +110,7 @@ namespace PianoGlass.Piano
             // the keyboard's span at that same mid-depth -- the same starting
             // point NoteHighway steps back from to find the wall's far edge.
             Vector3 spanCentre = (low.Center + high.Center) * 0.5f;
-            float depthBack = layout.WhiteKeyDepth * 0.5f +
-                               (noteHighway != null ? noteHighway.DepthOffset : 0f);
+            float depthBack = layout.WhiteKeyDepth * 0.5f + depthOffset;
             Vector3 wallDepth = spanCentre - layout.Forward * depthBack;
             Vector3 pos = wallDepth + layout.Up * heightAboveKeys;
 
