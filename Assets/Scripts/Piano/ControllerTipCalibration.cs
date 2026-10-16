@@ -66,16 +66,15 @@ namespace PianoGlass.Piano
         private float _phaseStart;
         private float _nextSample;
 
+        private KeyboardCalibration _calibration;
+
         private PianoProfileSerializer Serializer =>
             new PianoProfileSerializer(Path.Combine(Application.persistentDataPath, PianoProfileSerializer.DefaultFileName));
 
         private void Awake()
         {
-            if (pointerTip == null)
-            {
-                var calibration = GetComponent<KeyboardCalibration>();
-                if (calibration != null) pointerTip = calibration.PointerTip;
-            }
+            _calibration = GetComponent<KeyboardCalibration>();
+            if (pointerTip == null && _calibration != null) pointerTip = _calibration.PointerTip;
         }
 
         private void Start() => LoadSaved();
@@ -175,12 +174,23 @@ namespace PianoGlass.Piano
                 Status = $"Tip measured but not saved: {error}";
                 Debug.LogWarning("[TipCal] " + error);
                 Apply(r.TipOffset, rmsMm); // still use it this session
+                ResetKeyboardNudge();
                 return;
             }
 
             Apply(r.TipOffset, rmsMm);
+            ResetKeyboardNudge();
             Status = $"Tip saved: {r.TipOffset.magnitude * 1000f:0.0} mm from the tracked origin, RMS {rmsMm:0.0} mm. " +
-                     "Clear the nudge (right stick click) and recalibrate (B).";
+                     "Nudge reset to zero -- now recalibrate (B).";
+        }
+
+        /// <summary>The keyboard nudge existed to absorb the gap between the
+        /// controller origin and its tip. With the tip measured, PointerTip
+        /// already sits on the real tip, so keeping the old nudge would count
+        /// that gap twice.</summary>
+        private void ResetKeyboardNudge()
+        {
+            if (_calibration != null) _calibration.ClearNudge("tip calibrated");
         }
 
         private void Apply(Vector3 offset, float rmsMm)

@@ -189,12 +189,20 @@ namespace PianoGlass.Piano
         /// points. Use when the correction is plainly wrong rather than slightly
         /// off — after switching controllers, say.</summary>
         [ContextMenu("Clear nudge")]
-        public void ClearNudge()
+        public void ClearNudge() => ClearNudge("requested");
+
+        /// <param name="reason">Goes in the log line, so a nudge that
+        /// vanished can be traced to what cleared it.</param>
+        public void ClearNudge(string reason)
         {
+            // In keyboard-frame millimetres when there is a layout to express
+            // them in; mid-recalibration there is none, so world millimetres.
+            Vector3 was = Layout != null ? NudgeMillimetres : _nudge * 1000f;
             _nudge = Vector3.zero;
             if (Layout != null) RebuildLayout();
             Save();
-            Debug.Log("[Calibration] nudge cleared");
+            Debug.Log($"[Calibration] nudge cleared ({reason}); was " +
+                      $"x {was.x:+0.0;-0.0;0} y {was.y:+0.0;-0.0;0} z {was.z:+0.0;-0.0;0} mm");
         }
 
         private void Apply(Vector3 low, Vector3 high)
