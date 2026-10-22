@@ -429,6 +429,33 @@ recenters of up to 1.1 m / 180° kept the keys on the piano).
 
 ---
 
+## Git workflow
+
+`main` is always the version that has passed on the headset. Everything else
+happens on a branch. GitHub remote: `origin` = github.com/ryan-abou/pianoglass.
+Commits only count on Ryan's GitHub contribution graph once they are on `main`,
+and they keep their original commit dates.
+
+1. **Start new work from main:** `git checkout main`, `git pull`, then
+   `git checkout -b <short-name>` (e.g. `phase6-twopoint`).
+2. **Commit whenever a step works.** `git status`, then `git add -A`, then
+   `git commit -m "<what changed>"`. Never `git commit -am` (it skips new files).
+3. **Push at the end of every session, even if nothing works yet.** First push
+   of a branch: `git push -u origin <short-name>`; after that, `git push`.
+   This is the only off-machine backup.
+4. **Merge only after the headset test passes:** `git checkout main`,
+   `git pull`, `git merge <short-name>`, `git push`. Keep the branch. If the
+   test fails, stay on the branch, fix, retest.
+5. **Record the result** in `docs/anchored-calibration-status.md` (or the
+   relevant status doc) in the same commit as the merge or just before it.
+
+When Ryan says "push", "merge this into main" or "start a new branch", follow
+these steps exactly. Ask before force-pushing, rewriting history, or deleting a
+branch. If a merge reports a conflict, stop and explain it rather than
+resolving it silently.
+
+---
+
 ## Current state and what is next
 
 Working and proven on device: MIDI input end to end, 88-key overlay registered
