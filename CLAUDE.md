@@ -155,6 +155,14 @@ Assets/
     CalibrationPanel.cs               in-headset calibration + transport readout
     CanvasCalibrationFollower.cs      status Canvas registered on the keyboard, not world space
     Core/AnchoredCalibrationSession.cs  anchored calibration end to end: CalibrationFlow + anchor I/O + profile writes (own asmdef, tested)
+    Core/CalibrationFlow.cs           pure state machine: Launch/Localizing/FullCalibration/Verifying/Correcting/Ready/Suspended
+    Core/AnchoredKeyboard.cs          yaw-only anchor frame, world <-> anchor-local, one-/two-point correction, plausibility
+    Core/PianoProfileData.cs + PianoProfileSerializer.cs + PianoProfileEdits.cs
+                                      piano_profiles.json schema v2: atomic writes, rename-aside on invalid, pure edits
+    Core/PivotCalibration.cs          least-squares controller-tip offset for ControllerTipCalibration
+    Core/EditorPianoAnchorService.cs  fake anchor runtime for the editor and tests (simulated recenter/relaunch)
+    ControllerTipCalibration.cs       left menu: measure the controller tip; written to the profile root
+    OvrPianoAnchorService.cs          IPianoAnchorService on OVRSpatialAnchor's async API (device only)
     CalibrationFlowController.cs      Unity shell for the session; KeyboardCalibration's placement owner (dev builds only)
     PianoAnchorManager.cs             LateUpdate: re-publishes the layout when the bound anchor moves > 1 mm / 0.1 deg
     OvrAnchorServiceRegistration.cs   hands the controller OvrPianoAnchorService on device (editor uses the fake)
@@ -283,6 +291,46 @@ looking at."
 
 ---
 
+## Anchored calibration (development builds)
+
+Status, per-phase device results and what is next live in
+**`docs/anchored-calibration-status.md`** — update it after every phase.
+
+The keyboard is stored relative to a spatial anchor created at calibration
+time, not in tracking space: `piano_profiles.json` holds the anchor UUID
+plus front-edge points and facing **in the anchor's local frame** — never a
+world position, which every recenter invalidates. The layout is rebuilt as
+"anchor pose × local geometry", so recenters, reboots and headset sleep need
+no special handling. Proven on device in Phase 4 (localize ~100 ms on
+relaunch, 134 ms after reboot, ~2 s after 10 min with the headset off; three
+recenters of up to 1.1 m / 180° kept the keys on the piano).
+
+- **Only in development builds.** `CalibrationFlowController` disables itself
+  in Awake when `!Debug.isDebugBuild`, and release builds run the legacy
+  `keyboard_calibration.json` path untouched. A release APK handed to a
+  tester does *not* have anchored calibration.
+- **All decisions are in Core** (`CalibrationFlow` decides,
+  `AnchoredCalibrationSession` carries out the commands), tested headlessly
+  against `EditorPianoAnchorService`. The MonoBehaviours only forward input.
+  New behaviour goes in Core with a test first.
+- **Rules the flow keeps:** nothing is created on launch; no failure path
+  (timeout, failed load, failed save) ever erases an anchor or rewrites the
+  profile; the old anchor is erased only after the profile naming the new
+  one is on disk. An empty load is `NotFound` (anchor gone), not a failure.
+- **Read-modify-write the profile file every time.** `ControllerTipCalibration`
+  writes the tip fields into the same file; writing from a copy held since
+  launch would wipe them.
+- **The editor fake forgets its anchors when play mode stops,** so every
+  editor run sees the saved anchor as gone and asks for a fresh calibration.
+  That is expected, not a bug.
+- **Grips are reserved for anchored-calibration corrections.**
+  `OvrAnchorSpike` (Phase 3 harness) used both grips and is disabled in the
+  scene by `Configure Anchored Calibration`; do not re-enable it alongside the
+  flow.
+- **All logs start with `[AnchorFlow]`**: `adb logcat -s Unity | findstr AnchorFlow`.
+
+---
+
 ## Traps already hit — do not re-learn these
 
 - **Unity does not compile a `.java` file until you select it in the Project
@@ -380,7 +428,9 @@ looking at."
 
 Working and proven on device: MIDI input end to end, 88-key overlay registered
 on the real piano to under half a percent of correct, calibration persisted with
-runtime fine-adjust.
+runtime fine-adjust, controller-tip calibration (1.58 mm RMS), and — in
+development builds — anchored calibration that survives relaunch, recenter and
+reboot (Phase 4, 2026-10-21). See `docs/anchored-calibration-status.md`.
 
 Next is the vertical slice — song data → song clock → falling-note highway → hit
 detection → wait-mode — built thin and ugly, end to end, before any of it is
