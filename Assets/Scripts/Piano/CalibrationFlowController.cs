@@ -102,9 +102,14 @@ namespace PianoGlass.Piano
         }
 
         /// <summary>For the panel: the anchor line, and the last problem if any.</summary>
-        public string StatusLine => Active ? Session.StatusLine : "off";
+        public string StatusLine => Active
+            ? AnchorStatusText.Line(Session.Status, Session.Flow.LocalizeFailures, Session.MaxLocalizeAttempts,
+                                    calibration.CurrentStage == KeyboardCalibration.Stage.AwaitingHighest)
+            : "off";
         public AnchorPanelStatus Status => Session != null ? Session.Status : AnchorPanelStatus.Starting;
         public string LastProblem => Session?.LastProblem;
+        /// <summary>What the last Middle C fix applied; null if none on this anchor.</summary>
+        public string CorrectionNote => Session?.CorrectionNote;
 
         // ------------------------------------------------------------------
         // IKeyboardPlacementOwner
@@ -144,6 +149,25 @@ namespace PianoGlass.Piano
 
         public Vector3 NudgeMillimetres => Session.NudgeMm;
         public float YawDegrees => Session.SessionYawDegrees;
+
+        public string PlacedPrompt => Status switch
+        {
+            AnchorPanelStatus.Verifying  => AnchorStatusText.VerifyBanner,
+            AnchorPanelStatus.Correcting => "Touch the front edge of MIDDLE C (C4) and pull the trigger.   right grip = cancel",
+            AnchorPanelStatus.Ready      => "Ready.  A = play/pause   right grip = Middle C fix   sticks = nudge   B = recalibrate",
+            _                            => null,
+        };
+
+        public bool AwaitingConfirmation => Session.AwaitingConfirmation;
+
+        public void Confirm() => Session.Confirm();
+
+        public void ToggleCorrection() => Run(Session.ToggleCorrectionAsync());
+
+        public void OnTriggerWhilePlaced(Vector3 tipWorld)
+        {
+            if (Session.Flow.State == FlowState.Correcting) Run(Session.OnMiddleCTouchedAsync(tipWorld));
+        }
 
         // ------------------------------------------------------------------
 

@@ -8,7 +8,9 @@ namespace PianoGlass.Transport
     /// floor, and the MIDI restart chord in SongTransport is what gets used;
     /// this is here for setup and for testing without touching the keyboard.
     ///
-    ///   Right A     play / pause toggle
+    ///   Right A     play / pause toggle -- except while anchored calibration
+    ///               is waiting for A to confirm the keys (SongTransport
+    ///               ignores that press)
     ///   Left Y      restart from the top and play
     ///
     /// B and both triggers belong to OvrCalibrationInput and are deliberately

@@ -108,7 +108,7 @@ namespace PianoGlass.Tests.EditMode
             Assert.AreEqual(1, _fake.SaveCount);
             Assert.IsTrue(_fake.Stored.ContainsKey(s.Anchor.Id));
             Assert.IsTrue(s.IsOverlayVisible);
-            Assert.AreEqual(AnchorPanelStatus.Ready, s.Status);
+            Assert.AreEqual(AnchorPanelStatus.Verifying, s.Status, "drawn, waiting for A");
 
             PianoProfile p = OnDisk().ActiveProfile;
             Assert.IsNotNull(p);
@@ -180,6 +180,8 @@ namespace PianoGlass.Tests.EditMode
             Assert.AreEqual(1, captures);
             Assert.IsNull(s.Anchor);
             Assert.IsFalse(s.IsOverlayVisible, "B hides the keys");
+            Assert.AreEqual(AnchorPanelStatus.Recalibrating, s.Status, "a saved piano exists: not 'no saved piano yet'");
+            Assert.AreEqual("recalibrating -- touch the lowest key", s.StatusLine);
             Assert.IsTrue(_fake.Stored.ContainsKey(oldId), "old anchor untouched on the way in");
             Assert.AreEqual(oldId, OnDisk().ActiveProfile.PrimaryAnchorUuid);
             Assert.AreEqual(0, _fake.EraseCount);
@@ -237,7 +239,7 @@ namespace PianoGlass.Tests.EditMode
             Capture(s, Low, High);
             Assert.AreEqual(s.Anchor.Id, OnDisk().ActiveProfile.PrimaryAnchorUuid);
             Assert.AreEqual(0, _fake.EraseCount, "nothing to erase: the old anchor no longer exists");
-            Assert.AreEqual(AnchorPanelStatus.Ready, s.Status);
+            Assert.AreEqual(AnchorPanelStatus.Verifying, s.Status);
         }
 
         [Test]

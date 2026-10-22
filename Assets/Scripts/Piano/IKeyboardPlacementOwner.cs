@@ -37,5 +37,23 @@ namespace PianoGlass.Piano
 
         Vector3 NudgeMillimetres { get; }
         float YawDegrees { get; }
+
+        /// <summary>The prompt while the keyboard is placed (Stage.Calibrated),
+        /// or null for KeyboardCalibration's own.</summary>
+        string PlacedPrompt { get; }
+
+        /// <summary>The placement is on show and waiting for the player to
+        /// say it looks right.</summary>
+        bool AwaitingConfirmation { get; }
+
+        /// <summary>A pressed while AwaitingConfirmation.</summary>
+        void Confirm();
+
+        /// <summary>Right grip: start or cancel a Middle C fix.</summary>
+        void ToggleCorrection();
+
+        /// <summary>The capture button pressed while placed, with the tip's
+        /// world position -- a Middle C touch, if one is in progress.</summary>
+        void OnTriggerWhilePlaced(Vector3 tipWorld);
     }
 }

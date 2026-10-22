@@ -183,6 +183,68 @@ namespace PianoGlass.Tests.EditMode
             Assert.IsFalse(t.Has(FlowCommand.WriteProfile));
         }
 
+        private static CalibrationFlow AtReady()
+        {
+            CalibrationFlow f = AtVerifying();
+            f.Handle(FlowEvent.ConfirmPressed);
+            Assert.AreEqual(FlowState.Ready, f.State);
+            return f;
+        }
+
+        [Test]
+        public void ACancelledCorrectionReturnsToWhereItStarted()
+        {
+            CalibrationFlow v = AtVerifying();
+            v.Handle(FlowEvent.CorrectionStarted);
+            Assert.AreEqual(FlowState.Verifying, v.Handle(FlowEvent.CorrectionCancelled).To);
+
+            CalibrationFlow r = AtReady();
+            Assert.AreEqual(FlowState.Correcting, r.Handle(FlowEvent.CorrectionStarted).To);
+            FlowTransition t = r.Handle(FlowEvent.CorrectionCancelled);
+            Assert.AreEqual(FlowState.Ready, t.To, "nothing changed, so nothing to re-confirm");
+            Assert.AreEqual(0, t.Commands.Count);
+        }
+
+        [Test]
+        public void AnAppliedCorrectionFromReadyMustBeConfirmedAgain()
+        {
+            CalibrationFlow f = AtReady();
+            f.Handle(FlowEvent.CorrectionStarted);
+            FlowTransition t = f.Handle(FlowEvent.CorrectionApplied);
+            Assert.AreEqual(FlowState.Verifying, t.To);
+            Assert.IsTrue(t.Has(FlowCommand.WriteProfile));
+            Assert.IsFalse(t.Has(FlowCommand.MarkVerified));
+
+            Assert.IsTrue(f.Handle(FlowEvent.ConfirmPressed).Has(FlowCommand.MarkVerified));
+            Assert.AreEqual(FlowState.Ready, f.State);
+        }
+
+        [Test]
+        public void ConfirmIsOnlyHandledWhileVerifying()
+        {
+            CalibrationFlow r = AtReady();
+            Assert.IsFalse(r.Handle(FlowEvent.ConfirmPressed).Handled, "Ready: A is the transport's");
+
+            CalibrationFlow c = AtVerifying();
+            c.Handle(FlowEvent.CorrectionStarted);
+            Assert.IsFalse(c.Handle(FlowEvent.ConfirmPressed).Handled, "mid-correction");
+            Assert.AreEqual(FlowState.Correcting, c.State);
+        }
+
+        [Test]
+        public void AMovedRejectionCanStillBeRecalibratedWithB()
+        {
+            CalibrationFlow f = AtVerifying();
+            f.Handle(FlowEvent.CorrectionStarted);
+            f.Handle(FlowEvent.CorrectionRejectedMoved);
+            Assert.IsTrue(f.RecalibrateOffered);
+
+            FlowTransition t = f.Handle(FlowEvent.RecalibrateRequested);
+            Assert.AreEqual(FlowState.FullCalibration, t.To);
+            Assert.IsTrue(t.Has(FlowCommand.BeginCapture));
+            Assert.IsFalse(f.RecalibrateOffered);
+        }
+
         [Test]
         public void OverlayIsVisibleOnlyInVerifyingCorrectingAndReady()
         {

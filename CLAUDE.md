@@ -327,6 +327,11 @@ recenters of up to 1.1 m / 180° kept the keys on the piano).
   `OvrAnchorSpike` (Phase 3 harness) used both grips and is disabled in the
   scene by `Configure Anchored Calibration`; do not re-enable it alongside the
   flow.
+- **Verifying is a real state, not a formality** (Phase 5). After every
+  localize or calibration the keys are drawn and A means "looks right"
+  (→ Ready, `lastVerifiedUtc`), *not* play — `SongTransport` ignores that one
+  press. Right grip starts a Middle C fix (touch the front edge, trigger):
+  a rigid anchor-local shift, vertical capped at 10 mm, refused over 50 mm.
 - **All logs start with `[AnchorFlow]`**: `adb logcat -s Unity | findstr AnchorFlow`.
 
 ---

@@ -81,6 +81,11 @@ namespace PianoGlass.Piano
         public string lastVerifiedUtc = "";
         /// <summary>"none", "middle-c" or "two-point".</summary>
         public string lastCorrection = "none";
+        /// <summary>The shift the last correction applied, millimetres in
+        /// the anchor's frame (y is world up). A record only: it is already
+        /// baked into the front-edge points above. Absent in older files,
+        /// which JsonUtility reads as zero.</summary>
+        public Vector3 lastCorrectionMm;
 
         public KeyboardGeometry LocalGeometry => new KeyboardGeometry(lowFrontLocal, highFrontLocal, towardPlayerLocal);
 
