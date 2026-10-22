@@ -23,6 +23,10 @@ namespace PianoGlass.Piano
         [SerializeField] private KeyboardCalibration calibration;
         [SerializeField] private SongTransport transport;
         [SerializeField] private SongClock clock;
+        [SerializeField] private ControllerTipCalibration tip;
+        [Tooltip("Anchored calibration. Its status is shown here because the " +
+                 "player has no PC attached -- a logcat-only message is invisible.")]
+        [SerializeField] private CalibrationFlowController flow;
 
         private readonly StringBuilder _sb = new StringBuilder(256);
 
@@ -32,6 +36,8 @@ namespace PianoGlass.Piano
             calibration = FindAnyObjectByType<KeyboardCalibration>();
             transport = FindAnyObjectByType<SongTransport>();
             clock = FindAnyObjectByType<SongClock>();
+            tip = FindAnyObjectByType<ControllerTipCalibration>();
+            flow = FindAnyObjectByType<CalibrationFlowController>();
         }
 
         private void Awake()
@@ -40,6 +46,8 @@ namespace PianoGlass.Piano
             if (calibration == null) calibration = FindAnyObjectByType<KeyboardCalibration>();
             if (transport == null) transport = FindAnyObjectByType<SongTransport>();
             if (clock == null) clock = FindAnyObjectByType<SongClock>();
+            if (tip == null) tip = FindAnyObjectByType<ControllerTipCalibration>();
+            if (flow == null) flow = FindAnyObjectByType<CalibrationFlowController>();
         }
 
         private void Update()
@@ -48,7 +56,44 @@ namespace PianoGlass.Piano
 
             _sb.Clear();
             _sb.AppendLine("<b>PianoGlass — calibration</b>");
+
+            // While the tip is being measured, that is the only thing the
+            // player should be reading.
+            if (tip != null && tip.IsBusy)
+            {
+                _sb.AppendLine(tip.Status);
+                if (tip.CurrentPhase == ControllerTipCalibration.Phase.Recording)
+                    _sb.AppendLine($"recording  {tip.Progress * 100f:0}%   (left menu = cancel)");
+                text.text = _sb.ToString();
+                return;
+            }
+
             _sb.AppendLine(calibration.Prompt);
+
+            if (flow != null && flow.Active)
+            {
+                string colour = flow.Status switch
+                {
+                    AnchorPanelStatus.Ready          => "#A9C67C",
+                    AnchorPanelStatus.Untracked      => "#E5948A",
+                    AnchorPanelStatus.LocalizeFailed => "#E5948A",
+                    AnchorPanelStatus.NotFound       => "#E5948A",
+                    _                                => "#E8D48A",
+                };
+                _sb.AppendLine($"anchor:     <color={colour}>{flow.StatusLine}</color>");
+                // Cleared by every success, so whatever is here is current --
+                // including "not saved" while the keys are showing.
+                if (!string.IsNullOrEmpty(flow.LastProblem))
+                    _sb.AppendLine($"<color=#E5948A>{flow.LastProblem}</color>");
+            }
+
+            if (tip != null)
+            {
+                _sb.AppendLine(tip.HasOffset
+                    ? $"tip:        {tip.OffsetMetres.magnitude * 1000f:0.0} mm from origin, RMS {tip.RmsMm:0.0} mm   (left menu = redo)"
+                    : "tip:        not measured   (left menu = measure)");
+                if (!string.IsNullOrEmpty(tip.Status)) _sb.AppendLine(tip.Status);
+            }
 
             // Shown unconditionally, not just once calibrated: a silent
             // lead-in with nothing on the wall yet is easy to mistake for a
@@ -79,11 +124,14 @@ namespace PianoGlass.Piano
                 if (n.sqrMagnitude > 0.01f)
                     _sb.AppendLine($"nudge:      x {n.x:+0.0;-0.0;0} · y {n.y:+0.0;-0.0;0} · z {n.z:+0.0;-0.0;0} mm");
 
+                if (Mathf.Abs(calibration.YawDegrees) > 0.005f)
+                    _sb.AppendLine($"yaw:        {calibration.YawDegrees:+0.00;-0.00} deg");
+
                 if (!plausible)
                 {
                     _sb.AppendLine();
                     _sb.AppendLine("<color=#E5948A>Those were probably not the lowest and");
-                    _sb.AppendLine("highest keys. Hold both triggers to redo.</color>");
+                    _sb.AppendLine("highest keys. Press B (or left trigger) to redo.</color>");
                 }
             }
 

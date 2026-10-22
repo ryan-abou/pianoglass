@@ -52,16 +52,11 @@ namespace PianoGlass.Highway
         [SerializeField] private float highwayHeight = 0.5f;
         [Tooltip("Small standoff behind the key's far edge (away from the player), " +
                  "so the wall doesn't clip into the key body.")]
-        [SerializeField] private float depthOffset = 0.02f;
+        [SerializeField] private float depthOffset = 0.010f;
         [Tooltip("Degrees the wall leans, about layout.Right. Positive tips the " +
                  "top toward the player, which is the direction that makes the " +
                  "wall easier to read from a seated view; 0 is upright.")]
         [SerializeField] private float tiltDegrees = 0f;
-
-        /// <summary>Same standoff used to place the status Canvas at the wall's
-        /// depth -- CanvasCalibrationFollower reads this rather than carrying
-        /// its own copy of the number, so the two can't drift apart.</summary>
-        public float DepthOffset => depthOffset;
 
         private SongData _song;
         private readonly List<(SongNote note, Renderer renderer)> _slabs = new List<(SongNote, Renderer)>();
@@ -85,12 +80,25 @@ namespace PianoGlass.Highway
         {
             if (calibration == null) return;
             calibration.Calibrated += OnCalibrated;
+            calibration.PlacementValidChanged += OnPlacementValidChanged;
             if (calibration.IsCalibrated) Build();
         }
 
         private void OnDisable()
         {
-            if (calibration != null) calibration.Calibrated -= OnCalibrated;
+            if (calibration == null) return;
+            calibration.Calibrated -= OnCalibrated;
+            calibration.PlacementValidChanged -= OnPlacementValidChanged;
+        }
+
+        /// <summary>Update() stops placing slabs while placement is invalid,
+        /// but would leave the ones already showing where they were -- so
+        /// hide them here, once, at the moment it becomes invalid.</summary>
+        private void OnPlacementValidChanged(bool valid)
+        {
+            if (valid) return; // Update() shows whatever is due on the next frame
+            foreach (var (_, renderer) in _slabs)
+                if (renderer != null) renderer.enabled = false;
         }
 
         private void OnCalibrated(PianoKeyLayout layout)
@@ -153,7 +161,7 @@ namespace PianoGlass.Highway
 
         private void Update()
         {
-            if (clock == null || calibration == null || !calibration.IsCalibrated || _slabs.Count == 0) return;
+            if (clock == null || calibration == null || !calibration.IsPlacementValid || _slabs.Count == 0) return;
 
             PianoKeyLayout layout = calibration.Layout;
             double songTime = clock.SongTime;

@@ -128,12 +128,19 @@ namespace PianoGlass.Piano
             _song = SongData.TwinkleTwinkleLittleStar();
         }
 
+        /// <summary>Nothing is drawn at a placement the calibration does not
+        /// vouch for -- not even a pressed key. Read live rather than cached,
+        /// so the initial state needs no special handling in OnEnable.</summary>
+        private bool PlacementValid => calibration != null && calibration.IsPlacementValid;
+
         private void OnEnable()
         {
             if (calibration != null)
             {
                 calibration.Calibrated += Rebuild;
+                calibration.PlacementValidChanged += OnPlacementValidChanged;
                 if (calibration.IsCalibrated) Rebuild(calibration.Layout);
+                if (!PlacementValid) HideAll();
             }
 
             if (MidiInput.Instance != null)
@@ -145,7 +152,11 @@ namespace PianoGlass.Piano
 
         private void OnDisable()
         {
-            if (calibration != null) calibration.Calibrated -= Rebuild;
+            if (calibration != null)
+            {
+                calibration.Calibrated -= Rebuild;
+                calibration.PlacementValidChanged -= OnPlacementValidChanged;
+            }
             if (MidiInput.Instance != null)
             {
                 MidiInput.Instance.NoteOn -= OnNoteOn;
@@ -162,7 +173,7 @@ namespace PianoGlass.Piano
         /// </summary>
         private void Update()
         {
-            if (clock == null || _renderers.Count == 0) return;
+            if (clock == null || _renderers.Count == 0 || !PlacementValid) return;
             if (displayMode != DisplayMode.ActiveKeysOnly && displayMode != DisplayMode.EdgeMarkers) return;
 
             ActiveNoteSelector.CollectDueSoonPitches(_song.Notes, clock.SongTime, activeKeyLookaheadSeconds, _dueSoon);
@@ -280,8 +291,30 @@ namespace PianoGlass.Piano
                 if (renderer != null) renderer.sharedMaterial = mat;
         }
 
+        private void OnPlacementValidChanged(bool valid)
+        {
+            if (!valid)
+            {
+                HideAll();
+                return;
+            }
+
+            foreach (var kv in _renderers)
+                ApplyRestState(kv.Key, PianoKeyLayout.IsBlackKey(kv.Key));
+        }
+
+        private void HideAll()
+        {
+            foreach (var renderer in _renderers.Values)
+                if (renderer != null) renderer.enabled = false;
+        }
+
         private void OnNoteOn(int note, int velocity, double time)
         {
+            // Without this, a note-on after Recalibrate() re-showed keys at
+            // the old layout's coordinates.
+            if (!PlacementValid) return;
+
             // Velocity brightens the flash a little — free feedback on touch,
             // and a hint of the dynamics scoring you can add later.
             float t = Mathf.InverseLerp(20f, 110f, velocity);
@@ -301,7 +334,7 @@ namespace PianoGlass.Piano
         {
             if (!_renderers.TryGetValue(note, out var renderer) || renderer == null) return;
 
-            if (forceVisible) renderer.enabled = true;
+            if (forceVisible && PlacementValid) renderer.enabled = true;
 
             if (displayMode == DisplayMode.Translucent)
                 color = new Color(color.r, color.g, color.b, translucentAlpha);
@@ -320,6 +353,13 @@ namespace PianoGlass.Piano
         private void ApplyRestState(int note, bool isBlack)
         {
             if (!_renderers.TryGetValue(note, out var renderer) || renderer == null) return;
+
+            if (!PlacementValid)
+            {
+                renderer.enabled = false;
+                return;
+            }
+
             if (MidiInput.Instance != null && MidiInput.Instance.IsHeld(note)) return;
 
             switch (displayMode)

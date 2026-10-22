@@ -71,7 +71,7 @@ namespace PianoGlass.EditorTools
             {
                 CanvasCalibrationFollower follower = canvas.GetComponent<CanvasCalibrationFollower>();
                 if (follower == null) follower = canvas.gameObject.AddComponent<CanvasCalibrationFollower>();
-                WireCanvasFollower(follower, calibration, highway);
+                WireCanvasFollower(follower, calibration);
             }
 
             EditorSceneManager.MarkSceneDirty(scene);
@@ -228,6 +228,154 @@ namespace PianoGlass.EditorTools
         }
 
         /// <summary>
+        /// Adds ControllerTipCalibration next to KeyboardCalibration (left
+        /// menu button measures where the controller tip really is) and
+        /// points it, and CalibrationPanel, at the right objects. Yaw
+        /// fine-adjust needs no wiring -- it lives in KeyboardCalibration and
+        /// OvrCalibrationInput already. Idempotent.
+        /// </summary>
+        [MenuItem("PianoGlass/Scene/Configure Calibration Tools")]
+        public static void ConfigureCalibrationTools()
+        {
+            Scene scene = OpenScene();
+
+            var calibration = Object.FindAnyObjectByType<KeyboardCalibration>();
+            if (calibration == null)
+            {
+                Debug.LogError("[SceneSetup] No KeyboardCalibration in the scene -- nothing to attach tip calibration to.");
+                return;
+            }
+
+            var calibrationSo = new SerializedObject(calibration);
+            var pointerTip = calibrationSo.FindProperty("pointerTip").objectReferenceValue as Transform;
+            if (pointerTip == null || pointerTip.parent == null)
+                Debug.LogWarning("[SceneSetup] KeyboardCalibration.pointerTip is unassigned or has no parent -- " +
+                                 "tip calibration samples the parent (controller) pose and will refuse to run.");
+
+            GameObject host = calibration.gameObject;
+            var tip = host.GetComponent<ControllerTipCalibration>();
+            if (tip == null) tip = host.AddComponent<ControllerTipCalibration>();
+
+            var tipSo = new SerializedObject(tip);
+            tipSo.FindProperty("pointerTip").objectReferenceValue = pointerTip;
+            tipSo.ApplyModifiedProperties();
+
+            CalibrationPanel panel = Object.FindAnyObjectByType<CalibrationPanel>();
+            if (panel != null)
+            {
+                var panelSo = new SerializedObject(panel);
+                panelSo.FindProperty("tip").objectReferenceValue = tip;
+                panelSo.ApplyModifiedProperties();
+            }
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+
+            Debug.Log("[SceneSetup] Calibration tools configured: ControllerTipCalibration on " +
+                      $"'{host.name}' (pointerTip = {(pointerTip != null ? pointerTip.name : "none")}), " +
+                      $"CalibrationPanel {(panel != null ? "wired" : "not found")}.");
+        }
+
+        /// <summary>
+        /// Adds the development-only spatial-anchor test harness
+        /// (OvrAnchorSpike: right grip create+save, left grip load, both grips
+        /// held erase) next to KeyboardCalibration, wired to it, to the
+        /// ControllerTipCalibration (so it stays quiet while the tip is
+        /// measured) and to NoteHighway.mat for its markers. The component
+        /// disables itself in release builds. Idempotent.
+        /// </summary>
+        [MenuItem("PianoGlass/Scene/Configure Anchor Spike")]
+        public static void ConfigureAnchorSpike()
+        {
+            Scene scene = OpenScene();
+
+            var calibration = Object.FindAnyObjectByType<KeyboardCalibration>();
+            if (calibration == null)
+            {
+                Debug.LogError("[SceneSetup] No KeyboardCalibration in the scene -- the anchor spike needs a keyboard to anchor.");
+                return;
+            }
+
+            GameObject host = calibration.gameObject;
+            var spike = host.GetComponent<OvrAnchorSpike>();
+            if (spike == null) spike = host.AddComponent<OvrAnchorSpike>();
+
+            var so = new SerializedObject(spike);
+            so.FindProperty("calibration").objectReferenceValue = calibration;
+            so.FindProperty("tip").objectReferenceValue = host.GetComponent<ControllerTipCalibration>();
+            SerializedProperty materialProp = so.FindProperty("markerMaterial");
+            if (materialProp.objectReferenceValue == null)
+                materialProp.objectReferenceValue = GetOrCreateNoteMaterial();
+            so.ApplyModifiedProperties();
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+
+            Debug.Log($"[SceneSetup] Anchor spike configured on '{host.name}' " +
+                      $"(tip {(host.GetComponent<ControllerTipCalibration>() != null ? "wired" : "missing")}, " +
+                      $"marker material {(materialProp.objectReferenceValue != null ? materialProp.objectReferenceValue.name : "none")}).");
+        }
+
+        /// <summary>
+        /// Phase 4: the real overlays follow a spatial anchor. Adds
+        /// PianoAnchorManager and CalibrationFlowController next to
+        /// KeyboardCalibration (useAnchoredCalibration on -- it only takes
+        /// effect in development builds), points CalibrationPanel at the
+        /// controller so anchor status shows in the headset, and disables
+        /// OvrAnchorSpike: its grip bindings would clash with the Phase 5
+        /// corrections, and two things creating anchors from one keyboard is
+        /// one too many. The spike's code and component stay, disabled.
+        /// Idempotent.
+        /// </summary>
+        [MenuItem("PianoGlass/Scene/Configure Anchored Calibration")]
+        public static void ConfigureAnchoredCalibration()
+        {
+            Scene scene = OpenScene();
+
+            var calibration = Object.FindAnyObjectByType<KeyboardCalibration>();
+            if (calibration == null)
+            {
+                Debug.LogError("[SceneSetup] No KeyboardCalibration in the scene -- nothing to anchor.");
+                return;
+            }
+
+            GameObject host = calibration.gameObject;
+            var manager = host.GetComponent<PianoAnchorManager>();
+            if (manager == null) manager = host.AddComponent<PianoAnchorManager>();
+
+            var controller = host.GetComponent<CalibrationFlowController>();
+            if (controller == null) controller = host.AddComponent<CalibrationFlowController>();
+
+            var so = new SerializedObject(controller);
+            so.FindProperty("calibration").objectReferenceValue = calibration;
+            so.FindProperty("anchorManager").objectReferenceValue = manager;
+            so.FindProperty("useAnchoredCalibration").boolValue = true;
+            so.ApplyModifiedProperties();
+
+            CalibrationPanel panel = Object.FindAnyObjectByType<CalibrationPanel>();
+            if (panel != null)
+            {
+                var panelSo = new SerializedObject(panel);
+                panelSo.FindProperty("flow").objectReferenceValue = controller;
+                panelSo.ApplyModifiedProperties();
+            }
+
+            var spike = host.GetComponent<OvrAnchorSpike>();
+            if (spike != null)
+            {
+                spike.enabled = false;
+                EditorUtility.SetDirty(spike);
+            }
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+
+            Debug.Log($"[SceneSetup] Anchored calibration configured on '{host.name}': PianoAnchorManager + " +
+                      $"CalibrationFlowController, CalibrationPanel {(panel != null ? "wired" : "not found")}, " +
+                      $"OvrAnchorSpike {(spike != null ? "disabled" : "not present")}.");
+        }
+
+        /// <summary>
         /// Removes the leftover default "Cube" GameObject from Day 1 testing
         /// -- a plain 1x1x1 primitive sitting at the scene root, unrelated to
         /// any of the piano/overlay/highway wiring above. Idempotent: logs
@@ -297,6 +445,7 @@ namespace PianoGlass.EditorTools
             var so = new SerializedObject(highway);
             so.FindProperty("calibration").objectReferenceValue = calibration;
             so.FindProperty("clock").objectReferenceValue = clock;
+            so.FindProperty("depthOffset").floatValue = HighwayDepthOffset;
 
             SerializedProperty materialProp = so.FindProperty("noteMaterial");
             if (materialProp.objectReferenceValue == null)
@@ -330,11 +479,19 @@ namespace PianoGlass.EditorTools
             so.ApplyModifiedProperties();
         }
 
-        private static void WireCanvasFollower(CanvasCalibrationFollower follower, KeyboardCalibration calibration, NoteHighway highway)
+        /// <summary>The note wall and the status panel used to share one
+        /// standoff (NoteHighway.depthOffset, 0.05 in the scene). The wall now
+        /// sits HighwayDepthOffset behind the keys -- 40 mm closer to the
+        /// player -- while the panel keeps PanelDepthOffset, exactly where it
+        /// was. Both set here so the scene cannot keep a stale override.</summary>
+        private const float HighwayDepthOffset = 0.010f;
+        private const float PanelDepthOffset = 0.05f;
+
+        private static void WireCanvasFollower(CanvasCalibrationFollower follower, KeyboardCalibration calibration)
         {
             var so = new SerializedObject(follower);
             so.FindProperty("calibration").objectReferenceValue = calibration;
-            so.FindProperty("noteHighway").objectReferenceValue = highway;
+            so.FindProperty("depthOffset").floatValue = PanelDepthOffset;
             so.ApplyModifiedProperties();
         }
 

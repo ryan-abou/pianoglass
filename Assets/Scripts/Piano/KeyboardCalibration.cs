@@ -19,7 +19,10 @@ namespace PianoGlass.Piano
     /// </summary>
     public class KeyboardCalibration : MonoBehaviour
     {
-        public enum Stage { Idle, AwaitingLowest, AwaitingHighest, Calibrated }
+        /// <summary>Waiting: anchored mode only -- the placement owner is
+        /// busy (localizing, saving a new anchor) and the trigger does not
+        /// capture.</summary>
+        public enum Stage { Idle, AwaitingLowest, AwaitingHighest, Calibrated, Waiting }
 
         [Header("Keyboard")]
         [Tooltip("Number of keys on your keyboard. Sets the note range below.")]
@@ -42,19 +45,45 @@ namespace PianoGlass.Piano
 
         public Stage CurrentStage { get; private set; } = Stage.Idle;
         public PianoKeyLayout Layout { get; private set; }
+
+        /// <summary>The transform whose position is captured. Exposed so
+        /// ControllerTipCalibration can move it onto the real plastic tip.</summary>
+        public Transform PointerTip => pointerTip;
         public bool IsCalibrated => Layout != null;
+
+        /// <summary>
+        /// Whether anything may be drawn at Layout's coordinates right now.
+        /// Separate from IsCalibrated on purpose: a layout can exist and still
+        /// be untrustworthy (mid-recalibration today; an untracked or
+        /// unlocalized anchor later). Every overlay -- keys, highway, edge
+        /// markers -- hides while this is false, so nothing is ever drawn at
+        /// stale coordinates.
+        /// </summary>
+        public bool IsPlacementValid { get; private set; }
 
         /// <summary>Fires whenever a new layout becomes available, including on load.</summary>
         public event Action<PianoKeyLayout> Calibrated;
+
+        /// <summary>Fires when IsPlacementValid changes. Not folded into
+        /// Calibrated(null): CanvasCalibrationFollower would throw on a null
+        /// layout, and PianoKeyHighlighter would destroy all 88 keys.</summary>
+        public event Action<bool> PlacementValidChanged;
 
         /// <summary>Short line to show the user during setup.</summary>
         public string Prompt => CurrentStage switch
         {
             Stage.AwaitingLowest  => $"Touch the front edge of the LOWEST key ({NoteName(lowestNote)}) and pull the trigger",
             Stage.AwaitingHighest => $"Now the HIGHEST key ({NoteName(highestNote)})",
-            Stage.Calibrated      => "Calibrated.  sticks = nudge   B = redo   stick click = clear nudge",
+            Stage.Calibrated      => "Calibrated.  sticks = nudge   left stick L/R = yaw   B = redo   stick click = clear nudge",
+            Stage.Waiting         => _owner != null ? _owner.WaitingPrompt : "",
             _                     => "Press the trigger to start calibration"
         };
+
+        private IKeyboardPlacementOwner _owner;
+
+        /// <summary>True when an anchor (via its owner) decides placement,
+        /// not this component's own captured points.</summary>
+        public bool IsExternallyPlaced => _owner != null;
 
         private Vector3 _lowPoint;
         private Vector3 _highPoint;
@@ -64,6 +93,14 @@ namespace PianoGlass.Piano
         /// tip physically touched — a constant error that shifts the whole
         /// keyboard without distorting the spacing between keys.</summary>
         private Vector3 _nudge;
+
+        /// <summary>Fine rotation about the vertical axis through the
+        /// keyboard's centre, degrees. Replaces holding the Meta button to
+        /// recenter until the piano happens to line up. Unlike the nudge it
+        /// belongs to the captured points, so a fresh capture resets it.</summary>
+        private float _yawDegrees;
+
+        public float YawDegrees => _owner != null ? _owner.YawDegrees : _yawDegrees;
 
         private string FilePath => Path.Combine(Application.persistentDataPath, fileName);
 
@@ -86,8 +123,54 @@ namespace PianoGlass.Piano
             if (headTransform == null && Camera.main != null)
                 headTransform = Camera.main.transform;
 
+            // Anchored mode: the owner decides between localizing and a
+            // fresh capture. The legacy file's tracking-space points must not
+            // be drawn first -- nothing shows until the anchor is found.
+            if (_owner != null) return;
+
             if (loadOnStart && Load()) return;
             CurrentStage = Stage.AwaitingLowest;
+        }
+
+        // ------------------------------------------------------------------
+        // Anchored mode -- see IKeyboardPlacementOwner
+        // ------------------------------------------------------------------
+
+        /// <summary>Hand placement to <paramref name="owner"/>. Call in Awake,
+        /// before this component's Start, so the legacy file is never loaded.</summary>
+        public void SetPlacementOwner(IKeyboardPlacementOwner owner)
+        {
+            _owner = owner;
+            Layout = null;
+            CurrentStage = Stage.Waiting;
+            SetPlacementValid(false);
+            Debug.Log("[Calibration] placement owned by the anchor flow; keyboard_calibration.json not used");
+        }
+
+        /// <summary>The owner wants two fresh touches. Hides everything.</summary>
+        public void BeginExternalCapture()
+        {
+            Layout = null;
+            CurrentStage = Stage.AwaitingLowest;
+            SetPlacementValid(false);
+            Debug.Log("[Calibration] capture started (anchored)");
+        }
+
+        /// <summary>The owner's layout for this frame. Fires Calibrated, so
+        /// overlays follow it exactly as they follow a nudge. Visibility is
+        /// separate: SetExternalPlacementValid.</summary>
+        public void PublishExternalLayout(PianoKeyLayout layout)
+        {
+            if (_owner == null || layout == null) return;
+            Layout = layout;
+            CurrentStage = Stage.Calibrated;
+            Calibrated?.Invoke(layout);
+        }
+
+        public void SetExternalPlacementValid(bool valid)
+        {
+            if (_owner == null) return;
+            SetPlacementValid(valid && Layout != null);
         }
 
         /// <summary>
@@ -125,6 +208,10 @@ namespace PianoGlass.Piano
                     CurrentStage = Stage.AwaitingLowest;
                     break;
 
+                case Stage.Waiting:
+                    _owner?.OnTriggerWhileWaiting();
+                    break;
+
                 case Stage.AwaitingLowest:
                     _lowPoint = pointerTip.position;
                     CurrentStage = Stage.AwaitingHighest;
@@ -132,33 +219,92 @@ namespace PianoGlass.Piano
                     break;
 
                 case Stage.AwaitingHighest:
+                    if (_owner != null)
+                    {
+                        HandOverCapture(_lowPoint, pointerTip.position);
+                        break;
+                    }
                     Apply(_lowPoint, pointerTip.position);
                     Save();
                     break;
             }
         }
 
+        /// <summary>Anchored mode's end of capture: the raw layout goes to the
+        /// owner, which creates and saves the anchor. Nothing is shown here --
+        /// placement becomes valid only once that anchor exists.</summary>
+        private void HandOverCapture(Vector3 low, Vector3 high)
+        {
+            float span = Vector3.Distance(low, high);
+            if (span < 0.10f)
+            {
+                Debug.LogWarning($"[Calibration] the two points are only {span * 100f:0.0} cm apart. " +
+                                 "Did you capture the same key twice? Starting over.");
+                CurrentStage = Stage.AwaitingLowest;
+                return;
+            }
+
+            Vector3 head = headTransform != null ? headTransform.position : low + Vector3.back;
+            var captured = new PianoKeyLayout(low, high, lowestNote, highestNote, head, whiteKeyDepth);
+            if (captured.Warning != null) Debug.LogWarning("[Calibration] " + captured.Warning);
+            Debug.Log($"[Calibration] highest key at {high}; white key width {captured.WhiteKeySpacing * 1000f:0.0} mm");
+
+            CurrentStage = Stage.Waiting;
+            _owner.OnPointsCaptured(captured);
+        }
+
         [ContextMenu("Recalibrate")]
         public void Recalibrate()
         {
+            if (_owner != null)
+            {
+                // Anchored: the flow decides, and keeps the old anchor until
+                // a new one is saved.
+                _owner.OnRecalibrateRequested();
+                return;
+            }
+
             // Read the nudge before dropping the layout — NudgeMillimetres needs
             // the layout's axes to express it.
             Vector3 keptNudge = NudgeMillimetres;
             Layout = null;
             CurrentStage = Stage.AwaitingLowest;
             Debug.Log($"[Calibration] restarting (keeping nudge {keptNudge} mm)");
+            SetPlacementValid(false);
+        }
+
+        private void SetPlacementValid(bool valid)
+        {
+            if (IsPlacementValid == valid) return;
+            IsPlacementValid = valid;
+            Debug.Log($"[Calibration] placement {(valid ? "valid" : "invalid")}");
+            PlacementValidChanged?.Invoke(valid);
         }
 
         /// <summary>Throw away the fine-adjust and go back to the raw captured
         /// points. Use when the correction is plainly wrong rather than slightly
         /// off — after switching controllers, say.</summary>
         [ContextMenu("Clear nudge")]
-        public void ClearNudge()
+        public void ClearNudge() => ClearNudge("requested");
+
+        /// <param name="reason">Goes in the log line, so a nudge that
+        /// vanished can be traced to what cleared it.</param>
+        public void ClearNudge(string reason)
         {
+            if (_owner != null)
+            {
+                _owner.ClearNudge(reason);
+                return;
+            }
+
+            // In keyboard-frame millimetres when there is a layout to express
+            // them in; mid-recalibration there is none, so world millimetres.
+            Vector3 was = Layout != null ? NudgeMillimetres : _nudge * 1000f;
             _nudge = Vector3.zero;
             if (Layout != null) RebuildLayout();
             Save();
-            Debug.Log("[Calibration] nudge cleared");
+            Debug.Log($"[Calibration] nudge cleared ({reason}); was " +
+                      $"x {was.x:+0.0;-0.0;0} y {was.y:+0.0;-0.0;0} z {was.z:+0.0;-0.0;0} mm");
         }
 
         private void Apply(Vector3 low, Vector3 high)
@@ -174,6 +320,9 @@ namespace PianoGlass.Piano
 
             _lowPoint = low;
             _highPoint = high;
+
+            // Yaw trimmed the old points; it means nothing for new ones.
+            _yawDegrees = 0f;
 
             // Deliberately NOT clearing the nudge here. It mostly compensates
             // for the fixed gap between the controller's tracked origin and the
@@ -201,6 +350,7 @@ namespace PianoGlass.Piano
         public void Nudge(Vector3 delta)
         {
             if (Layout == null) return;
+            if (_owner != null) { _owner.Nudge(delta); return; }
 
             _nudge += Layout.Right * delta.x
                     + Layout.Up * delta.y
@@ -209,9 +359,37 @@ namespace PianoGlass.Piano
             RebuildLayout();
         }
 
+        /// <summary>
+        /// Turn the whole keyboard about the vertical axis through its
+        /// centre. Vertical only -- a keyboard on a stand does not roll.
+        /// Cheap enough to call every frame while the stick is held.
+        /// </summary>
+        public void AdjustYaw(float deltaDegrees)
+        {
+            if (Layout == null) return;
+            if (_owner != null) { _owner.AdjustYaw(deltaDegrees); return; }
+            _yawDegrees = Mathf.Clamp(_yawDegrees + deltaDegrees, -10f, 10f);
+            RebuildLayout();
+        }
+
+        [ContextMenu("Clear yaw")]
+        public void ClearYaw()
+        {
+            if (_owner != null)
+            {
+                _owner.AdjustYaw(-_owner.YawDegrees);
+                _owner.Persist();
+                return;
+            }
+            _yawDegrees = 0f;
+            if (Layout != null) RebuildLayout();
+            Save();
+        }
+
         /// <summary>Total correction applied so far, in millimetres, for display.</summary>
-        public Vector3 NudgeMillimetres => Layout == null
-            ? Vector3.zero
+        public Vector3 NudgeMillimetres =>
+            _owner != null ? _owner.NudgeMillimetres
+            : Layout == null ? Vector3.zero
             : new Vector3(Vector3.Dot(_nudge, Layout.Right),
                           Vector3.Dot(_nudge, Layout.Up),
                           Vector3.Dot(_nudge, Layout.Forward)) * 1000f;
@@ -219,9 +397,19 @@ namespace PianoGlass.Piano
         private void RebuildLayout()
         {
             Vector3 head = headTransform != null ? headTransform.position : _lowPoint + Vector3.back;
-            Layout = new PianoKeyLayout(_lowPoint + _nudge, _highPoint + _nudge,
+
+            // Yaw first, about the captured points' own centre, then the
+            // nudge -- so the nudge, which Nudge() builds from the layout's
+            // axes, is never itself rotated a second time.
+            var turned = AnchoredKeyboard.RotateYaw(new KeyboardGeometry(_lowPoint, _highPoint, Vector3.zero), _yawDegrees);
+
+            Layout = new PianoKeyLayout(turned.LowFront + _nudge, turned.HighFront + _nudge,
                                         lowestNote, highestNote, head, whiteKeyDepth);
             Calibrated?.Invoke(Layout);
+
+            // After Calibrated, so consumers already hold the new layout when
+            // they are told they may show it.
+            SetPlacementValid(true);
         }
 
         // ------------------------------------------------------------------
@@ -238,10 +426,20 @@ namespace PianoGlass.Piano
             public int lowestNote;
             public int highestNote;
             public float whiteKeyDepth;
+            // Added with yaw fine-adjust. Absent in older files, which
+            // JsonUtility reads as 0 -- exactly "no yaw".
+            public float yawDegrees;
         }
 
         public void Save()
         {
+            if (_owner != null)
+            {
+                // Anchored: the adjustment goes to piano_profiles.json, and
+                // the legacy file is left exactly as it was.
+                _owner.Persist();
+                return;
+            }
             if (Layout == null) return;
             var data = new SavedCalibration
             {
@@ -251,7 +449,8 @@ namespace PianoGlass.Piano
                 head = headTransform != null ? headTransform.position : Vector3.zero,
                 lowestNote = lowestNote,
                 highestNote = highestNote,
-                whiteKeyDepth = whiteKeyDepth
+                whiteKeyDepth = whiteKeyDepth,
+                yawDegrees = _yawDegrees
             };
 
             try
@@ -278,6 +477,7 @@ namespace PianoGlass.Piano
                 _lowPoint = data.low;
                 _highPoint = data.high;
                 _nudge = data.nudge;
+                _yawDegrees = float.IsNaN(data.yawDegrees) ? 0f : Mathf.Clamp(data.yawDegrees, -10f, 10f);
 
                 if (headTransform == null && Camera.main != null) headTransform = Camera.main.transform;
                 RebuildLayout();
