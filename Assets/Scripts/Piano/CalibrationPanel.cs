@@ -48,6 +48,10 @@ namespace PianoGlass.Piano
             if (clock == null) clock = FindAnyObjectByType<SongClock>();
             if (tip == null) tip = FindAnyObjectByType<ControllerTipCalibration>();
             if (flow == null) flow = FindAnyObjectByType<CalibrationFlowController>();
+
+            // Development builds: the headset test checklist, beside this panel.
+            if (Debug.isDebugBuild && flow != null && text != null)
+                gameObject.AddComponent<DeviceChecklistRunner>().Init(flow, transport, text);
         }
 
         private void Update()

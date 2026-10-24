@@ -171,6 +171,13 @@ namespace PianoGlass.Piano
         /// <summary>Anchor, geometry or nudge changed: rebuild the layout.</summary>
         public event Action PlacementChanged;
 
+        /// <summary>Every handled flow event, before its commands run. For
+        /// observers (the in-headset device checklist); decides nothing.</summary>
+        public event Action<FlowEvent, FlowTransition> Transitioned;
+
+        /// <summary>lastCorrection of the profile read at launch; null if none.</summary>
+        public string LaunchLastCorrection { get; private set; }
+
         private readonly IPianoAnchorService _service;
         private readonly PianoProfileSerializer _serializer;
         private readonly double _localizeTimeoutSeconds;
@@ -235,6 +242,7 @@ namespace PianoGlass.Piano
 
             _savedProfile = check.Profile;
             SavedAnchorUuid = check.Profile.PrimaryAnchorUuid;
+            LaunchLastCorrection = check.Profile.lastCorrection;
             Log($"launch: profile '{check.Profile.profileId}' anchor={SavedAnchorUuid} " +
                 $"notes {check.Profile.lowestNote}-{check.Profile.highestNote} nudge={Mm(NudgeMm)}");
             return Fire(FlowEvent.ProfileValid);
@@ -433,6 +441,7 @@ namespace PianoGlass.Piano
                 return;
             }
             Log($"{e}: {t}");
+            Transitioned?.Invoke(e, t);
 
             // Read before WriteProfile replaces it.
             string oldUuid = SavedAnchorUuid;

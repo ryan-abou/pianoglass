@@ -113,6 +113,17 @@ starting state; `AnchoredCalibrationSession` — `Confirm`,
 grip, `SongTransport` leaves the confirming A alone, `CalibrationPanel`
 highlights the banner and shows the applied fix. No scene change.
 
+**In-headset checklist.** Development builds show the ten device-test
+steps in a column to the right of the calibration panel
+(`DeviceChecklist` in Core, tested; `DeviceChecklistRunner` added at
+runtime by `CalibrationPanel`, no scene change). Each step ticks itself
+from what actually happened -- flow transitions, the transport starting,
+the head dropping 25 cm (seated), a one-frame anchor pose jump (recenter),
+a MIDI note -- and the measured fix, cap and seated errors are shown under
+it. It does not judge alignment or wording; the tester still does that by
+eye. Progress survives relaunches in `device_checklist.json` and resets
+with each new build. Logs: `[AnchorFlow] checklist: step N (...) Passed`.
+
 ### Phase 5 device results
 
 PENDING DEVICE TEST — fill in from the Phase 5 checklist, including the
