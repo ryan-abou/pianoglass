@@ -72,6 +72,62 @@ namespace PianoGlass.Tests.EditMode
             Assert.AreEqual(highwayHeight, height, 1e-6f);
         }
 
+        // The real highway: 0.5 m wall, 3 s of lead time, 12 mm gap.
+        private const float RealSpeed = 0.5f / 3f;
+        private const float RealHeight = 0.5f;
+        private const float Gap = 0.012f;
+
+        /// <summary>Twinkle's opening: two back-to-back quarter-note C4s at
+        /// 120 BPM, the second starting the instant the first ends. Without a
+        /// gap they draw as one double-height bar.</summary>
+        [Test]
+        public void BackToBackRepeatedNotesAlwaysShowAGap()
+        {
+            int bothVisible = 0;
+            for (double songTime = -3.5; songTime <= 1.0; songTime += 0.01)
+            {
+                var (b1, h1) = SlabGeometry.VerticalExtent(0.0, 0.5, songTime, RealSpeed, RealHeight, Gap);
+                var (b2, h2) = SlabGeometry.VerticalExtent(0.5, 1.0, songTime, RealSpeed, RealHeight, Gap);
+                if (h1 <= 0f || h2 <= 0f) continue;
+                bothVisible++;
+                Assert.GreaterOrEqual(b2 - (b1 + h1), Gap - 1e-5f, $"songTime={songTime}");
+            }
+            Assert.Greater(bothVisible, 100, "the two notes really were on the wall together");
+        }
+
+        /// <summary>The bottom edge reaching the key line is the "play now"
+        /// cue; the gap comes off the top so that timing is untouched.</summary>
+        [Test]
+        public void TheGapNeverMovesTheBottomEdge()
+        {
+            for (double songTime = -2.9; songTime <= 0.4; songTime += 0.1)
+            {
+                var (plainBottom, _) = SlabGeometry.VerticalExtent(0.0, 0.5, songTime, RealSpeed, RealHeight);
+                var (gapBottom, gapHeight) = SlabGeometry.VerticalExtent(0.0, 0.5, songTime, RealSpeed, RealHeight, Gap);
+                if (gapHeight <= 0f) continue;
+                Assert.AreEqual(plainBottom, gapBottom, 1e-6f, $"songTime={songTime}");
+            }
+        }
+
+        [Test]
+        public void AFullyVisibleNoteIsShortenedByExactlyTheGap()
+        {
+            // A quarter note at 120 BPM: 0.5 s × speed = 83.3 mm tall.
+            var (_, plain) = SlabGeometry.VerticalExtent(1.0, 1.5, 0.0, RealSpeed, RealHeight);
+            var (_, gapped) = SlabGeometry.VerticalExtent(1.0, 1.5, 0.0, RealSpeed, RealHeight, Gap);
+            Assert.AreEqual(plain - Gap, gapped, 1e-6f);
+        }
+
+        /// <summary>A note shorter than a few gaps must not vanish: the gap is
+        /// capped at a third of the note's full height.</summary>
+        [Test]
+        public void AVeryShortNoteKeepsTwoThirdsOfItsHeight()
+        {
+            // 0.09 s × speed = 15 mm full height; a 12 mm gap would leave 3 mm.
+            var (_, height) = SlabGeometry.VerticalExtent(1.0, 1.09, 0.0, RealSpeed, RealHeight, Gap);
+            Assert.AreEqual(0.015f * 2f / 3f, height, 1e-5f);
+        }
+
         [Test]
         public void NegativeSongTimeDuringTheLeadInHidesEverything()
         {

@@ -43,6 +43,10 @@ namespace PianoGlass.Highway
         [Tooltip("Fraction of the key's width a slab fills, so adjacent notes " +
                  "don't touch.")]
         [SerializeField] private float widthFraction = 0.9f;
+        [Tooltip("Metres trimmed off the top of every slab, so two of the same " +
+                 "note in a row read as two notes, not one long bar. Drawing " +
+                 "only: note timing is untouched.")]
+        [SerializeField] private float noteGapMetres = 0.012f;
 
         [Header("Highway")]
         [Tooltip("Seconds of warning before a note is due -- how far up the wall it spawns.")]
@@ -182,7 +186,7 @@ namespace PianoGlass.Highway
                 if (!layout.TryGetKey(note.Pitch, out PianoKey key)) continue;
 
                 (float b, float height) = SlabGeometry.VerticalExtent(
-                    note.StartTime, note.EndTime, songTime, speed, highwayHeight);
+                    note.StartTime, note.EndTime, songTime, speed, highwayHeight, noteGapMetres);
 
                 // SlabGeometry's clamps alone are what cull a note that hasn't
                 // arrived yet, or has fully passed, and what make a held

@@ -11,6 +11,9 @@ namespace PianoGlass.Song
     /// </summary>
     public static class SlabGeometry
     {
+        /// <summary>The most of a note's height the gap may take.</summary>
+        public const float MaxGapFraction = 1f / 3f;
+
         /// <summary>
         /// The slab's bottom offset and height, in metres above the key line,
         /// for a note running from noteStartTime to noteEndTime, at the given
@@ -26,12 +29,22 @@ namespace PianoGlass.Song
         /// one during the pre-song lead-in, since bottom and top are both
         /// just affine functions of songTime and the same two clamps apply
         /// regardless of its sign.
+        ///
+        /// gap, in metres, is trimmed off the top so back-to-back notes --
+        /// two quarter-note C4s in a row -- draw as two slabs rather than
+        /// one long bar. Off the top, never the bottom: the bottom reaching
+        /// the key line is the "play now" cue and stays exactly on time. The
+        /// note's own times are untouched; this is drawing only. Capped at
+        /// MaxGapFraction of the note's full height so a short note never
+        /// disappears.
         /// </summary>
         public static (float bottom, float height) VerticalExtent(
             double noteStartTime, double noteEndTime, double songTime,
-            float speed, float highwayHeight)
+            float speed, float highwayHeight, float gap = 0f)
         {
-            float top = (float)(noteEndTime - songTime) * speed;
+            float fullHeight = (float)(noteEndTime - noteStartTime) * speed;
+            float trim = Mathf.Min(Mathf.Max(gap, 0f), fullHeight * MaxGapFraction);
+            float top = (float)(noteEndTime - songTime) * speed - trim;
             float bottom = (float)(noteStartTime - songTime) * speed;
             float b = Mathf.Max(bottom, 0f);
             float t = Mathf.Min(top, highwayHeight);
