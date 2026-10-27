@@ -72,10 +72,10 @@ namespace PianoGlass.Tests.EditMode
             Assert.AreEqual(highwayHeight, height, 1e-6f);
         }
 
-        // The real highway: 0.5 m wall, 3 s of lead time, 12 mm gap.
+        // The real highway: 0.5 m wall, 3 s of lead time, 8 mm gap.
         private const float RealSpeed = 0.5f / 3f;
         private const float RealHeight = 0.5f;
-        private const float Gap = 0.012f;
+        private const float Gap = 0.008f;
 
         /// <summary>Twinkle's opening: two back-to-back quarter-note C4s at
         /// 120 BPM, the second starting the instant the first ends. Without a
@@ -123,7 +123,7 @@ namespace PianoGlass.Tests.EditMode
         [Test]
         public void AVeryShortNoteKeepsTwoThirdsOfItsHeight()
         {
-            // 0.09 s × speed = 15 mm full height; a 12 mm gap would leave 3 mm.
+            // 0.09 s × speed = 15 mm full height; an 8 mm gap would leave 7 mm, but the cap allows only 5.
             var (_, height) = SlabGeometry.VerticalExtent(1.0, 1.09, 0.0, RealSpeed, RealHeight, Gap);
             Assert.AreEqual(0.015f * 2f / 3f, height, 1e-5f);
         }

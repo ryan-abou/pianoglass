@@ -46,7 +46,7 @@ namespace PianoGlass.Highway
         [Tooltip("Metres trimmed off the top of every slab, so two of the same " +
                  "note in a row read as two notes, not one long bar. Drawing " +
                  "only: note timing is untouched.")]
-        [SerializeField] private float noteGapMetres = 0.012f;
+        [SerializeField] private float noteGapMetres = 0.008f;
 
         [Header("Highway")]
         [Tooltip("Seconds of warning before a note is due -- how far up the wall it spawns.")]
