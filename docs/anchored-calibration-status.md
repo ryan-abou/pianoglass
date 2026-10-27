@@ -26,7 +26,7 @@ anything not yet tried on the headset is marked **PENDING DEVICE TEST**.
 | 3 | `42acb6c` | `OvrPianoAnchorService` on the non-obsolete `OVRSpatialAnchor` async API, editor fake, dev-only spike harness (`OvrAnchorSpike`, now disabled in the scene). | Spike superseded by Phase 4 run. |
 | — | `6df3722` | CLAUDE.md: adb-server trap; `MANIFEST-additions.txt` matches the real manifest. | n/a |
 | 4 | `a8ca173` | Overlays follow the anchor. `AnchoredCalibrationSession` + `CalibrationFlowController` (placement owner of `KeyboardCalibration`), `PianoAnchorManager` republishes the layout on > 1 mm / 0.1° anchor movement. Launch localizes automatically; nothing created on launch; nothing erased on any failure path; the old anchor is erased only after the new profile is on disk. | **All passed** — see below. |
-| 5 | *planned* | Verifying banner, A confirms → Ready + `lastVerifiedUtc`; Middle C one-point correction (right grip); recalibration panel wording. | not started |
+| 5 | branch `phase5-verify` | Verifying banner, A confirms → Ready + `lastVerifiedUtc`; Middle C one-point correction (right grip) as a rigid anchor-local shift; recalibration panel wording; in-headset test checklist. EditMode 190/190. | **All passed** (2026-10-26) — see below. |
 
 ---
 
@@ -62,16 +62,102 @@ anything not yet tried on the headset is marked **PENDING DEVICE TEST**.
 
 ---
 
+## Phase 5 — verification and Middle C correction
+
+**Status: passed on device (Quest 2, 2026-10-26).** EditMode 190/190.
+Device results at the end of this section.
+
+Development builds, anchored mode only:
+
+- After localizing or after a fresh calibration the flow is in
+  **Verifying**: overlays drawn, and the panel's prompt line is the banner
+  `A: looks right · right grip: Middle C fix · B: recalibrate`; the anchor
+  line reads `verifying -- do the keys line up?`.
+- **A** in Verifying confirms → **Ready** and writes `lastVerifiedUtc` to the
+  active profile (`[AnchorFlow] verified by the player: lastVerifiedUtc=...`).
+  That press does not also start the song — `SongTransport` ignores A while
+  confirmation is awaited and in the frame it happens, whichever input
+  script updates first. The next A plays/pauses as before. Y and the MIDI
+  restart chord are unaffected.
+- **Right grip** (Verifying or Ready) starts a **Middle C fix**: touch the
+  front edge of Middle C (C4, MIDI 60) and pull the right trigger. The raw
+  offset from the expected front-edge point (nudge included — it is
+  measured against what is drawn) is logged as
+  `[AnchorFlow] verify error x/y/z mm = +x / +y / +z (total n mm) -- ...` in
+  the keyboard frame (x along the keys, y up, z toward the player) and the
+  applied shift is shown on the panel. It is applied as a rigid shift of the
+  stored geometry in anchor-local space (span and yaw unchanged), vertical
+  capped at 10 mm, and persisted in the profile (`lastCorrection =
+  "middle-c"`, `lastCorrectionMm` anchor-local, geometry updated). Then back
+  to Verifying: A to accept the corrected keys.
+- Over **50 mm** is refused with
+  `Middle C is N mm off -- piano may have moved -- press B to recalibrate`;
+  nothing moves and nothing is written.
+- Right grip again cancels; a fix started from Ready and cancelled stays in
+  Ready (nothing changed, nothing to re-confirm). An applied fix always
+  returns to Verifying.
+- During a recalibration with an existing profile the anchor line says
+  `recalibrating -- touch the lowest key`, then
+  `recalibrating -- now the highest key` — never "no saved piano yet",
+  which is now only first-time setup.
+- A fresh calibration resets `lastCorrection` to `"none"` and
+  `lastCorrectionMm` to zero, as it already reset `lastVerifiedUtc`.
+
+Code: Core (`CalibrationFlow` — cancelled corrections return to their
+starting state; `AnchoredCalibrationSession` — `Confirm`,
+`ToggleCorrectionAsync`, `OnMiddleCTouchedAsync`, new panel statuses;
+`AnchoredKeyboard` — limits as constants, rejection wording;
+`PianoProfileEdits.ApplyCorrection`; `PianoProfile.lastCorrectionMm`). Shell:
+`IKeyboardPlacementOwner` grows confirm / correction / placed-prompt members,
+`KeyboardCalibration` forwards them, `OvrCalibrationInput` binds A and right
+grip, `SongTransport` leaves the confirming A alone, `CalibrationPanel`
+highlights the banner and shows the applied fix. No scene change.
+
+**In-headset checklist.** Development builds show the ten device-test
+steps in a column to the right of the calibration panel
+(`DeviceChecklist` in Core, tested; `DeviceChecklistRunner` added at
+runtime by `CalibrationPanel`, no scene change). Each step ticks itself
+from what actually happened -- flow transitions, the transport starting,
+the head dropping 25 cm (seated), a one-frame anchor pose jump (recenter),
+a MIDI note -- and the measured fix, cap and seated errors are shown under
+it. It does not judge alignment or wording; the tester still does that by
+eye. Progress survives relaunches in `device_checklist.json` and resets
+with each new build. Logs: `[AnchorFlow] checklist: step N (...) Passed`.
+
+### Phase 5 device results
+
+Quest 2, 2026-10-26, development build with the in-headset checklist.
+**All ten steps behaved as intended**, as judged by the tester: launch →
+Verifying with the banner; A confirmed without starting the song, and the
+next A played; the Middle C fix applied and survived a relaunch; a cancel
+from Ready stayed Ready; a touch over 50 mm away was refused; the vertical
+cap held; recalibration said "recalibrating -- touch the lowest key";
+a recenter kept the keys on the piano, and MIDI lit them.
+
+**Seated check (Phase 4 observation 2): improved, not resolved.** After
+one seated Middle C fix, A0 and C8 looked "a very little bit off" from the
+seat, with the overlay still slightly *lower* than the key edges. The
+seated y value was not written down. The key width was again 23.4 mm, the
+same as in Phase 4 on this piano, so it is most likely the piano's real
+key width. It is also a horizontal reading, about 5 mm over the whole span,
+with the end keys placed where they were touched, so it cannot explain a
+*vertical* offset. That is still consistent with a small height error seen
+at a shallow angle.
+
+**Checklist bug (test tool only, not Phase 5 behaviour).** The panel stayed
+on step 4 ("Fix survives a relaunch") after the fix had visibly survived,
+so steps 7 and 9 were run by hand. Not investigated. The device log would
+show whether `[AnchorFlow] checklist: step 4 ... Passed` was ever logged.
+
 ## What's next
 
-1. **Phase 5** (new branch from `main`, development builds only): Verifying
-   banner on the status panel after localizing or calibrating
-   (`A: looks right · right grip: Middle C fix · B: recalibrate`); A confirms
-   → Ready and writes `lastVerifiedUtc`; Middle C one-point correction
-   (right grip, touch, trigger) applied as a rigid anchor-local shift,
-   vertical capped at 10 mm, refused over 50 mm, persisted in the profile;
-   recalibration wording fix.
-2. Two-point correction (C3 + C6) for yaw/width errors a one-point fix
-   cannot remove — the Core maths (`SolveTwoPoint`) already exists.
-3. Promote anchored calibration from development-only to release once it has
+1. Measure observation 2: a seated Middle C fix with the y value written
+   down (`verify error x/y/z mm` in the log). Then decide whether the
+   fix's vertical part (capped at 10 mm) is enough, or whether a dedicated
+   height check is needed.
+2. Fix the checklist's step 4 not advancing, before it is used again.
+3. Two-point correction (C3 + C6) for yaw/width errors a one-point fix
+   cannot remove — the Core maths (`SolveTwoPoint`) already exists, and the
+   flow already has the states.
+4. Promote anchored calibration from development-only to release once it has
    survived a user-test session.

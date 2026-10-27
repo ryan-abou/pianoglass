@@ -117,6 +117,10 @@ namespace PianoGlass.Piano
 
         private readonly int _maxLocalizeAttempts;
         private FlowState _resumeState = FlowState.Ready;
+        /// <summary>Where a cancelled correction goes back to: a Middle C
+        /// fix started from Ready and abandoned changed nothing, so it
+        /// does not need confirming again.</summary>
+        private FlowState _correctionReturn = FlowState.Verifying;
 
         public CalibrationFlow(int maxLocalizeAttempts = DefaultMaxLocalizeAttempts)
         {
@@ -245,7 +249,7 @@ namespace PianoGlass.Piano
                             Go(FlowState.Ready);
                             return true;
                         case FlowEvent.CorrectionStarted:
-                            Go(FlowState.Correcting);
+                            StartCorrecting();
                             return true;
                         case FlowEvent.TrackingLost:
                             Suspend();
@@ -266,7 +270,7 @@ namespace PianoGlass.Piano
                             Go(FlowState.Verifying);
                             return true;
                         case FlowEvent.CorrectionCancelled:
-                            Go(FlowState.Verifying);
+                            Go(_correctionReturn);
                             return true;
                         case FlowEvent.TrackingLost:
                             // A correction measured against a lost anchor is
@@ -279,7 +283,7 @@ namespace PianoGlass.Piano
 
                 case FlowState.Ready:
                     if (e == FlowEvent.TrackingLost) { Suspend(); return true; }
-                    if (e == FlowEvent.CorrectionStarted) { Go(FlowState.Correcting); return true; }
+                    if (e == FlowEvent.CorrectionStarted) { StartCorrecting(); return true; }
                     return false;
 
                 case FlowState.Suspended:
@@ -300,6 +304,14 @@ namespace PianoGlass.Piano
             RecalibrateOffered = false;
             Go(FlowState.Localizing);
             cmd.Add(FlowCommand.LoadAndLocalizeAnchor);
+        }
+
+        /// <summary>An applied correction always comes back to Verifying --
+        /// the placement changed, so it is checked again.</summary>
+        private void StartCorrecting()
+        {
+            _correctionReturn = State;
+            Go(FlowState.Correcting);
         }
 
         private void Suspend()

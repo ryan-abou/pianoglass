@@ -153,6 +153,12 @@ namespace PianoGlass.Piano
         // Corrections
         // ------------------------------------------------------------------
 
+        public const int MiddleC = 60;
+        /// <summary>One-point correction limits: the vertical part is capped
+        /// at this, and anything further than MovedMetres is refused.</summary>
+        public const float VerticalCapMetres = 0.01f;
+        public const float MovedMetres = 0.05f;
+
         /// <summary>
         /// One-point (Middle C) correction. <paramref name="expected"/> is the
         /// front-edge centre the current layout says the key has;
@@ -163,14 +169,13 @@ namespace PianoGlass.Piano
         /// calibration error, the piano has moved.
         /// </summary>
         public static OnePointCorrection CorrectOnePoint(Vector3 expected, Vector3 touched,
-                                                         float verticalCap = 0.01f,
-                                                         float movedThreshold = 0.05f)
+                                                         float verticalCap = VerticalCapMetres,
+                                                         float movedThreshold = MovedMetres)
         {
             Vector3 delta = touched - expected;
             if (delta.magnitude > movedThreshold)
                 return OnePointCorrection.Reject(delta,
-                    $"Middle C is {delta.magnitude * 100f:0.0} cm from where it should be -- " +
-                    "the piano has probably moved. Recalibrate instead.");
+                    $"Middle C is {delta.magnitude * 1000f:0} mm off -- piano may have moved -- press B to recalibrate");
 
             delta.y = Mathf.Clamp(delta.y, -verticalCap, verticalCap);
             return OnePointCorrection.Accept(delta);

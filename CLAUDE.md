@@ -327,6 +327,11 @@ recenters of up to 1.1 m / 180° kept the keys on the piano).
   `OvrAnchorSpike` (Phase 3 harness) used both grips and is disabled in the
   scene by `Configure Anchored Calibration`; do not re-enable it alongside the
   flow.
+- **Verifying is a real state, not a formality** (Phase 5). After every
+  localize or calibration the keys are drawn and A means "looks right"
+  (→ Ready, `lastVerifiedUtc`), *not* play — `SongTransport` ignores that one
+  press. Right grip starts a Middle C fix (touch the front edge, trigger):
+  a rigid anchor-local shift, vertical capped at 10 mm, refused over 50 mm.
 - **All logs start with `[AnchorFlow]`**: `adb logcat -s Unity | findstr AnchorFlow`.
 
 ---
@@ -457,7 +462,8 @@ Working and proven on device: MIDI input end to end, 88-key overlay registered
 on the real piano to under half a percent of correct, calibration persisted with
 runtime fine-adjust, controller-tip calibration (1.58 mm RMS), and — in
 development builds — anchored calibration that survives relaunch, recenter and
-reboot (Phase 4, 2026-10-21). See `docs/anchored-calibration-status.md`.
+reboot (Phase 4, 2026-10-21), with a Verifying step and a Middle C one-point
+fix (Phase 5, 2026-10-26). See `docs/anchored-calibration-status.md`.
 
 Next is the vertical slice — song data → song clock → falling-note highway → hit
 detection → wait-mode — built thin and ugly, end to end, before any of it is

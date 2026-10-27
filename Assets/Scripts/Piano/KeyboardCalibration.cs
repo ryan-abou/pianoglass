@@ -74,7 +74,8 @@ namespace PianoGlass.Piano
         {
             Stage.AwaitingLowest  => $"Touch the front edge of the LOWEST key ({NoteName(lowestNote)}) and pull the trigger",
             Stage.AwaitingHighest => $"Now the HIGHEST key ({NoteName(highestNote)})",
-            Stage.Calibrated      => "Calibrated.  sticks = nudge   left stick L/R = yaw   B = redo   stick click = clear nudge",
+            Stage.Calibrated      => _owner?.PlacedPrompt ??
+                                     "Calibrated.  sticks = nudge   left stick L/R = yaw   B = redo   stick click = clear nudge",
             Stage.Waiting         => _owner != null ? _owner.WaitingPrompt : "",
             _                     => "Press the trigger to start calibration"
         };
@@ -84,6 +85,29 @@ namespace PianoGlass.Piano
         /// <summary>True when an anchor (via its owner) decides placement,
         /// not this component's own captured points.</summary>
         public bool IsExternallyPlaced => _owner != null;
+
+        /// <summary>Anchored mode: the keys are on show and the owner wants
+        /// A to confirm them. SongTransport leaves A alone meanwhile.</summary>
+        public bool AwaitingConfirmation => _owner != null && _owner.AwaitingConfirmation;
+
+        private int _confirmedFrame = -1;
+
+        /// <summary>A confirmed the placement this frame. Lets SongTransport
+        /// ignore that same press whichever Update runs first.</summary>
+        public bool ConfirmedThisFrame => _confirmedFrame == Time.frameCount;
+
+        /// <summary>A pressed. True if it confirmed the placement, in which
+        /// case nothing else should act on that press.</summary>
+        public bool Confirm()
+        {
+            if (!AwaitingConfirmation) return false;
+            _confirmedFrame = Time.frameCount;
+            _owner.Confirm();
+            return true;
+        }
+
+        /// <summary>Right grip: start or cancel a Middle C fix (anchored mode).</summary>
+        public void ToggleCorrection() => _owner?.ToggleCorrection();
 
         private Vector3 _lowPoint;
         private Vector3 _highPoint;
@@ -210,6 +234,10 @@ namespace PianoGlass.Piano
 
                 case Stage.Waiting:
                     _owner?.OnTriggerWhileWaiting();
+                    break;
+
+                case Stage.Calibrated:
+                    _owner?.OnTriggerWhilePlaced(pointerTip.position);
                     break;
 
                 case Stage.AwaitingLowest:

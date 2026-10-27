@@ -48,6 +48,10 @@ namespace PianoGlass.Piano
             if (clock == null) clock = FindAnyObjectByType<SongClock>();
             if (tip == null) tip = FindAnyObjectByType<ControllerTipCalibration>();
             if (flow == null) flow = FindAnyObjectByType<CalibrationFlowController>();
+
+            // Development builds: the headset test checklist, beside this panel.
+            if (Debug.isDebugBuild && flow != null && text != null)
+                gameObject.AddComponent<DeviceChecklistRunner>().Init(flow, transport, text);
         }
 
         private void Update()
@@ -68,7 +72,12 @@ namespace PianoGlass.Piano
                 return;
             }
 
-            _sb.AppendLine(calibration.Prompt);
+            // The Verifying banner is the prompt line; make it the thing the
+            // eye lands on.
+            if (flow != null && flow.Active && flow.Status == AnchorPanelStatus.Verifying)
+                _sb.AppendLine($"<b><color=#E8D48A>{calibration.Prompt}</color></b>");
+            else
+                _sb.AppendLine(calibration.Prompt);
 
             if (flow != null && flow.Active)
             {
@@ -85,6 +94,8 @@ namespace PianoGlass.Piano
                 // including "not saved" while the keys are showing.
                 if (!string.IsNullOrEmpty(flow.LastProblem))
                     _sb.AppendLine($"<color=#E5948A>{flow.LastProblem}</color>");
+                if (!string.IsNullOrEmpty(flow.CorrectionNote))
+                    _sb.AppendLine($"<color=#A9C67C>{flow.CorrectionNote}</color>");
             }
 
             if (tip != null)

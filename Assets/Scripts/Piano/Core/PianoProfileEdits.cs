@@ -78,6 +78,7 @@ namespace PianoGlass.Piano
             p.createdUtc = utcNow;
             p.lastVerifiedUtc = "";
             p.lastCorrection = "none";
+            p.lastCorrectionMm = Vector3.zero;
             store.tipNudgeKeyboardMm = nudgeKeyboardMm;
 
             return previous == anchorUuid ? null : previous;
@@ -91,6 +92,18 @@ namespace PianoGlass.Piano
             PianoProfile p = store.ActiveProfile;
             if (p == null || string.IsNullOrEmpty(anchorUuid) || p.PrimaryAnchorUuid != anchorUuid) return false;
             p.SetLocalGeometry(local);
+            return true;
+        }
+
+        /// <summary>A one- or two-point correction: the corrected geometry
+        /// plus a record of what was applied. Same anchor rule as ApplyGeometry.</summary>
+        public static bool ApplyCorrection(PianoProfileStore store, string anchorUuid, KeyboardGeometry local,
+                                           string kind, Vector3 appliedLocalMm)
+        {
+            if (!ApplyGeometry(store, anchorUuid, local)) return false;
+            PianoProfile p = store.ActiveProfile;
+            p.lastCorrection = kind;
+            p.lastCorrectionMm = appliedLocalMm;
             return true;
         }
 

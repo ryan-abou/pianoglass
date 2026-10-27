@@ -83,6 +83,11 @@ namespace PianoGlass.Transport
         public void TogglePlayPause()
         {
             if (!CanAcceptInput || clock == null) return;
+            // That A belongs to "looks right". Both checks, because which of
+            // OvrCalibrationInput and OvrSongTransport updates first is not
+            // fixed: before the confirm it is still awaited, after it the
+            // confirm happened this frame.
+            if (calibration.AwaitingConfirmation || calibration.ConfirmedThisFrame) return;
             if (clock.IsPlaying) clock.Pause(); else clock.Play();
         }
 

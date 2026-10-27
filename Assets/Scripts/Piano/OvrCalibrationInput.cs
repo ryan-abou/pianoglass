@@ -5,7 +5,11 @@ namespace PianoGlass.Piano
     /// <summary>
     /// Meta-specific input for calibration.
     ///
-    ///   Right trigger        capture the next point
+    ///   Right trigger        capture the next point; during a Middle C fix,
+    ///                        the Middle C touch
+    ///   A                    anchored mode, Verifying: "looks right" (the
+    ///                        same press does not reach the transport)
+    ///   Right grip           anchored mode: start / cancel a Middle C fix
     ///   B                    start calibration over
     ///   Left trigger         start calibration over
     ///   Right thumbstick     slide the keyboard left/right and nearer/further
@@ -80,6 +84,23 @@ namespace PianoGlass.Piano
             {
                 if (logInput) Debug.Log("[Calibration] right trigger — capture");
                 _calibration.CapturePoint();
+                return;
+            }
+
+            // Only acts while the placement is waiting to be confirmed;
+            // otherwise A is OvrSongTransport's play/pause.
+            if (_calibration.AwaitingConfirmation &&
+                OVRInput.GetDown(OVRInput.Button.One, OVRInput.Controller.RTouch))
+            {
+                if (logInput) Debug.Log("[Calibration] A — looks right");
+                _calibration.Confirm();
+                return;
+            }
+
+            if (OVRInput.GetDown(OVRInput.Button.PrimaryHandTrigger, OVRInput.Controller.RTouch))
+            {
+                if (logInput) Debug.Log("[Calibration] right grip — Middle C fix");
+                _calibration.ToggleCorrection();
                 return;
             }
 

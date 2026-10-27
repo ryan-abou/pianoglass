@@ -10,8 +10,11 @@ namespace PianoGlass.Piano
     {
         /// <summary>Reading piano_profiles.json.</summary>
         Starting,
-        /// <summary>No usable profile, or B pressed: touch two keys.</summary>
+        /// <summary>No usable profile yet: first-time setup, touch two keys.</summary>
         Calibrating,
+        /// <summary>B pressed with a saved piano: touch two keys. The saved
+        /// piano stays on disk until the new one is saved.</summary>
+        Recalibrating,
         /// <summary>The saved anchor's load came back empty: it is gone.</summary>
         NotFound,
         /// <summary>Points captured; creating and saving the new anchor.</summary>
@@ -21,7 +24,12 @@ namespace PianoGlass.Piano
         Retrying,
         /// <summary>Gave up retrying on its own; trigger retries, B recalibrates.</summary>
         LocalizeFailed,
-        /// <summary>Anchor localized and tracked; overlays drawn.</summary>
+        /// <summary>Overlays drawn; waiting for A (looks right), right grip
+        /// (Middle C fix) or B (recalibrate).</summary>
+        Verifying,
+        /// <summary>Middle C fix: waiting for the touch.</summary>
+        Correcting,
+        /// <summary>Confirmed by the player; overlays drawn.</summary>
         Ready,
         /// <summary>Anchor localized but the runtime has lost it. Nothing drawn.</summary>
         Untracked,
@@ -30,7 +38,7 @@ namespace PianoGlass.Piano
     public static class AnchorStatusText
     {
         public static AnchorPanelStatus Classify(FlowState state, int localizeFailures, bool recalibrateOffered,
-                                                 bool savingNewAnchor, bool anchorNotFound)
+                                                 bool savingNewAnchor, bool anchorNotFound, bool hasProfile = false)
         {
             switch (state)
             {
@@ -41,24 +49,40 @@ namespace PianoGlass.Piano
                     return localizeFailures > 0 ? AnchorPanelStatus.Retrying : AnchorPanelStatus.Localizing;
                 case FlowState.FullCalibration:
                     if (savingNewAnchor) return AnchorPanelStatus.Saving;
-                    return anchorNotFound ? AnchorPanelStatus.NotFound : AnchorPanelStatus.Calibrating;
+                    if (anchorNotFound) return AnchorPanelStatus.NotFound;
+                    return hasProfile ? AnchorPanelStatus.Recalibrating : AnchorPanelStatus.Calibrating;
                 case FlowState.Suspended:
                     return AnchorPanelStatus.Untracked;
-                default: // Verifying, Correcting, Ready: all drawn
+                case FlowState.Verifying:
+                    return AnchorPanelStatus.Verifying;
+                case FlowState.Correcting:
+                    return AnchorPanelStatus.Correcting;
+                default:
                     return AnchorPanelStatus.Ready;
             }
         }
 
-        /// <summary>The panel line, without the "anchor:" label.</summary>
-        public static string Line(AnchorPanelStatus s, int localizeFailures, int maxAttempts) => s switch
+        /// <summary>The Verifying prompt, exactly as the panel shows it.</summary>
+        public const string VerifyBanner = "A: looks right · right grip: Middle C fix · B: recalibrate";
+
+        /// <summary>The panel line, without the "anchor:" label.
+        /// <paramref name="awaitingHighest"/>: the lowest key is already
+        /// touched (only changes the Recalibrating line).</summary>
+        public static string Line(AnchorPanelStatus s, int localizeFailures, int maxAttempts,
+                                  bool awaitingHighest = false) => s switch
         {
             AnchorPanelStatus.Starting       => "starting",
             AnchorPanelStatus.Calibrating    => "no saved piano yet -- calibrate (touch two keys)",
+            AnchorPanelStatus.Recalibrating  => awaitingHighest
+                                                    ? "recalibrating -- now the highest key"
+                                                    : "recalibrating -- touch the lowest key",
             AnchorPanelStatus.NotFound       => "not found -- saved piano is gone; calibrate again",
             AnchorPanelStatus.Saving         => "saving the piano's position...",
             AnchorPanelStatus.Localizing     => "localizing -- look at the piano",
             AnchorPanelStatus.Retrying       => $"retrying -- attempt {localizeFailures + 1} of {maxAttempts}",
             AnchorPanelStatus.LocalizeFailed => $"not localized after {maxAttempts} tries -- trigger = retry, B = recalibrate",
+            AnchorPanelStatus.Verifying      => "verifying -- do the keys line up?",
+            AnchorPanelStatus.Correcting     => "Middle C fix -- touch the front edge of Middle C, pull the trigger",
             AnchorPanelStatus.Ready          => "ready",
             AnchorPanelStatus.Untracked      => "untracked -- keys hidden until the piano is found again",
             _                                => s.ToString(),
@@ -119,8 +143,21 @@ namespace PianoGlass.Piano
         /// <summary>The anchor UUID piano_profiles.json currently names.</summary>
         public string SavedAnchorUuid { get; private set; }
 
+        /// <summary>What the last Middle C fix measured and applied, in words
+        /// for the panel; null until one is applied on the current anchor.</summary>
+        public string CorrectionNote { get; private set; }
+
+        /// <summary>The last Middle C touch's raw offset from where the key
+        /// should be, millimetres along (right, up, toward player) -- before
+        /// the vertical cap. Zero until one is measured.</summary>
+        public Vector3 LastVerifyErrorMm { get; private set; }
+
         public AnchorPanelStatus Status => AnchorStatusText.Classify(
-            Flow.State, Flow.LocalizeFailures, Flow.RecalibrateOffered, Flow.SavingNewAnchor, AnchorWasNotFound);
+            Flow.State, Flow.LocalizeFailures, Flow.RecalibrateOffered, Flow.SavingNewAnchor, AnchorWasNotFound,
+            Flow.HasProfile);
+
+        /// <summary>Verifying, with the keys actually on show: A confirms.</summary>
+        public bool AwaitingConfirmation => Flow.State == FlowState.Verifying && IsOverlayVisible;
 
         public string StatusLine => AnchorStatusText.Line(Status, Flow.LocalizeFailures, MaxLocalizeAttempts);
 
@@ -134,6 +171,13 @@ namespace PianoGlass.Piano
         /// <summary>Anchor, geometry or nudge changed: rebuild the layout.</summary>
         public event Action PlacementChanged;
 
+        /// <summary>Every handled flow event, before its commands run. For
+        /// observers (the in-headset device checklist); decides nothing.</summary>
+        public event Action<FlowEvent, FlowTransition> Transitioned;
+
+        /// <summary>lastCorrection of the profile read at launch; null if none.</summary>
+        public string LaunchLastCorrection { get; private set; }
+
         private readonly IPianoAnchorService _service;
         private readonly PianoProfileSerializer _serializer;
         private readonly double _localizeTimeoutSeconds;
@@ -143,6 +187,9 @@ namespace PianoGlass.Piano
         private PianoProfile _savedProfile;
         private Capture? _pending;
         private bool _writeIsNewCalibration;
+        /// <summary>Set by an accepted Middle C touch for the WriteProfile
+        /// that follows: the applied shift, anchor-local mm.</summary>
+        private Vector3? _writeCorrectionMm;
         private bool _savedAnchorGone;
         private int _loadGeneration;
 
@@ -195,6 +242,7 @@ namespace PianoGlass.Piano
 
             _savedProfile = check.Profile;
             SavedAnchorUuid = check.Profile.PrimaryAnchorUuid;
+            LaunchLastCorrection = check.Profile.lastCorrection;
             Log($"launch: profile '{check.Profile.profileId}' anchor={SavedAnchorUuid} " +
                 $"notes {check.Profile.lowestNote}-{check.Profile.highestNote} nudge={Mm(NudgeMm)}");
             return Fire(FlowEvent.ProfileValid);
@@ -228,6 +276,86 @@ namespace PianoGlass.Piano
             Flow.State == FlowState.Localizing && Flow.RecalibrateOffered
                 ? Fire(FlowEvent.RetryRequested)
                 : Task.CompletedTask;
+
+        // ------------------------------------------------------------------
+        // Verifying (A, right grip, Middle C touch)
+        // ------------------------------------------------------------------
+
+        /// <summary>A while Verifying: Ready, and lastVerifiedUtc written.
+        /// False (and nothing happens) in any other state, so the press can
+        /// go to the transport instead.</summary>
+        public bool Confirm()
+        {
+            if (!AwaitingConfirmation) return false;
+            _ = Fire(FlowEvent.ConfirmPressed);
+            return true;
+        }
+
+        /// <summary>Right grip: start a Middle C fix from Verifying or Ready,
+        /// or cancel the one in progress.</summary>
+        public Task ToggleCorrectionAsync()
+        {
+            if (Flow.State == FlowState.Correcting) return Fire(FlowEvent.CorrectionCancelled);
+            if (!IsOverlayVisible) return Task.CompletedTask;
+
+            PianoKeyLayout layout = BuildLayout();
+            if (layout == null || !layout.Contains(AnchoredKeyboard.MiddleC))
+            {
+                LastProblem = "Middle C is not on this keyboard -- no Middle C fix.";
+                Log($"Middle C fix unavailable: note 60 outside {LowestNote}-{HighestNote}");
+                return Task.CompletedTask;
+            }
+            return Fire(FlowEvent.CorrectionStarted);
+        }
+
+        /// <summary>
+        /// The trigger while Correcting: <paramref name="tipWorld"/> is where
+        /// the controller tip touched Middle C's front edge. Measures it
+        /// against the front edge the layout on show says Middle C has
+        /// (nudge included), and applies the offset as a rigid shift of the
+        /// anchor-local geometry -- vertical capped, anything over
+        /// AnchoredKeyboard.MovedMetres refused with nothing written.
+        /// </summary>
+        public Task OnMiddleCTouchedAsync(Vector3 tipWorld)
+        {
+            if (Flow.State != FlowState.Correcting || Anchor == null)
+            {
+                Log($"Middle C touch ignored in {Flow.State}");
+                return Task.CompletedTask;
+            }
+
+            PianoKeyLayout layout = BuildLayout();
+            Vector3 expected = layout.FrontEdgeCenter(AnchoredKeyboard.MiddleC);
+            OnePointCorrection c = AnchoredKeyboard.CorrectOnePoint(expected, tipWorld);
+
+            Vector3 rawMm = AnchoredKeyboard.NudgeToKeyboardMm(tipWorld - expected, layout.Right, layout.Up, layout.Forward);
+            LastVerifyErrorMm = rawMm;
+            string error = $"verify error x/y/z mm = {rawMm.x:+0.0;-0.0;0} / {rawMm.y:+0.0;-0.0;0} / {rawMm.z:+0.0;-0.0;0} " +
+                           $"(total {rawMm.magnitude:0.0} mm)";
+
+            if (!c.Accepted)
+            {
+                Log($"{error} -- rejected, over {AnchoredKeyboard.MovedMetres * 1000f:0} mm");
+                LastProblem = c.Reason;
+                return Fire(FlowEvent.CorrectionRejectedMoved);
+            }
+
+            // The anchor is yaw-only, so its local y is world up and the
+            // capped vertical stays capped.
+            Vector3 local = AnchoredKeyboard.DirectionToLocal(Anchor.Pose, c.Delta);
+            LocalGeometry = AnchoredKeyboard.Translate(LocalGeometry, local);
+            _writeCorrectionMm = local * 1000f;
+
+            Vector3 appliedMm = AnchoredKeyboard.NudgeToKeyboardMm(c.Delta, layout.Right, layout.Up, layout.Forward);
+            bool capped = Mathf.Abs(rawMm.y - appliedMm.y) > 0.05f;
+            Log($"{error} -- applied {Mm(appliedMm)}" + (capped ? $" (vertical capped from {rawMm.y:+0.0;-0.0} mm)" : ""));
+
+            LastProblem = null;
+            CorrectionNote = $"Middle C fix: x {appliedMm.x:+0.0;-0.0;0} · y {appliedMm.y:+0.0;-0.0;0} · " +
+                             $"z {appliedMm.z:+0.0;-0.0;0} mm" + (capped ? $"   (y capped; measured {rawMm.y:+0.0;-0.0})" : "");
+            PlacementChanged?.Invoke();
+            return Fire(FlowEvent.CorrectionApplied);
+        }
 
         /// <summary>
         /// Call every frame. State-based rather than edge-based: whatever the
@@ -313,6 +441,7 @@ namespace PianoGlass.Piano
                 return;
             }
             Log($"{e}: {t}");
+            Transitioned?.Invoke(e, t);
 
             // Read before WriteProfile replaces it.
             string oldUuid = SavedAnchorUuid;
@@ -348,7 +477,9 @@ namespace PianoGlass.Piano
                         break;
 
                     case FlowCommand.OfferRecalibrate:
-                        Log("localization gave up retrying on its own: trigger retries, B recalibrates");
+                        Log(t.From == FlowState.Correcting
+                            ? "Middle C fix refused: piano may have moved -- B recalibrates"
+                            : "localization gave up retrying on its own: trigger retries, B recalibrates");
                         break;
                 }
             }
@@ -456,6 +587,8 @@ namespace PianoGlass.Piano
         {
             bool newCalibration = _writeIsNewCalibration;
             _writeIsNewCalibration = false;
+            Vector3? correctionMm = _writeCorrectionMm;
+            _writeCorrectionMm = null;
 
             PianoProfileStore store = LoadForWrite(out string error);
             if (store == null)
@@ -473,7 +606,15 @@ namespace PianoGlass.Piano
             }
             else if (Anchor != null)
             {
-                PianoProfileEdits.ApplyGeometry(store, Anchor.Id, LocalGeometry);
+                bool applied = correctionMm.HasValue
+                    ? PianoProfileEdits.ApplyCorrection(store, Anchor.Id, LocalGeometry, "middle-c", correctionMm.Value)
+                    : PianoProfileEdits.ApplyGeometry(store, Anchor.Id, LocalGeometry);
+                if (!applied && correctionMm.HasValue)
+                {
+                    // Geometry local to one anchor is meaningless for another.
+                    LastProblem = "Middle C fix shown but NOT saved: the saved piano names a different anchor.";
+                    Log("correction not written: the profile on disk names a different anchor");
+                }
                 store.tipNudgeKeyboardMm = NudgeMm;
             }
 
@@ -486,7 +627,9 @@ namespace PianoGlass.Piano
 
             SavedAnchorUuid = store.ActiveProfile?.PrimaryAnchorUuid;
             _savedProfile = store.ActiveProfile;
-            Log($"profile written: anchor={SavedAnchorUuid} -> {_serializer.Path}");
+            Log($"profile written: anchor={SavedAnchorUuid}" +
+                (correctionMm.HasValue ? $" correction=middle-c {Mm(correctionMm.Value)} anchor-local" : "") +
+                $" -> {_serializer.Path}");
             return true;
         }
 
@@ -520,8 +663,10 @@ namespace PianoGlass.Piano
         {
             PianoProfileStore store = LoadForWrite(out string error);
             if (store == null) { Log("verified not recorded: " + error); return; }
-            PianoProfileEdits.MarkVerified(store, _utcNow().ToString("yyyy-MM-dd'T'HH:mm:ss'Z'"));
-            if (!_serializer.Save(store, out error)) Log("verified not recorded: " + error);
+            string utc = _utcNow().ToString("yyyy-MM-dd'T'HH:mm:ss'Z'");
+            PianoProfileEdits.MarkVerified(store, utc);
+            if (!_serializer.Save(store, out error)) { Log("verified not recorded: " + error); return; }
+            Log($"verified by the player: lastVerifiedUtc={utc}");
         }
 
         // ------------------------------------------------------------------
@@ -534,6 +679,7 @@ namespace PianoGlass.Piano
             HighestNote = highest;
             WhiteKeyDepth = depth;
             SessionYawDegrees = 0f;
+            CorrectionNote = null;
             Log($"bound anchor {handle.Id} tracked={handle.IsTracked}");
             PlacementChanged?.Invoke();
         }
