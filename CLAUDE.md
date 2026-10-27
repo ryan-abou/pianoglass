@@ -462,7 +462,8 @@ Working and proven on device: MIDI input end to end, 88-key overlay registered
 on the real piano to under half a percent of correct, calibration persisted with
 runtime fine-adjust, controller-tip calibration (1.58 mm RMS), and — in
 development builds — anchored calibration that survives relaunch, recenter and
-reboot (Phase 4, 2026-10-21). See `docs/anchored-calibration-status.md`.
+reboot (Phase 4, 2026-10-21), with a Verifying step and a Middle C one-point
+fix (Phase 5, 2026-10-26). See `docs/anchored-calibration-status.md`.
 
 Next is the vertical slice — song data → song clock → falling-note highway → hit
 detection → wait-mode — built thin and ugly, end to end, before any of it is

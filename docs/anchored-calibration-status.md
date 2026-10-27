@@ -26,7 +26,7 @@ anything not yet tried on the headset is marked **PENDING DEVICE TEST**.
 | 3 | `42acb6c` | `OvrPianoAnchorService` on the non-obsolete `OVRSpatialAnchor` async API, editor fake, dev-only spike harness (`OvrAnchorSpike`, now disabled in the scene). | Spike superseded by Phase 4 run. |
 | — | `6df3722` | CLAUDE.md: adb-server trap; `MANIFEST-additions.txt` matches the real manifest. | n/a |
 | 4 | `a8ca173` | Overlays follow the anchor. `AnchoredCalibrationSession` + `CalibrationFlowController` (placement owner of `KeyboardCalibration`), `PianoAnchorManager` republishes the layout on > 1 mm / 0.1° anchor movement. Launch localizes automatically; nothing created on launch; nothing erased on any failure path; the old anchor is erased only after the new profile is on disk. | **All passed** — see below. |
-| 5 | branch `phase5-verify` | Verifying banner, A confirms → Ready + `lastVerifiedUtc`; Middle C one-point correction (right grip) as a rigid anchor-local shift; recalibration panel wording. EditMode 180/180. | **PENDING DEVICE TEST** |
+| 5 | branch `phase5-verify` | Verifying banner, A confirms → Ready + `lastVerifiedUtc`; Middle C one-point correction (right grip) as a rigid anchor-local shift; recalibration panel wording; in-headset test checklist. EditMode 190/190. | **All passed** (2026-10-26) — see below. |
 
 ---
 
@@ -64,8 +64,8 @@ anything not yet tried on the headset is marked **PENDING DEVICE TEST**.
 
 ## Phase 5 — verification and Middle C correction
 
-**Status: built (`.\build.ps1 -Development`), EditMode 180/180 (22 new),
-PENDING DEVICE TEST.** Nothing below has been tried on the headset.
+**Status: passed on device (Quest 2, 2026-10-26).** EditMode 190/190.
+Device results at the end of this section.
 
 Development builds, anchored mode only:
 
@@ -126,16 +126,36 @@ with each new build. Logs: `[AnchorFlow] checklist: step N (...) Passed`.
 
 ### Phase 5 device results
 
-PENDING DEVICE TEST — fill in from the Phase 5 checklist, including the
-seated-vs-standing far-key check and the measured vertical error, which is
-the first direct evidence for or against Phase 4 observation 2.
+Quest 2, 2026-10-26, development build with the in-headset checklist.
+**All ten steps behaved as intended**, as judged by the tester: launch →
+Verifying with the banner; A confirmed without starting the song, and the
+next A played; the Middle C fix applied and survived a relaunch; a cancel
+from Ready stayed Ready; a touch over 50 mm away was refused; the vertical
+cap held; recalibration said "recalibrating -- touch the lowest key";
+a recenter kept the keys on the piano, and MIDI lit them.
+
+**Seated check (Phase 4 observation 2): improved, not resolved.** After
+one seated Middle C fix, A0 and C8 looked "a very little bit off" from the
+seat, with the overlay still slightly *lower* than the key edges. The
+seated y value was not written down. The key width was again 23.4 mm, the
+same as in Phase 4 on this piano, so it is most likely the piano's real
+key width. It is also a horizontal reading, about 5 mm over the whole span,
+with the end keys placed where they were touched, so it cannot explain a
+*vertical* offset. That is still consistent with a small height error seen
+at a shallow angle.
+
+**Checklist bug (test tool only, not Phase 5 behaviour).** The panel stayed
+on step 4 ("Fix survives a relaunch") after the fix had visibly survived,
+so steps 7 and 9 were run by hand. Not investigated. The device log would
+show whether `[AnchorFlow] checklist: step 4 ... Passed` was ever logged.
 
 ## What's next
 
-1. Phase 5 device test.
-2. If the seated parallax is confirmed as a height error, decide whether the
-   Middle C fix's vertical part (capped at 10 mm) is enough or whether a
-   dedicated height check is needed.
+1. Measure observation 2: a seated Middle C fix with the y value written
+   down (`verify error x/y/z mm` in the log). Then decide whether the
+   fix's vertical part (capped at 10 mm) is enough, or whether a dedicated
+   height check is needed.
+2. Fix the checklist's step 4 not advancing, before it is used again.
 3. Two-point correction (C3 + C6) for yaw/width errors a one-point fix
    cannot remove — the Core maths (`SolveTwoPoint`) already exists, and the
    flow already has the states.
