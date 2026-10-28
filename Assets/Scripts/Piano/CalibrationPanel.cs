@@ -1,6 +1,8 @@
 using System.Text;
 using TMPro;
 using UnityEngine;
+using PianoGlass.Midi;
+using PianoGlass.Scoring;
 using PianoGlass.Song;
 using PianoGlass.Transport;
 
@@ -27,6 +29,7 @@ namespace PianoGlass.Piano
         [Tooltip("Anchored calibration. Its status is shown here because the " +
                  "player has no PC attached -- a logcat-only message is invisible.")]
         [SerializeField] private CalibrationFlowController flow;
+        [SerializeField] private ScoreKeeper score;
 
         private readonly StringBuilder _sb = new StringBuilder(256);
 
@@ -48,6 +51,7 @@ namespace PianoGlass.Piano
             if (clock == null) clock = FindAnyObjectByType<SongClock>();
             if (tip == null) tip = FindAnyObjectByType<ControllerTipCalibration>();
             if (flow == null) flow = FindAnyObjectByType<CalibrationFlowController>();
+            if (score == null) score = FindAnyObjectByType<ScoreKeeper>();
 
             // Development builds: the headset test checklist, beside this panel.
             if (Debug.isDebugBuild && flow != null && text != null)
@@ -116,6 +120,8 @@ namespace PianoGlass.Piano
                 _sb.AppendLine($"transport:  {StateLabel(transport.CurrentState)}   t = {clock.SongTime:0.0}s");
             }
 
+            if (score != null && score.Session != null) AppendScore(score);
+
             if (calibration.IsCalibrated)
             {
                 var layout = calibration.Layout;
@@ -147,6 +153,41 @@ namespace PianoGlass.Piano
             }
 
             text.text = _sb.ToString();
+        }
+
+        private void AppendScore(ScoreKeeper keeper)
+        {
+            ScoringSession s = keeper.Session;
+            _sb.AppendLine($"score:      {s.Score}   {s.Accuracy:0}%   perfect {s.Perfect} · great {s.Great} · " +
+                           $"good {s.Good} · miss {s.Miss} · wrong {s.WrongPitchCount + s.ExtraCount}");
+
+            JudgementResult r = s.LastResult;
+            if (r != null)
+            {
+                string colour = r.judgement switch
+                {
+                    Judgement.Perfect => "#A9C67C",
+                    Judgement.Great   => "#8FC1E8",
+                    Judgement.Good    => "#E8D48A",
+                    _                 => "#E5948A",
+                };
+                _sb.AppendLine($"last:       <color={colour}>{r.rating.ToUpperInvariant()}</color>  " +
+                               $"{MidiInput.NoteName(r.pitch)}" + (r.pressed ? $"  {r.errorMs:+0;-0;0} ms" : ""));
+            }
+
+            WrongNote w = s.LastWrongNote;
+            if (w != null)
+                _sb.AppendLine($"<color=#E5948A>wrong:      {MidiInput.NoteName(w.pressedPitch)}" +
+                               (w.expectedPitch >= 0 ? $" instead of {MidiInput.NoteName(w.expectedPitch)}" : " (nothing due)") +
+                               $", bar {w.bar}</color>");
+
+            if (keeper.AttemptSaved)
+            {
+                BarStats worst = s.WorstBar();
+                _sb.AppendLine(worst != null && worst.accuracy < 100.0
+                    ? $"done:       weakest bar {worst.bar} ({worst.accuracy:0}%)   Y = play again"
+                    : "done:       every bar clean   Y = play again");
+            }
         }
 
         private static float SpanCm(PianoKeyLayout layout)

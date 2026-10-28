@@ -583,6 +583,7 @@ GameObject:
   - component: {fileID: 644933873}
   - component: {fileID: 644933872}
   - component: {fileID: 644933871}
+  - component: {fileID: 644933874}
   m_Layer: 0
   m_Name: SongTransport
   m_TagString: Untagged
@@ -633,6 +634,26 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &644933874
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 644933870}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: baf613d88abc1ca49a28729dc5554b09, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PianoGlass.Scoring.ScoreKeeper
+  clock: {fileID: 1285217052}
+  transport: {fileID: 644933872}
+  calibration: {fileID: 2007997132}
+  perfectMs: 40
+  greatMs: 80
+  goodMs: 150
+  inputOffsetMs: 0
+  logEachNote: 1
 --- !u!1 &664641827
 GameObject:
   m_ObjectHideFlags: 0
@@ -789,6 +810,7 @@ MonoBehaviour:
   clock: {fileID: 1285217052}
   tip: {fileID: 2007997135}
   flow: {fileID: 2007997137}
+  score: {fileID: 644933874}
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -1109,6 +1131,7 @@ MonoBehaviour:
   noteColor: {r: 0.4, g: 0.68, b: 0.95, a: 1}
   slabThickness: 0.006
   widthFraction: 0.9
+  noteGapMetres: 0.008
   leadTimeSeconds: 3
   highwayHeight: 0.5
   depthOffset: 0.01
@@ -1266,6 +1289,7 @@ MonoBehaviour:
   fallbackHeight: 1.2
   invalidDistance: 0.8
   invalidDrop: 0.15
+  invalidRefollowDegrees: 70
 --- !u!1 &1253870629
 GameObject:
   m_ObjectHideFlags: 0

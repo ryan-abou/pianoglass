@@ -80,6 +80,10 @@ namespace PianoGlass.Transport
         /// controllers' buttons and the player's attention.</summary>
         private bool CanAcceptInput => calibration != null && calibration.IsPlacementValid;
 
+        /// <summary>One of the two keys of the MIDI restart chord. Scoring
+        /// leaves these out unless the song itself uses them.</summary>
+        public bool IsRestartChordNote(int note) => note == chordNoteA || note == chordNoteB;
+
         public void TogglePlayPause()
         {
             if (!CanAcceptInput || clock == null) return;

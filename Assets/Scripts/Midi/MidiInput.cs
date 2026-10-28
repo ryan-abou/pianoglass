@@ -85,8 +85,49 @@ namespace PianoGlass.Midi
 #endif
         }
 
+        /// <summary>
+        /// A press's timestamp (the seconds NoteOn/NoteOff carry) as
+        /// Time.realtimeSinceStartupAsDouble. The timestamps come from the
+        /// bridge's own clock, taken when the event arrived; scoring needs
+        /// that moment, not the frame that happened to drain it -- at 72 Hz
+        /// the frame alone is up to 14 ms of error.
+        /// </summary>
+        public double ToRealtime(double eventSeconds) =>
+            double.IsNaN(_clockOffset) ? Time.realtimeSinceStartupAsDouble : eventSeconds - _clockOffset;
+
+        /// <summary>Event clock minus Unity realtime, refreshed every frame;
+        /// NaN when there is no bridge clock (presses then count as "now").</summary>
+        private double _clockOffset;
+        private bool _bridgeClockFailed;
+
+        private void SyncClock()
+        {
+#if UNITY_ANDROID && !UNITY_EDITOR
+            if (_bridge != null && !_bridgeClockFailed)
+            {
+                try
+                {
+                    _clockOffset = _bridge.CallStatic<int>("nowMs") / 1000.0 - Time.realtimeSinceStartupAsDouble;
+                    return;
+                }
+                catch (Exception e)
+                {
+                    // An APK built without nowMs(). Presses then read as
+                    // arriving now: frame-accurate, no worse than before.
+                    _bridgeClockFailed = true;
+                    Debug.LogWarning("[MidiInput] bridge clock unavailable, timing presses by frame: " + e.Message);
+                }
+            }
+            _clockOffset = double.NaN;
+#else
+            // The simulator stamps events with Time.time.
+            _clockOffset = Time.timeAsDouble - Time.realtimeSinceStartupAsDouble;
+#endif
+        }
+
         private void Update()
         {
+            SyncClock();
 #if UNITY_ANDROID && !UNITY_EDITOR
             if (_bridge != null)
             {

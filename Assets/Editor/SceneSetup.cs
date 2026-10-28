@@ -1,5 +1,6 @@
 using PianoGlass.Highway;
 using PianoGlass.Piano;
+using PianoGlass.Scoring;
 using PianoGlass.Song;
 using PianoGlass.Transport;
 using UnityEditor;
@@ -381,6 +382,51 @@ namespace PianoGlass.EditorTools
         /// any of the piano/overlay/highway wiring above. Idempotent: logs
         /// and does nothing if it's already gone.
         /// </summary>
+        /// <summary>
+        /// Adds ScoreKeeper next to SongTransport, wired to the clock,
+        /// transport and KeyboardCalibration, and points CalibrationPanel at
+        /// it for the score line. Idempotent.
+        /// </summary>
+        [MenuItem("PianoGlass/Scene/Configure Scoring")]
+        public static void ConfigureScoring()
+        {
+            Scene scene = OpenScene();
+
+            var transport = Object.FindAnyObjectByType<SongTransport>();
+            var clock = Object.FindAnyObjectByType<SongClock>();
+            var calibration = Object.FindAnyObjectByType<KeyboardCalibration>();
+            if (transport == null || clock == null || calibration == null)
+            {
+                Debug.LogError("[SceneSetup] SongTransport, SongClock or KeyboardCalibration missing -- " +
+                               "run Add Falling-Note Highway first.");
+                return;
+            }
+
+            GameObject host = transport.gameObject;
+            var keeper = host.GetComponent<ScoreKeeper>();
+            if (keeper == null) keeper = host.AddComponent<ScoreKeeper>();
+
+            var so = new SerializedObject(keeper);
+            so.FindProperty("clock").objectReferenceValue = clock;
+            so.FindProperty("transport").objectReferenceValue = transport;
+            so.FindProperty("calibration").objectReferenceValue = calibration;
+            so.ApplyModifiedProperties();
+
+            CalibrationPanel panel = Object.FindAnyObjectByType<CalibrationPanel>();
+            if (panel != null)
+            {
+                var panelSo = new SerializedObject(panel);
+                panelSo.FindProperty("score").objectReferenceValue = keeper;
+                panelSo.ApplyModifiedProperties();
+            }
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+
+            Debug.Log($"[SceneSetup] Scoring configured: ScoreKeeper on '{host.name}', " +
+                      $"CalibrationPanel {(panel != null ? "wired" : "not found")}.");
+        }
+
         [MenuItem("PianoGlass/Scene/Remove Test Cube")]
         public static void RemoveTestCube()
         {

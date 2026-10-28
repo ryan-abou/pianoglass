@@ -45,16 +45,33 @@ namespace PianoGlass.Song
         /// of them, computed once rather than on every read.</summary>
         public double Duration { get; }
 
-        public SongData(string title, float bpm, IReadOnlyList<SongNote> notes)
+        /// <summary>Beats in a bar -- 4 for everything so far. Fixed for the
+        /// whole song: no time-signature changes yet.</summary>
+        public int BeatsPerBar { get; }
+
+        public SongData(string title, float bpm, IReadOnlyList<SongNote> notes, int beatsPerBar = 4)
         {
             Title = title;
             Bpm = bpm;
             Notes = notes;
+            BeatsPerBar = beatsPerBar < 1 ? 1 : beatsPerBar;
 
             double duration = 0.0;
             foreach (SongNote note in notes)
                 if (note.EndTime > duration) duration = note.EndTime;
             Duration = duration;
+        }
+
+        /// <summary>1-based bar number of a song time; anything before 0
+        /// (the lead-in) is bar 1. "Bar 9 is where you fall apart" is in these
+        /// units, so they match how a player counts.</summary>
+        public int BarOf(double songTime)
+        {
+            double secondsPerBar = 60.0 / Bpm * BeatsPerBar;
+            if (songTime <= 0.0 || secondsPerBar <= 0.0) return 1;
+            // A hair of tolerance so a note exactly on a barline is not put in
+            // the previous bar by rounding.
+            return (int)System.Math.Floor(songTime / secondsPerBar + 1e-9) + 1;
         }
 
         // Middle C = 60, scientific pitch notation -- matches MidiInput.NoteName.

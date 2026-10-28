@@ -145,6 +145,14 @@ public final class MidiBridge {
         return midiFeatureAvailable;
     }
 
+    /** Now, on the same clock as the event timestamps (ms since init()).
+     *  Unity reads it once a frame to line its own clock up with the
+     *  presses', so a press is timed from when it arrived, not from the
+     *  frame that drained it. */
+    public static int nowMs() {
+        return (int) ((System.nanoTime() - startNanos) / 1_000_000L);
+    }
+
     /** Human-readable line for the debug HUD. */
     public static String getStatus() {
         if (!initialised) return "not initialised";

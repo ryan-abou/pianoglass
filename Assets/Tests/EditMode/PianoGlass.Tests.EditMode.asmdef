@@ -4,6 +4,7 @@
     "references": [
         "PianoGlass.Piano.Core",
         "PianoGlass.Song",
+        "PianoGlass.Scoring",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],
