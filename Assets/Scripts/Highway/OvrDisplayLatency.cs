@@ -15,8 +15,11 @@ namespace PianoGlass.Highway
     /// judged late by the same amount.
     ///
     /// The latency is the runtime's own number: predicted display time minus
-    /// now, both on OVRPlugin's clock, read fresh every frame (it moves with
-    /// frame timing); Unity's motion-to-photon figure if that is unavailable.
+    /// now, both on OVRPlugin's clock, read fresh every frame; Unity's
+    /// motion-to-photon figure if that is unavailable. Raw readings are
+    /// noisy (0s, and once -253 s), so DisplayLatencyFilter rejects the
+    /// implausible ones and smooths the rest over ~1 s before SongClock
+    /// sees them.
     /// Nothing here is tuned by hand or learned from how anyone plays.
     ///
     /// Meta-specific code isolated in its own file, same split as
@@ -31,7 +34,12 @@ namespace PianoGlass.Highway
                  "min and max over that period. 0 = never.")]
         [SerializeField] private float logIntervalSeconds = 30f;
 
+        [Tooltip("Smoothing time constant for the latency used to draw. ~1 s " +
+                 "keeps the highway from jittering with per-frame timing.")]
+        [SerializeField] private float smoothingSeconds = 1f;
+
         private SongClock _clock;
+        private DisplayLatencyFilter _filter;
         private double _sum, _min = double.MaxValue, _max;
         private int _count;
         private float _nextLog;
@@ -44,6 +52,7 @@ namespace PianoGlass.Highway
         private void Awake()
         {
             _clock = GetComponent<SongClock>();
+            _filter = new DisplayLatencyFilter(smoothingSeconds);
 
             // OVRPlugin.GetPredictedDisplayTime() exists in SDK 205 but is
             // private (checked by reflection against the installed package),
@@ -93,8 +102,10 @@ namespace PianoGlass.Highway
 
         private void Update()
         {
+            // An unreadable frame is fed as 0, which the filter rejects like
+            // any other implausible reading: the last good value is held.
             TryReadLatency(out double latency, out Source source);
-            _clock.DisplayLatencySeconds = latency;
+            _clock.DisplayLatencySeconds = _filter.Add(latency, Time.unscaledDeltaTime);
 
             if (source != _source)
             {
@@ -103,19 +114,27 @@ namespace PianoGlass.Highway
                           (source == Source.None ? " -- notes drawn at frame time, uncompensated" : ""));
             }
 
-            double used = _clock.DisplayLatencySeconds; // after SongClock's clamp
-            _sum += used;
-            _count++;
-            if (used < _min) _min = used;
-            if (used > _max) _max = used;
+            // Stats are of the raw readings the filter accepted, so the log
+            // shows how noisy the runtime is next to the smoothed value used.
+            if (DisplayLatencyFilter.IsPlausible(latency))
+            {
+                _sum += latency;
+                _count++;
+                if (latency < _min) _min = latency;
+                if (latency > _max) _max = latency;
+            }
 
             if (logIntervalSeconds > 0f && Time.realtimeSinceStartup >= _nextLog)
             {
                 _nextLog = Time.realtimeSinceStartup + logIntervalSeconds;
-                Debug.Log($"[DisplayLatency] mean {_sum / _count * 1000.0:0.0} ms, " +
-                          $"min {_min * 1000.0:0.0}, max {_max * 1000.0:0.0} over {_count} frames " +
-                          $"(raw this frame {latency * 1000.0:0.0} ms)");
+                string accepted = _count > 0
+                    ? $"raw mean {_sum / _count * 1000.0:0.0} ms, min {_min * 1000.0:0.0}, max {_max * 1000.0:0.0}"
+                    : "no plausible raw readings";
+                Debug.Log($"[DisplayLatency] used {_clock.DisplayLatencySeconds * 1000.0:0.0} ms (smoothed); " +
+                          $"{accepted} over {_filter.AcceptedCount} frames; rejected {_filter.RejectedCount}" +
+                          (_filter.RejectedCount > 0 ? $" (last rejected {_filter.LastRejected * 1000.0:0.0} ms)" : ""));
                 _sum = 0; _count = 0; _min = double.MaxValue; _max = 0;
+                _filter.ResetCounts();
             }
         }
     }
