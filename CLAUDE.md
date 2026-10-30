@@ -172,11 +172,17 @@ Assets/
     SlabGeometry.cs                   pure slab bottom/height maths, shared by highway + tests
     ActiveNoteSelector.cs             pure "is a note due soon" maths, shared by highlighter + tests
   Scripts/Highway/
-    NoteHighway.cs                    falling-note wall, position from (noteTime − songTime)
+    NoteHighway.cs                    falling-note wall, position from (noteTime − DisplaySongTime)
+    OvrDisplayLatency.cs              feeds SongClock the runtime's render-to-display latency
+  Scripts/Scoring/
+    Core/ScoringSession.cs            pure judging: matching, misses, wrong notes, per-bar stats (own asmdef)
+    Core/NoteJudge.cs + JudgementResult.cs + AccuracyCalculator.cs
+                                      windows, ratings, the attempt JSON schema
+    ScoreKeeper.cs                    Unity shell: MIDI → session, attempt files, restart = abandoned
   Scripts/Transport/
     SongTransport.cs                  play/pause/restart + MIDI chord + transport state (Meta-free)
     OvrSongTransport.cs               transport's OVRInput code
-  Tests/EditMode/                     PianoKeyLayout + SongClock + SlabGeometry, run headlessly
+  Tests/EditMode/                     217 tests (layout, calibration, clock, slabs, scoring), run headlessly
 ```
 
 OVRInput now lives in three places, split the same way as calibration:
@@ -465,11 +471,56 @@ development builds — anchored calibration that survives relaunch, recenter and
 reboot (Phase 4, 2026-10-21), with a Verifying step and a Middle C one-point
 fix (Phase 5, 2026-10-26). See `docs/anchored-calibration-status.md`.
 
-Next is the vertical slice — song data → song clock → falling-note highway → hit
-detection → wait-mode — built thin and ugly, end to end, before any of it is
-polished. The song clock must be a `double` of seconds with a tempo multiplier,
-and note positions must derive from `(noteTime − songTime)`, never from frame
-counts. Getting that wrong means rewriting everything above it.
+Also working: the falling-note highway (8 mm gap so repeated notes read as
+two), and — on branch `scoring`, tested on device 2026-10-29, not yet merged —
+scoring and display-latency compensation:
 
-Scoring is not a later feature: it is the study instrument. Build it into the
-loop, and write every attempt to JSON on the headset before user testing starts.
+- **Scoring** (`Scripts/Scoring/`): `ScoringSession` (pure, tested) judges each
+  press PERFECT/GREAT/GOOD/MISS at 40/80/150 real ms, names wrong pitches,
+  keeps per-bar stats; `ScoreKeeper` feeds it MIDI presses timed from the
+  bridge's own timestamps (`MidiInput.ToRealtime`), shows results on the
+  panel and writes every attempt to
+  `/sdcard/Android/data/com.ryanabourjeili.pianoglass/files/attempts/*.json`.
+  Pull with `adb pull <that path>/. <dir>`; `[Score]` lines in logcat.
+- **Display latency**: `SongClock.DisplaySongTime` = SongTime + display
+  latency × tempo. Everything *drawn* uses it; *judging* uses `SongTime`.
+  `OvrDisplayLatency` feeds it from OVRPlugin's private
+  `GetPredictedDisplayTime()` (via reflection — it is not public in SDK 205),
+  falling back to `XRDisplaySubsystem.TryGetMotionToPhoton`.
+- **Latency calibration is a system measurement, never the player's mean
+  error** — a mean error would absorb the player's own rushing/dragging, which
+  is feedback to show them. `ScoreKeeper.inputOffsetMs` stays 0 until measured
+  on hardware (240 fps phone video: key down → virtual key lights).
+
+First device data (7 attempts of Twinkle, 2026-10-29): 0 wrong pitches;
+pooled mean error −7 ms (compensation looks right), spread ~40 ms, so ~⅔
+PERFECT and ~90% accuracy is just that spread. Per-attempt mean drifts −28 to
++11 ms — no audible beat to lock onto. Rushing in bars 3 (−37 ms) and 7
+(−18 ms).
+
+**Next, in order:**
+
+1. **Fix the display-latency reading** (`OvrDisplayLatency`): per-frame values
+   are noisy (attempt snapshots 15–44 ms, some frames 0, one raw −253 s, which
+   `SongClock` clamps to 0). Reject implausible readings instead of clamping
+   them, and smooth over ~1 s so the highway doesn't jitter.
+2. Quick headset retest, then merge `scoring` into main and record the result
+   (git workflow steps 4–5).
+3. Beat and bar lines on the highway (drawn from `DisplaySongTime`) and a
+   count-in during the silent 3 s lead-in.
+4. Measure headset audio output latency, then an optional metronome scheduled
+   ahead with `AudioSource.PlayScheduled`; record on/off in the attempt file.
+5. Roadmap: MIDI file loading → wait mode → weak-section practice → memory
+   fade → personal bests / XP / achievements. Multiplayer and leaderboards
+   much later, if ever.
+
+Open, not urgent: measure the leftover input offset (video test above); tune
+the 40/80/150 ms windows from more attempts; maybe a faster highway (0.5 m over
+2 s instead of 3 s) compared by spread; rewrite this file's scope into
+Now / Next / Later tiers (waiting on whether the 12-week timeline is a hard
+deadline); `DeviceChecklist` step 4 never advances on device (dev tool only);
+measure the seated vertical overlay error (`docs/anchored-calibration-status.md`).
+
+The song clock must stay a `double` of seconds with a tempo multiplier, and
+note positions must derive from `(noteTime − songTime)`, never from frame
+counts. Scoring is the study instrument: every attempt is written to JSON.
