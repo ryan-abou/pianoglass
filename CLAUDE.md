@@ -171,6 +171,7 @@ Assets/
     SongClock.cs                      double songTime, tempo multiplier, pre-song lead-in
     SlabGeometry.cs                   pure slab bottom/height maths, shared by highway + tests
     ActiveNoteSelector.cs             pure "is a note due soon" maths, shared by highlighter + tests
+    DisplayLatencyFilter.cs           pure: rejects implausible display-latency readings, smooths ~1 s
   Scripts/Highway/
     NoteHighway.cs                    falling-note wall, position from (noteTime − DisplaySongTime)
     OvrDisplayLatency.cs              feeds SongClock the runtime's render-to-display latency
@@ -182,7 +183,7 @@ Assets/
   Scripts/Transport/
     SongTransport.cs                  play/pause/restart + MIDI chord + transport state (Meta-free)
     OvrSongTransport.cs               transport's OVRInput code
-  Tests/EditMode/                     217 tests (layout, calibration, clock, slabs, scoring), run headlessly
+  Tests/EditMode/                     230 tests (layout, calibration, clock, slabs, scoring, latency filter), run headlessly
 ```
 
 OVRInput now lives in three places, split the same way as calibration:
@@ -472,8 +473,8 @@ reboot (Phase 4, 2026-10-21), with a Verifying step and a Middle C one-point
 fix (Phase 5, 2026-10-26). See `docs/anchored-calibration-status.md`.
 
 Also working: the falling-note highway (8 mm gap so repeated notes read as
-two), and — on branch `scoring`, tested on device 2026-10-29, not yet merged —
-scoring and display-latency compensation:
+two), and — merged into main 2026-10-29 after a headset retest with the
+filtered latency reading — scoring and display-latency compensation:
 
 - **Scoring** (`Scripts/Scoring/`): `ScoringSession` (pure, tested) judges each
   press PERFECT/GREAT/GOOD/MISS at 40/80/150 real ms, names wrong pitches,
@@ -486,7 +487,11 @@ scoring and display-latency compensation:
   latency × tempo. Everything *drawn* uses it; *judging* uses `SongTime`.
   `OvrDisplayLatency` feeds it from OVRPlugin's private
   `GetPredictedDisplayTime()` (via reflection — it is not public in SDK 205),
-  falling back to `XRDisplaySubsystem.TryGetMotionToPhoton`.
+  falling back to `XRDisplaySubsystem.TryGetMotionToPhoton`. Raw per-frame
+  readings are noisy (15–44 ms, some 0, once −253 s), so they go through
+  `DisplayLatencyFilter` (`Scripts/Song/`, pure, tested): readings outside
+  (2 ms, 100 ms] are rejected and the last good value held; the rest are
+  smoothed with a ~1 s time constant. `SongClock`'s clamp stays as a backstop.
 - **Latency calibration is a system measurement, never the player's mean
   error** — a mean error would absorb the player's own rushing/dragging, which
   is feedback to show them. `ScoreKeeper.inputOffsetMs` stays 0 until measured
@@ -500,17 +505,11 @@ PERFECT and ~90% accuracy is just that spread. Per-attempt mean drifts −28 to
 
 **Next, in order:**
 
-1. **Fix the display-latency reading** (`OvrDisplayLatency`): per-frame values
-   are noisy (attempt snapshots 15–44 ms, some frames 0, one raw −253 s, which
-   `SongClock` clamps to 0). Reject implausible readings instead of clamping
-   them, and smooth over ~1 s so the highway doesn't jitter.
-2. Quick headset retest, then merge `scoring` into main and record the result
-   (git workflow steps 4–5).
-3. Beat and bar lines on the highway (drawn from `DisplaySongTime`) and a
+1. Beat and bar lines on the highway (drawn from `DisplaySongTime`) and a
    count-in during the silent 3 s lead-in.
-4. Measure headset audio output latency, then an optional metronome scheduled
+2. Measure headset audio output latency, then an optional metronome scheduled
    ahead with `AudioSource.PlayScheduled`; record on/off in the attempt file.
-5. Roadmap: MIDI file loading → wait mode → weak-section practice → memory
+3. Roadmap: MIDI file loading → wait mode → weak-section practice → memory
    fade → personal bests / XP / achievements. Multiplayer and leaderboards
    much later, if ever.
 
