@@ -115,17 +115,18 @@ A session is roughly one evening.
 | F38 | **Load your own MIDI files** (adb push, no file picker) | | Medium–large. SMF parser in Core, tempo map in `SongData`, fixture tests | None (own parser) |
 | F7 | **Song picker** | | Small after F38 | None |
 | F11 | **Free, public-domain starter library**, only if it costs nothing | Skip | Curation time, not code: sequencing or vetting files, grading difficulty | $0 by rule. See "Harder than it looks" for licensing |
-| F13 | **Notes coloured by hand**, colours **customisable in-app** | | Small after F38 for the colouring. The customisation needs the settings menu (S1) | None |
+| F13 | **Notes coloured by hand**, customisable in-app **from preset colour pairs** (decided 2026-10-30; a free colour picker is in Maybe later) | | Small after F38 for the colouring. The presets need the settings menu (S1) | None |
 | F25 | **One-hand practice**: other hand dimmed and unscored, no auto-play | | Small after F13. Existing `isPlayable` filter | None |
 | F18 | **Due-key highlight in the hand's colour**, with **an on/off toggle** in the settings menu | Skip (already have) | Small for colour after F13. The toggle comes with S1 | None |
 | F44 | **Hand-tracking UI** for menus | Skip | Large. Meta Interaction SDK poke on world-space canvases, controller ↔ hands switching | Interaction SDK is in `com.meta.xr.sdk.all` (already installed); hand tracking already enabled in `OculusProjectConfig.asset` |
 | F12 + F24 | **One hand-tracked panel**: dock and in-song controls merged (songs, settings, stop, tempo, progress, toggles). Ryan: "make both the last panel and this panel into one thing", read as the F12 dock + F24 | Skip, Skip | Medium after F44. New Canvas registered on the keyboard via `CanvasCalibrationFollower`, wired in `SceneSetup` | None |
 | S1 | **Settings menu** (new; follows from F13 and F18): hand colours, due-key toggle, display mode, passthrough, wait mode, metronome, memory fade | — | Medium. A Meta-free `PianoSettings` component that saves to PlayerPrefs (as display mode does now), and its page on the F12/F24 panel | None |
 
-### Maybe later (14 items)
+### Maybe later (15 items)
 
 | # | Feature | Mine | When to revisit |
 |---|---|---|---|
+| C1 | **Free colour picker for hand colours** (new; follows from F13) | — | **Planned**: once the menus (S1 + the hand-tracked panel) exist and presets have shipped. Same guard rail as the presets: the outcome colours stay reserved |
 | F37 | Per-song history | Maybe later | **Queued**: build once F30, F38 and F7 are done (Ryan wants it) |
 | F39 | Exercises (scales, chords) | Maybe later | After asking experienced pianists which drills matter most |
 | F6 | Letter labels on every key | Maybe later | Paint on the key plane covers hands (no depth sensor) |
@@ -235,8 +236,10 @@ point for the spike, not a substitute for looking at those frames.
 6. **Attempt schema v2.** It is not a feature but a prerequisite. Add `mode`
    (continuous/wait), `loopFromBar`/`loopToBar`, `hand`, `metronome` in one
    change, so steps 7–12 don't each bump the schema.
-7. **Results card (F30) + bar heat strip (F32).** Needs step 5 to compare
-   at the same tempo.
+7. **Liquid Glass material and colour-token asset**, then the **results
+   card (F30) + bar heat strip (F32)** built in that glass. The card is the
+   first real menu, so the shared glass shader is made here and every later
+   panel reuses it. The card needs step 5 to compare at the same tempo.
 8. **Metronome (F27).** Independent; it is the first in-app audio, so the
    latency measurement here also serves F9 if it ever happens.
 9. **Loop worst bar ± 1 (F33).** Most useful with step 7 showing which bar.
@@ -268,9 +271,9 @@ point for the spike, not a substitute for looking at those frames.
     - frame time stays at 72 Hz.
 20. **Settings model (S1)**: a Meta-free `PianoSettings` saved to
     PlayerPrefs. It moves display mode, passthrough, wait mode, metronome and
-    memory fade toggles into one place. **Hand-colour customisation (F13;
-    presets vs free picker not yet decided)** and **the due-key toggle
-    (F18)** live here.
+    memory fade toggles into one place. **Hand-colour presets (F13)** and
+    **the due-key toggle (F18)** live here. The free colour picker (C1) comes
+    later, on top of these menus.
 21. **Unified hand-tracked panel (F12 + F24)**: dock, in-song controls and
     the settings page from step 20.
 
@@ -338,14 +341,14 @@ runs short.
    - Matching the look of a highway grid is fine. It's a common
      visual convention, not PianoVision's branding. Everything else stays
      PianoGlass's own (Part 4).
-3. **Custom hand colours (F13) need guard rails.** What Ryan decided is
-   that the colours must be customisable in-app. Presets instead of a free
-   picker is **my recommendation, not yet agreed**. Settle it before step 20.
-   - A free colour picker in VR is fiddly to build and use. Offer 4–6
-     preset pairs instead, and keep them distinct from the outcome colours
-     (hit / miss / wrong).
-   - A player who picks mint for the right hand would otherwise make every
-     note look "hit".
+3. **Custom hand colours (F13) need guard rails.**
+   - **Decided:** 4–6 preset pairs now; a free colour picker (C1) later,
+     once the menus exist.
+   - Presets and the picker must both keep away from the outcome colours
+     (hit / miss / wrong). A player who picks mint for the right hand would
+     otherwise make every note look "hit".
+   - The picker is fiddly in VR: it needs a hue/brightness control big
+     enough to poke with Quest 2 hand tracking.
 4. **The free library (F11) has a licensing trap.**
    - A public-domain *composition* does not make a given *MIDI file* free to
      use: whoever transcribed it may hold rights in their file.
@@ -424,8 +427,9 @@ Calm, precise, numbers first, registered to the piano. A finished-looking
 instrument, not a neon game.
 
 - **Palette** (PianoGlass's own; none of it is PianoVision's):
-  - **Surface**: smoked glass `#0E1116` at 85% alpha, 1 px hairline border
-    at white 12%.
+  - **Surface**: Liquid Glass (Ryan's decision; see "Menu style: Liquid
+    Glass" below). The exact tint and alpha are tuned on the headset, not
+    fixed here.
   - **Text**: `#E9EEF2` primary, `#8A96A3` secondary.
   - **Default hand pair**: your current note blue `#66ADF2` (right) and warm
     sand `#E8B86D` (left). These are the defaults before the player
@@ -452,6 +456,67 @@ instrument, not a neon game.
   - panel buttons depress visibly on poke (Phase 4);
   - nothing glows at rest.
 
+### Menu style: Liquid Glass (decided 2026-10-30)
+
+Ryan's requirement: every menu and panel is **translucent, like Apple's
+Liquid Glass on the iPhone**, with **rounded corners**, and generally
+nice-looking. This applies to:
+- the results card;
+- the status/calibration panel;
+- the settings menu;
+- the hand-tracked dock and control panel;
+- the song picker;
+- any future menu.
+
+It does **not** apply to the highway grid, which matches the video.
+
+What the look is made of:
+- **Translucent body.** The room shows through the panel, lightly tinted,
+  not a solid slab.
+- **Bright edge.**
+  - A thin, light rim around the panel, brightest along the top edge, like
+    light catching the glass.
+  - This, more than the translucency, is what reads as "glass".
+- **A highlight that moves with your head.** A soft specular sheen that
+  shifts as the view angle changes (a Fresnel/view-angle term in the shader).
+  It is cheap, and in VR it is what makes glass look like a physical object.
+- **Rounded corners everywhere.**
+  - Panels get generous corner radii.
+  - Buttons are pills or circles.
+  - Nested elements (tiles inside a card) get a slightly smaller radius than
+    their parent, so the curves stay concentric.
+- **Soft depth.** Buttons and tiles sit slightly in front of the panel, with
+  a faint shadow or darker inner edge, and depress visibly when poked.
+- **Legible text.** White text with a subtle shadow. The tint must be
+  strong enough to read over a bright window as well as a dark wall.
+
+How to build it on Quest 2:
+- One URP unlit transparent shader (Shader Graph). It draws:
+  - rounded corners as a signed-distance function, so edges stay crisp at
+    any size with no sprite slicing;
+  - the rim;
+  - the Fresnel sheen;
+  - the tint.
+- The material is created and assigned in `SceneSetup`, never via
+  `Shader.Find`.
+- Shared parameters (tint, alpha, rim strength, corner radius) live in the
+  colour-token asset, so every panel matches.
+
+The limitation:
+- iPhone Liquid Glass **blurs and bends what is behind it**. On Quest 2 that
+  is not possible over the real room.
+- Passthrough is composited by the system underneath the app, and Quest 2
+  apps cannot read the passthrough image (camera access is Quest 3/3S
+  only).
+- So the glass can be translucent, rimmed, highlighted and rounded, but it
+  cannot frost or refract the room.
+- Blurring the app's *own* content behind a panel (e.g. the highway) is
+  possible but costs GPU time on Quest 2. Treat it as an experiment, not a
+  requirement.
+- **Check in the headset that translucent panels blend with passthrough
+  correctly** (the panel's alpha decides how much room shows through), and
+  check frame time at 72 Hz with several panels open.
+
 ### Concrete changes, ordered by impact
 
 1. **Clean highway grid with bar numbers** (Phase 1). It is the biggest
@@ -464,8 +529,12 @@ instrument, not a neon game.
    - tiles for *vs last attempt*, *timing* (mean early/late in ms from
      `ErrorStats()`) and *wrong notes*;
    - the bar heat strip.
-4. **Smoked-glass styling from one colour-token asset**: a small
-   `ScriptableObject` read by `CalibrationPanel`, `NoteHighway`,
-   `PianoKeyHighlighter` and later the hand-tracked panel. The default hand
-   colours live in it too.
+4. **Liquid Glass panels from one shared shader and colour-token asset**:
+   - the rounded, translucent, rimmed glass material above;
+   - a small `ScriptableObject` of tokens read by `CalibrationPanel`,
+     `NoteHighway`, `PianoKeyHighlighter` and later the hand-tracked panel;
+   - the hand-colour presets and glass parameters live in it too.
+
+   Do this before the results card's final layout, so the card is built in
+   glass from the start.
 5. **The unified hand-tracked panel** at the keyboard's left end (Phase 4).

@@ -9,7 +9,10 @@ played D instead of D♯, or that bar 9 is where you keep falling apart. That is
 what PianoGlass exists to do, and it comes first.
 
 It also has to **look and feel finished**: a clean highway, readable results,
-menus you can use with your hands. Polish that makes the app feel like a real
+menus you can use with your hands. Every menu and panel uses the same
+**Liquid Glass** style (translucent like the iPhone's Liquid Glass, bright
+rim, rounded corners); the highway grid is the one exception and matches the
+reference video instead. Polish that makes the app feel like a real
 product earns its place alongside feedback. A feature is cut when it does
 neither: it neither sharpens feedback nor makes the app look and feel
 finished. The full list of what is in, deferred and cut, and the build order,
