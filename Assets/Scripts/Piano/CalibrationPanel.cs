@@ -33,6 +33,10 @@ namespace PianoGlass.Piano
 
         private readonly StringBuilder _sb = new StringBuilder(256);
 
+        // Same hard-coded song the highway and highlighter read; only its
+        // tempo and metre are used here, for the count-in.
+        private readonly SongData _song = SongData.TwinkleTwinkleLittleStar();
+
         private void Reset()
         {
             text = GetComponent<TMP_Text>();
@@ -118,6 +122,13 @@ namespace PianoGlass.Piano
             {
                 _sb.AppendLine();
                 _sb.AppendLine($"transport:  {StateLabel(transport.CurrentState)}   t = {clock.SongTime:0.0}s");
+
+                // The beat the player is counting into the first note, big
+                // enough to read at a glance. DisplaySongTime, like the beat
+                // lines on the wall, so the number changes as the line lands.
+                int count = BeatGrid.CountInBeat(_song.Bpm, _song.BeatsPerBar, -clock.LeadInSeconds, clock.DisplaySongTime);
+                if (transport.CurrentState == SongTransport.State.CountingIn && count > 0)
+                    _sb.AppendLine($"<size=200%><b><color=#F2B847>{count}</color></b></size>");
             }
 
             if (score != null && score.Session != null) AppendScore(score);

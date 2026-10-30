@@ -62,8 +62,27 @@ namespace PianoGlass.Highway
                  "wall easier to read from a seated view; 0 is upright.")]
         [SerializeField] private float tiltDegrees = 0f;
 
+        [Header("Beat lines")]
+        [Tooltip("Horizontal lines across the wall, one per beat, falling with " +
+                 "the notes. A note that starts on a beat sits on its line all " +
+                 "the way down, so the beat is something to lock onto.")]
+        [SerializeField] private bool showBeatLines = true;
+        [SerializeField] private Color beatLineColor = new Color(0.30f, 0.33f, 0.36f, 1f);
+        [SerializeField] private Color barLineColor = new Color(0.72f, 0.76f, 0.80f, 1f);
+        [Tooltip("Lead-in beats: the count-in falling into the first note.")]
+        [SerializeField] private Color countInLineColor = new Color(0.95f, 0.72f, 0.28f, 1f);
+        [SerializeField] private float beatLineThickness = 0.0015f;
+        [SerializeField] private float barLineThickness = 0.003f;
+        [Tooltip("How far past the song's lowest and highest keys the lines run, " +
+                 "in metres. They span the song's range, not all 88 keys -- a " +
+                 "1.2 m line across the whole view would be clutter.")]
+        [SerializeField] private float beatLinePadding = 0.03f;
+
         private SongData _song;
         private readonly List<(SongNote note, Renderer renderer)> _slabs = new List<(SongNote, Renderer)>();
+        private readonly List<Renderer> _beatLines = new List<Renderer>();
+        private readonly List<BeatLine> _visibleBeats = new List<BeatLine>();
+        private int _lowestPitch, _highestPitch;
         private MaterialPropertyBlock _block;
 
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
@@ -103,6 +122,7 @@ namespace PianoGlass.Highway
             if (valid) return; // Update() shows whatever is due on the next frame
             foreach (var (_, renderer) in _slabs)
                 if (renderer != null) renderer.enabled = false;
+            HideBeatLines(0);
         }
 
         private void OnCalibrated(PianoKeyLayout layout)
@@ -127,6 +147,9 @@ namespace PianoGlass.Highway
             foreach (var (_, renderer) in _slabs)
                 if (renderer != null) Destroy(renderer.gameObject);
             _slabs.Clear();
+            foreach (Renderer renderer in _beatLines)
+                if (renderer != null) Destroy(renderer.gameObject);
+            _beatLines.Clear();
 
             if (calibration == null || !calibration.IsCalibrated) return;
             PianoKeyLayout layout = calibration.Layout;
@@ -134,33 +157,57 @@ namespace PianoGlass.Highway
             Material mat = noteMaterial != null ? noteMaterial : CreateFallbackMaterial();
             if (mat == null) return;
 
+            _lowestPitch = int.MaxValue;
+            _highestPitch = int.MinValue;
             foreach (SongNote note in _song.Notes)
             {
                 if (!layout.Contains(note.Pitch)) continue; // outside this keyboard
 
-                var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                go.name = $"Note_{note.Pitch}_{note.StartTime:0.00}";
-                go.transform.SetParent(transform, false);
-
-                // Colliders would fight with hand/controller physics for no gain.
-                var collider = go.GetComponent<Collider>();
-                if (collider != null) Destroy(collider);
-
-                var renderer = go.GetComponent<Renderer>();
-                renderer.sharedMaterial = mat;
-                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                renderer.receiveShadows = false;
-                renderer.enabled = false;
-
-                renderer.GetPropertyBlock(_block);
-                _block.SetColor(BaseColorId, noteColor);   // URP
-                _block.SetColor(ColorId, noteColor);       // Built-in, harmless either way
-                renderer.SetPropertyBlock(_block);
-
+                Renderer renderer = CreateCube($"Note_{note.Pitch}_{note.StartTime:0.00}", mat);
+                SetColor(renderer, noteColor);
                 _slabs.Add((note, renderer));
+
+                _lowestPitch = Mathf.Min(_lowestPitch, note.Pitch);
+                _highestPitch = Mathf.Max(_highestPitch, note.Pitch);
             }
 
-            Debug.Log($"[NoteHighway] built {_slabs.Count} note slabs for '{_song.Title}'");
+            // A fixed pool, enough for every beat the wall can hold at once
+            // (both ends of the window inclusive), recoloured as beats pass.
+            if (showBeatLines && _slabs.Count > 0)
+            {
+                double spb = BeatGrid.SecondsPerBeat(_song.Bpm);
+                int pool = spb > 0.0 ? (int)System.Math.Ceiling(leadTimeSeconds / spb) + 2 : 0;
+                for (int i = 0; i < pool; i++)
+                    _beatLines.Add(CreateCube($"BeatLine_{i}", mat));
+            }
+
+            Debug.Log($"[NoteHighway] built {_slabs.Count} note slabs and {_beatLines.Count} beat lines for '{_song.Title}'");
+        }
+
+        private Renderer CreateCube(string name, Material mat)
+        {
+            var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            go.name = name;
+            go.transform.SetParent(transform, false);
+
+            // Colliders would fight with hand/controller physics for no gain.
+            var collider = go.GetComponent<Collider>();
+            if (collider != null) Destroy(collider);
+
+            var renderer = go.GetComponent<Renderer>();
+            renderer.sharedMaterial = mat;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            renderer.enabled = false;
+            return renderer;
+        }
+
+        private void SetColor(Renderer renderer, Color color)
+        {
+            renderer.GetPropertyBlock(_block);
+            _block.SetColor(BaseColorId, color);   // URP
+            _block.SetColor(ColorId, color);       // Built-in, harmless either way
+            renderer.SetPropertyBlock(_block);
         }
 
         private void Update()
@@ -211,6 +258,73 @@ namespace PianoGlass.Highway
                 renderer.transform.SetPositionAndRotation(pos, tiltRotation);
                 renderer.transform.localScale = new Vector3(key.Width * widthFraction, height, slabThickness);
             }
+
+            UpdateBeatLines(layout, songTime, speed, tiltRotation, tiltedUp);
+        }
+
+        /// <summary>One line per visible beat, at the same height a note
+        /// starting on that beat has its bottom -- both are (time - songTime)
+        /// x speed -- so lines and notes fall together. Drawn from
+        /// DisplaySongTime like the notes, so they hit the key line on the
+        /// beat as the player sees it.</summary>
+        private void UpdateBeatLines(PianoKeyLayout layout, double songTime, float speed,
+                                     Quaternion tiltRotation, Vector3 tiltedUp)
+        {
+            if (_beatLines.Count == 0) return;
+
+            // Ends of the line: the far edges of the white keys at (or just
+            // outside) the song's lowest and highest notes. White keys
+            // because they reach furthest back -- the same edge the note
+            // slabs stand on.
+            int low = PianoKeyLayout.IsBlackKey(_lowestPitch) ? _lowestPitch - 1 : _lowestPitch;
+            int high = PianoKeyLayout.IsBlackKey(_highestPitch) ? _highestPitch + 1 : _highestPitch;
+            if (!layout.TryGetKey(low, out PianoKey lowKey) || !layout.TryGetKey(high, out PianoKey highKey))
+            {
+                HideBeatLines(0);
+                return;
+            }
+
+            // Just behind the note slabs, so a note drawn on its line covers
+            // it instead of z-fighting with it.
+            float behind = depthOffset + slabThickness;
+            Vector3 lowEdge = lowKey.Center - layout.Forward * (lowKey.Depth * 0.5f + behind)
+                              - layout.Right * (lowKey.Width * 0.5f + beatLinePadding);
+            Vector3 highEdge = highKey.Center - layout.Forward * (highKey.Depth * 0.5f + behind)
+                               + layout.Right * (highKey.Width * 0.5f + beatLinePadding);
+            Vector3 mid = (lowEdge + highEdge) * 0.5f;
+            float length = Vector3.Distance(lowEdge, highEdge);
+
+            int count = BeatGrid.CollectVisible(_song.Bpm, _song.BeatsPerBar, -clock.LeadInSeconds,
+                                                _song.Duration, songTime, leadTimeSeconds, _visibleBeats);
+            count = Mathf.Min(count, _beatLines.Count);
+
+            for (int i = 0; i < count; i++)
+            {
+                BeatLine beat = _visibleBeats[i];
+                Renderer renderer = _beatLines[i];
+                if (renderer == null) continue;
+
+                float thickness = beat.IsBarLine ? barLineThickness : beatLineThickness;
+                Color color = beat.IsCountIn ? countInLineColor
+                            : beat.IsBarLine ? barLineColor
+                            : beatLineColor;
+
+                float h = (float)(beat.Time - songTime) * speed;
+                // Centred on its height, but never poking below the key line.
+                Vector3 pos = mid + tiltedUp * Mathf.Max(h, thickness * 0.5f);
+
+                renderer.transform.SetPositionAndRotation(pos, tiltRotation);
+                renderer.transform.localScale = new Vector3(length, thickness, slabThickness);
+                SetColor(renderer, color);
+                renderer.enabled = true;
+            }
+            HideBeatLines(count);
+        }
+
+        private void HideBeatLines(int from)
+        {
+            for (int i = from; i < _beatLines.Count; i++)
+                if (_beatLines[i] != null) _beatLines[i].enabled = false;
         }
 
         // ------------------------------------------------------------------

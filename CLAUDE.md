@@ -172,6 +172,7 @@ Assets/
     SlabGeometry.cs                   pure slab bottom/height maths, shared by highway + tests
     ActiveNoteSelector.cs             pure "is a note due soon" maths, shared by highlighter + tests
     DisplayLatencyFilter.cs           pure: rejects implausible display-latency readings, smooths ~1 s
+    BeatGrid.cs                       pure: which beat/bar lines are on the wall, count-in beat
   Scripts/Highway/
     NoteHighway.cs                    falling-note wall, position from (noteTime − DisplaySongTime)
     OvrDisplayLatency.cs              feeds SongClock the runtime's render-to-display latency
@@ -183,7 +184,7 @@ Assets/
   Scripts/Transport/
     SongTransport.cs                  play/pause/restart + MIDI chord + transport state (Meta-free)
     OvrSongTransport.cs               transport's OVRInput code
-  Tests/EditMode/                     230 tests (layout, calibration, clock, slabs, scoring, latency filter), run headlessly
+  Tests/EditMode/                     250 tests (layout, calibration, clock, slabs, scoring, latency filter, beat grid), run headlessly
 ```
 
 OVRInput now lives in three places, split the same way as calibration:
@@ -508,7 +509,13 @@ PERFECT and ~90% accuracy is just that spread. Per-attempt mean drifts −28 to
 **Next, in order:**
 
 1. Beat and bar lines on the highway (drawn from `DisplaySongTime`) and a
-   count-in during the silent 3 s lead-in.
+   count-in during the silent 3 s lead-in. **Built on branch `beat-lines`,
+   awaiting headset test:** `BeatGrid` (pure, tested) puts a line at every
+   beat from the lead-in to the final bar line, at the same height a note
+   on that beat has its bottom; bar lines thicker/brighter, lead-in lines
+   amber. Lines span the song's key range ± 3 cm, just behind the note
+   slabs, from a pooled set of cubes on `NoteHighway.mat` (no scene change).
+   `CalibrationPanel` shows the count-in beat (3 4 1 2 3 4 at 120 BPM) large.
 2. Measure headset audio output latency, then an optional metronome scheduled
    ahead with `AudioSource.PlayScheduled`; record on/off in the attempt file.
 3. Roadmap: MIDI file loading → wait mode → weak-section practice → memory
