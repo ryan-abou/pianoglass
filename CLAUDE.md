@@ -6,7 +6,14 @@ ground-truth input. Built by one student developer, ~7 hours a week.
 
 The product claim is **feedback, not price**: a video cannot tell you that you
 played D instead of D♯, or that bar 9 is where you keep falling apart. That is
-what PianoGlass exists to do. Features that do not serve that claim are cut.
+what PianoGlass exists to do, and it comes first.
+
+It also has to **look and feel finished**: a clean highway, readable results,
+menus you can use with your hands. Polish that makes the app feel like a real
+product earns its place alongside feedback. A feature is cut when it does
+neither: it neither sharpens feedback nor makes the app look and feel
+finished. The full list of what is in, deferred and cut, and the build order,
+is in **`docs/feature-evaluation.md`** (decided 2026-10-30).
 
 ---
 
@@ -507,15 +514,30 @@ PERFECT and ~90% accuracy is just that spread. Per-attempt mean drifts −28 to
 
 **Next, in order:**
 
-1. Measure headset audio output latency, then an optional metronome scheduled
-   ahead with `AudioSource.PlayScheduled`; record on/off in the attempt file.
-2. Roadmap: MIDI file loading → wait mode → weak-section practice → memory
-   fade → personal bests / XP / achievements. Multiplayer and leaderboards
-   much later, if ever.
+Follow the four-phase build order in `docs/feature-evaluation.md` (Part 3):
 
-Dropped 2026-10-30: beat/bar lines on the highway and the count-in during the
-lead-in. Built (branch `beat-lines`, commit `cf0f8bc`) and scrapped before a
-headset test; the branch is deleted.
+1. **Highway looks finished**: a clean grid with bar lines, bar numbers,
+   beat and lane lines, matched to the reference video's look (agree on the
+   look from headset screenshots *before* building it); hit/miss/wrong
+   colours on slabs; note names.
+2. **Results, tempo, practice**: tempo ±5%, attempt schema v2, results card
+   with bar heat strip, metronome (measure headset audio output latency, then
+   `AudioSource.PlayScheduled`, on/off in the attempt), loop worst bar,
+   auto-tempo, wait mode (pitch-only judging), memory fade.
+3. **Real songs**: MIDI file loading, song picker, hand colours, one-hand
+   practice, a free public-domain starter library, per-song history.
+4. **Hand-tracked UI**: hand-tracking spike, settings model, one panel
+   combining the dock and in-song controls.
+
+Personal bests / XP / achievements come after that. Multiplayer is much later,
+if ever.
+
+The beat-lines branch was dropped on 2026-10-30 because of how the lines
+looked, not because of the idea. The grid is back in phase 1, and it must
+look **exactly like the reference video**, nothing like that branch. The
+visual target is written down in `docs/feature-evaluation.md` ("Highway grid:
+visual target"). Only its timing maths (`BeatGrid.cs` and its tests, tag
+`beat-lines-archive`) may be reused, and only if it helps.
 
 Open, not urgent: measure the leftover input offset (video test above); tune
 the 40/80/150 ms windows from more attempts; maybe a faster highway (0.5 m over
