@@ -405,8 +405,10 @@ recenters of up to 1.1 m / 180° kept the keys on the piano).
 - **Meta XR Audio SDK 205.0.0 has a runtime script that references editor-only
   APIs** and can block player builds with `CS0234 UnityEditor.GUID`. Restarting
   the editor cleared it once. If it returns, replace `com.meta.xr.sdk.all` with
-  `com.meta.xr.sdk.core` in `Packages/manifest.json` — nothing here uses audio,
-  platform, interaction or voice.
+  `com.meta.xr.sdk.core` **plus `com.meta.xr.sdk.interaction`** (same
+  version, 205.0.0) in `Packages/manifest.json`. Nothing here uses audio,
+  platform or voice. Interaction is needed once the hand-tracked UI (phase 4)
+  exists, and dropping it would break that.
 - **A camera with `Skybox` clear flags renders an opaque sky over
   everything, passthrough included — this is what the "black void, can't see
   my hands" report traced back to.** Enabling `OVRManager.isInsightPassthroughEnabled`

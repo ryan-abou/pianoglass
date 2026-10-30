@@ -119,7 +119,7 @@ A session is roughly one evening.
 | F25 | **One-hand practice**: other hand dimmed and unscored, no auto-play | | Small after F13. Existing `isPlayable` filter | None |
 | F18 | **Due-key highlight in the hand's colour**, with **an on/off toggle** in the settings menu | Skip (already have) | Small for colour after F13. The toggle comes with S1 | None |
 | F44 | **Hand-tracking UI** for menus | Skip | Large. Meta Interaction SDK poke on world-space canvases, controller ↔ hands switching | Interaction SDK is in `com.meta.xr.sdk.all` (already installed); hand tracking already enabled in `OculusProjectConfig.asset` |
-| F12 + F24 | **One hand-tracked panel**: dock and in-song controls merged (songs, settings, stop, tempo, progress, toggles) | Skip, Skip | Medium after F44. New Canvas registered on the keyboard via `CanvasCalibrationFollower`, wired in `SceneSetup` | None |
+| F12 + F24 | **One hand-tracked panel**: dock and in-song controls merged (songs, settings, stop, tempo, progress, toggles). Ryan: "make both the last panel and this panel into one thing", read as the F12 dock + F24 | Skip, Skip | Medium after F44. New Canvas registered on the keyboard via `CanvasCalibrationFollower`, wired in `SceneSetup` | None |
 | S1 | **Settings menu** (new; follows from F13 and F18): hand colours, due-key toggle, display mode, passthrough, wait mode, metronome, memory fade | — | Medium. A Meta-free `PianoSettings` component that saves to PlayerPrefs (as display mode does now), and its page on the F12/F24 panel | None |
 
 ### Maybe later (14 items)
@@ -179,7 +179,8 @@ churn and one headset test.
    - no amber lead-in lines;
    - no thick/bright bar lines;
    - no lines limited to the song's key range;
-   - no count-in.
+   - no count-in. It was dropped with the branch on 2026-10-30 and not
+     revisited in the brainstorm; bring it back only if Ryan asks.
 
    If the maths gets in the way of matching the video, change the maths.
 
@@ -267,8 +268,9 @@ point for the spike, not a substitute for looking at those frames.
     - frame time stays at 72 Hz.
 20. **Settings model (S1)**: a Meta-free `PianoSettings` saved to
     PlayerPrefs. It moves display mode, passthrough, wait mode, metronome and
-    memory fade toggles into one place. **Hand-colour presets (F13
-    customisation)** and **the due-key toggle (F18)** live here.
+    memory fade toggles into one place. **Hand-colour customisation (F13;
+    presets vs free picker not yet decided)** and **the due-key toggle
+    (F18)** live here.
 21. **Unified hand-tracked panel (F12 + F24)**: dock, in-song controls and
     the settings page from step 20.
 
@@ -336,7 +338,9 @@ runs short.
    - Matching the look of a highway grid is fine. It's a common
      visual convention, not PianoVision's branding. Everything else stays
      PianoGlass's own (Part 4).
-3. **Custom hand colours (F13) need guard rails.**
+3. **Custom hand colours (F13) need guard rails.** What Ryan decided is
+   that the colours must be customisable in-app. Presets instead of a free
+   picker is **my recommendation, not yet agreed**. Settle it before step 20.
    - A free colour picker in VR is fiddly to build and use. Offer 4–6
      preset pairs instead, and keep them distinct from the outcome colours
      (hit / miss / wrong).
@@ -424,8 +428,8 @@ instrument, not a neon game.
     at white 12%.
   - **Text**: `#E9EEF2` primary, `#8A96A3` secondary.
   - **Default hand pair**: your current note blue `#66ADF2` (right) and warm
-    sand `#E8B86D` (left). These are the defaults for the customisable
-    presets (F13).
+    sand `#E8B86D` (left). These are the defaults before the player
+    customises them (F13).
   - **Outcomes**: hit mint `#3DDC97`, missed slate `#5A636E`, wrong coral
     `#FF6B5B`. These are reserved; hand presets may not use them.
   - **Grid** (F16/F17): **exception to "own identity"**. By Ryan's
@@ -462,6 +466,6 @@ instrument, not a neon game.
    - the bar heat strip.
 4. **Smoked-glass styling from one colour-token asset**: a small
    `ScriptableObject` read by `CalibrationPanel`, `NoteHighway`,
-   `PianoKeyHighlighter` and later the hand-tracked panel. Hand-colour
-   presets live in it too.
+   `PianoKeyHighlighter` and later the hand-tracked panel. The default hand
+   colours live in it too.
 5. **The unified hand-tracked panel** at the keyboard's left end (Phase 4).
