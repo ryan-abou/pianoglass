@@ -1106,6 +1106,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1034278084}
   - component: {fileID: 1034278083}
+  - component: {fileID: 1034278085}
   m_Layer: 0
   m_Name: NoteHighway
   m_TagString: Untagged
@@ -1135,7 +1136,7 @@ MonoBehaviour:
   leadTimeSeconds: 3
   highwayHeight: 0.5
   depthOffset: 0.01
-  tiltDegrees: 0
+  tiltDegrees: -60
 --- !u!4 &1034278084
 Transform:
   m_ObjectHideFlags: 0
@@ -1151,6 +1152,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1034278085
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1034278082}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f2cdd25c3a4a6b448bfa60cd8310aad, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PianoGlass.Highway.HighwayGrid
+  highway: {fileID: 1034278083}
+  gridMaterial: {fileID: 2100000, guid: f94f15708a0b83c49931ca6be8f88659, type: 2}
+  laneColor: {r: 0.88, g: 0.9, b: 0.93, a: 0.75}
+  laneWidth: 0.0015
+  beatColor: {r: 0.88, g: 0.9, b: 0.93, a: 0.16}
+  barColor: {r: 0.88, g: 0.9, b: 0.93, a: 0.34}
+  beatWidth: 0.003
+  lineOverhang: 0.1
+  lineEndFade: 0.06
+  topFadeFraction: 0.2
+  tagColor: {r: 0.03, g: 0.03, b: 0.04, a: 0.92}
+  tagTextColor: {r: 1, g: 1, b: 1, a: 1}
+  tagSize: {x: 0.036, y: 0.022}
+  tagCornerRadius: 0.005
+  tagGap: 0.006
+  tagFontSize: 0.16
+  hitLineColor: {r: 0.02, g: 0.02, b: 0.03, a: 0.95}
+  hitLineWidth: 0.012
+  standoff: 0.004
 --- !u!1 &1156380841
 GameObject:
   m_ObjectHideFlags: 0
@@ -1488,6 +1520,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PianoGlass.Highway.OvrDisplayLatency
   logIntervalSeconds: 30
+  smoothingSeconds: 1
 --- !u!1 &1356427212
 GameObject:
   m_ObjectHideFlags: 0

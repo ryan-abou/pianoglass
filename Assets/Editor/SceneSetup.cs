@@ -447,6 +447,70 @@ namespace PianoGlass.EditorTools
             Debug.Log($"[SceneSetup] Display latency configured: OvrDisplayLatency on '{clock.gameObject.name}'.");
         }
 
+        /// <summary>
+        /// The highway grid (Phase 1, F16/F17): a HighwayGrid next to
+        /// NoteHighway with its material, and the highway leaned back into
+        /// the reference video's runway. Tilt is set here rather than left
+        /// in the scene so the angle under review is the one in this file.
+        /// </summary>
+        [MenuItem("PianoGlass/Scene/Configure Highway Grid")]
+        public static void ConfigureHighwayGrid()
+        {
+            Scene scene = OpenScene();
+
+            var highway = Object.FindAnyObjectByType<NoteHighway>();
+            if (highway == null)
+            {
+                Debug.LogError("[SceneSetup] NoteHighway missing -- run Add Falling-Note Highway first.");
+                return;
+            }
+
+            HighwayGrid grid = highway.GetComponent<HighwayGrid>();
+            if (grid == null) grid = highway.gameObject.AddComponent<HighwayGrid>();
+
+            var gridSo = new SerializedObject(grid);
+            gridSo.FindProperty("highway").objectReferenceValue = highway;
+            gridSo.FindProperty("gridMaterial").objectReferenceValue = GetOrCreateGridMaterial();
+            gridSo.ApplyModifiedProperties();
+
+            var highwaySo = new SerializedObject(highway);
+            highwaySo.FindProperty("tiltDegrees").floatValue = HighwayTiltDegrees;
+            highwaySo.ApplyModifiedProperties();
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+
+            Debug.Log($"[SceneSetup] Highway grid configured on '{highway.gameObject.name}', " +
+                      $"tilt {HighwayTiltDegrees} deg.");
+        }
+
+        /// <summary>Degrees the highway leans back from upright. The video's
+        /// runway rises roughly 25-35 degrees above horizontal behind the keys;
+        /// tuned against headset screenshots in the grid spike.</summary>
+        private const float HighwayTiltDegrees = -60f;
+
+        private const string GridShaderPath = "Assets/Shaders/HighwayGrid.shader";
+        private const string GridMaterialPath = "Assets/HighwayGrid.mat";
+
+        private static Material GetOrCreateGridMaterial()
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<Material>(GridMaterialPath);
+            if (existing != null) return existing;
+
+            var shader = AssetDatabase.LoadAssetAtPath<Shader>(GridShaderPath);
+            if (shader == null)
+            {
+                Debug.LogError($"[SceneSetup] {GridShaderPath} not found -- HighwayGrid left without a material.");
+                return null;
+            }
+
+            var mat = new Material(shader) { name = "HighwayGrid" };
+            AssetDatabase.CreateAsset(mat, GridMaterialPath);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"[SceneSetup] created {GridMaterialPath}");
+            return mat;
+        }
+
         [MenuItem("PianoGlass/Scene/Remove Test Cube")]
         public static void RemoveTestCube()
         {

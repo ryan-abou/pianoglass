@@ -12,7 +12,10 @@ namespace PianoGlass.Highway
     /// Synthesia arrangement -- a wall behind the keys, not a tile floating
     /// above them -- because a horizontal tile seen from a seated headset
     /// viewpoint is nearly edge-on, and "how far above the key is it" is the
-    /// hardest depth judgement a Quest 2 can ask of someone.
+    /// hardest depth judgement a Quest 2 can ask of someone. Since Phase 1
+    /// the wall leans back (tiltDegrees &lt; 0, set by SceneSetup) to match
+    /// the reference video's runway; it still rises from the keys' far edge
+    /// rather than floating over them.
     ///
     /// A slab's height IS its note's remaining duration on screen -- see
     /// SlabGeometry.VerticalExtent, the pure function Update() calls for the
@@ -58,9 +61,35 @@ namespace PianoGlass.Highway
                  "so the wall doesn't clip into the key body.")]
         [SerializeField] private float depthOffset = 0.010f;
         [Tooltip("Degrees the wall leans, about layout.Right. Positive tips the " +
-                 "top toward the player, which is the direction that makes the " +
-                 "wall easier to read from a seated view; 0 is upright.")]
+                 "top toward the player; negative leans it back into a runway, " +
+                 "which is what the reference video's highway does; 0 is upright.")]
         [SerializeField] private float tiltDegrees = 0f;
+
+        public KeyboardCalibration Calibration => calibration;
+        public SongClock Clock => clock;
+        public SongData Song => _song;
+        public float LeadTimeSeconds => leadTimeSeconds;
+        public float HighwayHeight => highwayHeight;
+        public float DepthOffset => depthOffset;
+
+        /// <summary>Metres of wall per second of song time.</summary>
+        public float Speed => highwayHeight / Mathf.Max(0.01f, leadTimeSeconds);
+
+        /// <summary>
+        /// The wall's up direction (key line to spawn point) and its normal
+        /// (toward the player), once tilt is applied. Built from Up and
+        /// Forward directly rather than from an AngleAxis about Right, so the
+        /// sign of tiltDegrees means the same thing whichever way Right's
+        /// handedness came out of calibration. HighwayGrid draws on exactly
+        /// this plane, so the grid and the slabs can never disagree.
+        /// </summary>
+        public (Vector3 up, Vector3 normal) PlaneAxes(PianoKeyLayout layout)
+        {
+            float rad = tiltDegrees * Mathf.Deg2Rad;
+            float c = Mathf.Cos(rad), s = Mathf.Sin(rad);
+            return (layout.Up * c + layout.Forward * s,
+                    layout.Forward * c - layout.Up * s);
+        }
 
         private SongData _song;
         private readonly List<(SongNote note, Renderer renderer)> _slabs = new List<(SongNote, Renderer)>();
@@ -172,16 +201,13 @@ namespace PianoGlass.Highway
             // where it is now -- otherwise every note lands on the key line
             // one display latency late, and the player presses late with it.
             double songTime = clock.DisplaySongTime;
-            float speed = highwayHeight / Mathf.Max(0.01f, leadTimeSeconds);
+            float speed = Speed;
 
             // Shared by every slab this frame: the wall's orientation and its
-            // vertical axis once tilt is applied. Rotating the whole
-            // orientation about layout.Right (rather than just nudging Up)
-            // keeps Up and Forward orthogonal and rotating together, so the
-            // wall stays a flat plane instead of shearing.
-            Quaternion tiltRotation = Quaternion.AngleAxis(tiltDegrees, layout.Right)
-                                       * Quaternion.LookRotation(layout.Forward, layout.Up);
-            Vector3 tiltedUp = tiltRotation * Vector3.up;
+            // vertical axis once tilt is applied. Up and the normal rotate
+            // together, so the wall stays a flat plane instead of shearing.
+            (Vector3 tiltedUp, Vector3 normal) = PlaneAxes(layout);
+            Quaternion tiltRotation = Quaternion.LookRotation(normal, tiltedUp);
 
             foreach (var (note, renderer) in _slabs)
             {
