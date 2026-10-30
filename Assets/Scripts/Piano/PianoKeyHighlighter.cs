@@ -83,7 +83,9 @@ namespace PianoGlass.Piano
         [Tooltip("ActiveKeysOnly is the default: the old FullOverlay behaviour " +
                  "painted all 88 keys at rest, which hides the player's hand " +
                  "even with passthrough on. Cycle through the others with " +
-                 "OvrKeyOverlayInput (left X) to compare them on the headset.")]
+                 "OvrKeyOverlayInput (left X) to compare them on the headset. " +
+                 "Only used on first launch: after that the last mode chosen " +
+                 "is restored from PlayerPrefs.")]
         [SerializeField] private DisplayMode displayMode = DisplayMode.ActiveKeysOnly;
 
         [Tooltip("Alpha applied to every colour in Translucent mode. Default " +
@@ -101,6 +103,11 @@ namespace PianoGlass.Piano
         [SerializeField] private float edgeMarkerDepthFraction = 0.2f;
 
         public DisplayMode Mode => displayMode;
+
+        /// <summary>PlayerPrefs key for the last display mode. Stored by
+        /// name, not index, so reordering the enum can't silently restore
+        /// the wrong mode; an unknown name falls back to the Inspector value.</summary>
+        private const string DisplayModePrefKey = "PianoGlass.KeyOverlay.DisplayMode";
 
         private readonly Dictionary<int, Renderer> _renderers = new Dictionary<int, Renderer>();
         private readonly HashSet<int> _dueSoon = new HashSet<int>();
@@ -126,6 +133,15 @@ namespace PianoGlass.Piano
             // each independently finds its own KeyboardCalibration -- there
             // is exactly one song right now, so there is nothing to drift.
             _song = SongData.TwinkleTwinkleLittleStar();
+
+            // Launch in whatever mode the player last chose. Restored here,
+            // before Rebuild, so the keys are built in it from the start.
+            string saved = PlayerPrefs.GetString(DisplayModePrefKey, "");
+            if (Enum.TryParse(saved, out DisplayMode restored) && Enum.IsDefined(typeof(DisplayMode), restored))
+            {
+                displayMode = restored;
+                Debug.Log($"[Highlighter] display mode restored: {displayMode}");
+            }
         }
 
         /// <summary>Nothing is drawn at a placement the calibration does not
@@ -399,6 +415,11 @@ namespace PianoGlass.Piano
             var values = (DisplayMode[])Enum.GetValues(typeof(DisplayMode));
             int next = (Array.IndexOf(values, displayMode) + 1) % values.Length;
             displayMode = values[next];
+
+            // Saved on every change, not on quit: a Quest app is usually
+            // closed by the system without OnApplicationQuit ever running.
+            PlayerPrefs.SetString(DisplayModePrefKey, displayMode.ToString());
+            PlayerPrefs.Save();
 
             ApplyMaterialForMode();
             if (_layout == null) return;

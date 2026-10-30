@@ -280,7 +280,9 @@ top of the player's hand regardless of passthrough. `FullOverlay` painting
 all 88 keys at rest is what made a tester unable to see their own hands even
 once passthrough is on — `ActiveKeysOnly`/`EdgeMarkers` exist to paint only
 the key the player actually needs to find, which is why `ActiveKeysOnly` is
-the shipped default rather than `FullOverlay`.
+the shipped default rather than `FullOverlay`. The default only applies on
+first launch: every mode change is saved to PlayerPrefs (by name) and the app
+launches in the last mode chosen.
 
 Controls, `OvrKeyOverlayInput.cs`, explicit `OVRInput.Controller.LTouch` as
 always:
