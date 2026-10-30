@@ -282,7 +282,7 @@ once passthrough is on — `ActiveKeysOnly`/`EdgeMarkers` exist to paint only
 the key the player actually needs to find, which is why `ActiveKeysOnly` is
 the shipped default rather than `FullOverlay`. The default only applies on
 first launch: every mode change is saved to PlayerPrefs (by name) and the app
-launches in the last mode chosen.
+launches in the last mode chosen (confirmed on device 2026-10-29).
 
 Controls, `OvrKeyOverlayInput.cs`, explicit `OVRInput.Controller.LTouch` as
 always:
