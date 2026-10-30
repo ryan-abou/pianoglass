@@ -507,13 +507,15 @@ PERFECT and ~90% accuracy is just that spread. Per-attempt mean drifts −28 to
 
 **Next, in order:**
 
-1. Beat and bar lines on the highway (drawn from `DisplaySongTime`) and a
-   count-in during the silent 3 s lead-in.
-2. Measure headset audio output latency, then an optional metronome scheduled
+1. Measure headset audio output latency, then an optional metronome scheduled
    ahead with `AudioSource.PlayScheduled`; record on/off in the attempt file.
-3. Roadmap: MIDI file loading → wait mode → weak-section practice → memory
+2. Roadmap: MIDI file loading → wait mode → weak-section practice → memory
    fade → personal bests / XP / achievements. Multiplayer and leaderboards
    much later, if ever.
+
+Dropped 2026-10-30: beat/bar lines on the highway and the count-in during the
+lead-in. Built (branch `beat-lines`, commit `cf0f8bc`) and scrapped before a
+headset test; the branch is deleted.
 
 Open, not urgent: measure the leftover input offset (video test above); tune
 the 40/80/150 ms windows from more attempts; maybe a faster highway (0.5 m over
