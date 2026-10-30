@@ -176,7 +176,7 @@ namespace PianoGlass.Piano
             if (clock == null || _renderers.Count == 0 || !PlacementValid) return;
             if (displayMode != DisplayMode.ActiveKeysOnly && displayMode != DisplayMode.EdgeMarkers) return;
 
-            ActiveNoteSelector.CollectDueSoonPitches(_song.Notes, clock.SongTime, activeKeyLookaheadSeconds, _dueSoon);
+            ActiveNoteSelector.CollectDueSoonPitches(_song.Notes, clock.DisplaySongTime, activeKeyLookaheadSeconds, _dueSoon);
 
             foreach (var kv in _renderers)
             {

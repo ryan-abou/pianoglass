@@ -37,6 +37,31 @@ namespace PianoGlass.Song
 
         public bool IsPlaying { get; private set; }
 
+        /// <summary>No real headset is this slow; anything larger is a bad
+        /// reading, and drawing that far ahead would be worse than none.</summary>
+        public const double MaxDisplayLatencySeconds = 0.1;
+
+        private double _displayLatency;
+
+        /// <summary>Real seconds from this frame's Update to the moment the
+        /// frame is actually on the display. Set every frame by the headset
+        /// adapter (OvrDisplayLatency); 0 in the editor and tests. Clamped
+        /// to [0, MaxDisplayLatencySeconds].</summary>
+        public double DisplayLatencySeconds
+        {
+            get => _displayLatency;
+            set => _displayLatency = System.Math.Min(System.Math.Max(value, 0.0), MaxDisplayLatencySeconds);
+        }
+
+        /// <summary>The song time this frame will show when the player sees
+        /// it -- what anything DRAWN from the song must use, so a note
+        /// reaches the key line on the display exactly when it is due.
+        /// Judging must keep using SongTime: a press is real, not drawn.
+        /// Equal to SongTime while paused, because a paused song does not
+        /// move between render and display.</summary>
+        public double DisplaySongTime =>
+            IsPlaying ? SongTime + _displayLatency * tempoMultiplier : SongTime;
+
         public float TempoMultiplier
         {
             get => tempoMultiplier;

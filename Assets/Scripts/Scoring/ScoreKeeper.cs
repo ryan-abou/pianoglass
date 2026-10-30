@@ -18,9 +18,13 @@ namespace PianoGlass.Scoring
     /// Timing: a press is timed from its own MIDI timestamp, converted to
     /// Unity realtime by MidiInput.ToRealtime, then to song time against the
     /// clock as it stands this frame. Runs after SongClock (execution order
-    /// 100) so "this frame" is the songTime the highway is drawing. Any
-    /// steady display or USB latency left over shows up as a non-zero mean
-    /// error in the log and the file, and inputOffsetMs is where it goes.
+    /// 100). Judging uses SongTime, never DisplaySongTime: the highway draws
+    /// ahead by the display latency so a note is SEEN at the key line when
+    /// it is due, and a press is then judged against when it was really due.
+    /// Whatever latency is left after that (USB, anything the runtime's
+    /// prediction misses) is a property of the system, measured once (slow-
+    /// motion video), not learned from the player -- inputOffsetMs is
+    /// where it goes. A steady mean error after that is the player.
     ///
     /// Attempts: one starts the first frame the clock plays with no attempt
     /// running; it ends when every note is judged (completed) or when the
@@ -40,9 +44,10 @@ namespace PianoGlass.Scoring
         [SerializeField] private float greatMs = 80f;
         [SerializeField] private float goodMs = 150f;
 
-        [Tooltip("Subtracted from every press, real ms. Set it to the mean " +
-                 "error the log reports once it is clearly steady: that is " +
-                 "display/USB latency, not the player.")]
+        [Tooltip("Subtracted from every press, real ms. System latency left " +
+                 "after display compensation, measured on the hardware -- not " +
+                 "the player's mean error, which would hide their own rushing " +
+                 "or dragging.")]
         [SerializeField] private float inputOffsetMs = 0f;
 
         [Tooltip("Log one [Score] line per judged note.")]
@@ -183,6 +188,7 @@ namespace PianoGlass.Scoring
             {
                 AttemptRecord rec = Session.ToRecord(outcome, _startedUtc, DateTime.UtcNow.ToString("o"),
                                                      clock.TempoMultiplier, inputOffsetMs);
+                rec.displayLatencyMs = clock.DisplayLatencySeconds * 1000.0;
                 Directory.CreateDirectory(Path.GetDirectoryName(_path));
                 File.WriteAllText(_path, JsonUtility.ToJson(rec, true));
                 LastSavedPath = _path;

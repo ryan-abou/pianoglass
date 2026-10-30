@@ -427,6 +427,26 @@ namespace PianoGlass.EditorTools
                       $"CalibrationPanel {(panel != null ? "wired" : "not found")}.");
         }
 
+        [MenuItem("PianoGlass/Scene/Configure Display Latency")]
+        public static void ConfigureDisplayLatency()
+        {
+            Scene scene = OpenScene();
+
+            var clock = Object.FindAnyObjectByType<SongClock>();
+            if (clock == null)
+            {
+                Debug.LogError("[SceneSetup] SongClock missing -- run Add Falling-Note Highway first.");
+                return;
+            }
+
+            if (clock.GetComponent<OvrDisplayLatency>() == null) clock.gameObject.AddComponent<OvrDisplayLatency>();
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+
+            Debug.Log($"[SceneSetup] Display latency configured: OvrDisplayLatency on '{clock.gameObject.name}'.");
+        }
+
         [MenuItem("PianoGlass/Scene/Remove Test Cube")]
         public static void RemoveTestCube()
         {

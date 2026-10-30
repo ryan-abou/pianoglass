@@ -96,6 +96,9 @@ namespace PianoGlass.Scoring
         public string outcome;
         public double tempo;
         public double inputOffsetMs;
+        /// <summary>How far ahead the highway was drawn when the attempt was
+        /// saved (render-to-display latency, from the runtime); 0 in the editor.</summary>
+        public double displayLatencyMs;
         public TimingWindows windows;
 
         public int score;

@@ -168,7 +168,10 @@ namespace PianoGlass.Highway
             if (clock == null || calibration == null || !calibration.IsPlacementValid || _slabs.Count == 0) return;
 
             PianoKeyLayout layout = calibration.Layout;
-            double songTime = clock.SongTime;
+            // Where the song will be when this frame reaches the display, not
+            // where it is now -- otherwise every note lands on the key line
+            // one display latency late, and the player presses late with it.
+            double songTime = clock.DisplaySongTime;
             float speed = highwayHeight / Mathf.Max(0.01f, leadTimeSeconds);
 
             // Shared by every slab this frame: the wall's orientation and its

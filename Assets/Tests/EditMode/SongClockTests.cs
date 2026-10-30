@@ -121,5 +121,57 @@ namespace PianoGlass.Tests.EditMode
             clock.Pause();
             Assert.IsFalse(clock.IsPlaying);
         }
+
+        [Test]
+        public void DisplaySongTimeIsAheadByTheDisplayLatencyWhilePlaying()
+        {
+            SongClock clock = NewClock();
+            clock.Seek(2.0);
+            clock.Play();
+            clock.DisplayLatencySeconds = 0.030;
+            Assert.AreEqual(2.030, clock.DisplaySongTime, 1e-9);
+            Assert.AreEqual(2.0, clock.SongTime, 1e-9, "judging time must not move");
+        }
+
+        [Test]
+        public void DisplayLeadScalesWithTempo()
+        {
+            // At half speed the song moves half as far in the same 30 real ms.
+            SongClock clock = NewClock();
+            clock.Seek(2.0);
+            clock.TempoMultiplier = 0.5f;
+            clock.Play();
+            clock.DisplayLatencySeconds = 0.030;
+            Assert.AreEqual(2.015, clock.DisplaySongTime, 1e-9);
+        }
+
+        [Test]
+        public void PausedSongIsDrawnWhereItIs()
+        {
+            SongClock clock = NewClock();
+            clock.Seek(2.0);
+            clock.DisplayLatencySeconds = 0.030;
+            Assert.IsFalse(clock.IsPlaying);
+            Assert.AreEqual(2.0, clock.DisplaySongTime, 1e-9);
+        }
+
+        [Test]
+        public void DisplayLatencyIsClampedToAPlausibleRange()
+        {
+            SongClock clock = NewClock();
+            clock.DisplayLatencySeconds = -0.5;
+            Assert.AreEqual(0.0, clock.DisplayLatencySeconds, 1e-12);
+            clock.DisplayLatencySeconds = 5.0;
+            Assert.AreEqual(SongClock.MaxDisplayLatencySeconds, clock.DisplayLatencySeconds, 1e-12);
+        }
+
+        [Test]
+        public void DisplayLatencyDefaultsToZero()
+        {
+            SongClock clock = NewClock();
+            clock.Seek(1.0);
+            clock.Play();
+            Assert.AreEqual(1.0, clock.DisplaySongTime, 1e-9);
+        }
     }
 }
