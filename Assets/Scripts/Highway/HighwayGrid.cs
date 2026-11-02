@@ -73,7 +73,9 @@ namespace PianoGlass.Highway
 
         [Header("Hit line")]
         [SerializeField] private Color hitLineColor = new Color(0.02f, 0.02f, 0.03f, 0.95f);
-        [Tooltip("Thickness of the hit line, measured up the wall, centred on the key line.")]
+        [Tooltip("Thickness of the hit line, measured up the wall from the key " +
+                 "line. It starts at the key line rather than centring on it: " +
+                 "centred, its lower half hung over the key tops (2026-11-02).")]
         [SerializeField] private float hitLineWidth = 0.012f;
 
         [Header("Depth")]
@@ -178,8 +180,9 @@ namespace PianoGlass.Highway
                 AddRect(At(x, height * 0.5f), up, right, height * 0.5f, laneWidth * 0.5f, 0f, laneColor, 0f);
             }
 
-            // Hit line.
-            AddRect(At((leftEnd + rightEnd) * 0.5f, 0f), right, up,
+            // Hit line, on the runway side of the key line only, so it never
+            // covers the keys; a slab's bottom stops on its near edge.
+            AddRect(At((leftEnd + rightEnd) * 0.5f, hitLineWidth * 0.5f), right, up,
                     (rightEnd - leftEnd) * 0.5f, hitLineWidth * 0.5f, 0f, hitLineColor, 0f);
 
             // Beat and bar lines, and the bar tags.
