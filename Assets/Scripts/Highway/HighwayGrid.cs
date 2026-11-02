@@ -37,12 +37,15 @@ namespace PianoGlass.Highway
         [SerializeField] private Material gridMaterial;
 
         [Header("Lane lines")]
-        [SerializeField] private Color laneColor = new Color(0.88f, 0.90f, 0.93f, 0.75f);
+        // Alphas are low on purpose: the project renders in linear colour
+        // space, where a blended alpha reads much brighter than its number
+        // suggests (0.16 made the beat lines as loud as the lanes, 2026-11-02).
+        [SerializeField] private Color laneColor = new Color(0.88f, 0.90f, 0.93f, 0.70f);
         [SerializeField] private float laneWidth = 0.0015f;
 
         [Header("Beat and bar lines")]
-        [SerializeField] private Color beatColor = new Color(0.88f, 0.90f, 0.93f, 0.16f);
-        [SerializeField] private Color barColor = new Color(0.88f, 0.90f, 0.93f, 0.34f);
+        [SerializeField] private Color beatColor = new Color(0.88f, 0.90f, 0.93f, 0.06f);
+        [SerializeField] private Color barColor = new Color(0.88f, 0.90f, 0.93f, 0.15f);
         [SerializeField] private float beatWidth = 0.003f;
         [Tooltip("How far beat and bar lines run past each end of the keyboard.")]
         [SerializeField] private float lineOverhang = 0.10f;
@@ -56,11 +59,14 @@ namespace PianoGlass.Highway
         [Header("Bar number tags")]
         [SerializeField] private Color tagColor = new Color(0.03f, 0.03f, 0.04f, 0.92f);
         [SerializeField] private Color tagTextColor = Color.white;
-        [SerializeField] private Vector2 tagSize = new Vector2(0.036f, 0.022f);
-        [SerializeField] private float tagCornerRadius = 0.005f;
+        [Tooltip("Tags stand upright facing the player, not flat on the " +
+                 "runway -- lying flat, the grazing view squashed them to " +
+                 "slivers. The reference video's tags face the viewer too.")]
+        [SerializeField] private Vector2 tagSize = new Vector2(0.046f, 0.028f);
+        [SerializeField] private float tagCornerRadius = 0.006f;
         [Tooltip("Gap between the tag's right side and the keyboard's left end.")]
         [SerializeField] private float tagGap = 0.006f;
-        [SerializeField] private float tagFontSize = 0.16f;
+        [SerializeField] private float tagFontSize = 0.22f;
 
         [Header("Hit line")]
         [SerializeField] private Color hitLineColor = new Color(0.02f, 0.02f, 0.03f, 0.95f);
@@ -197,10 +203,11 @@ namespace PianoGlass.Highway
                 if (beat.IsBarLine && beat.Bar >= 1)
                 {
                     Vector3 centre = At(leftEnd - tagGap - tagSize.x * 0.5f, y) + normal * (standoff * 0.5f);
+                    (Vector3 tagRight, Vector3 tagUp, Vector3 tagNormal) = TagAxes(centre, right, layout.Up);
                     Color bg = tagColor;
                     bg.a *= fade;
-                    AddRect(centre, right, up, tagSize.x * 0.5f, tagSize.y * 0.5f, tagCornerRadius, bg, 0f);
-                    PlaceTag(tagCount++, beat.Bar, centre + normal * 0.001f, up, normal, fade);
+                    AddRect(centre, tagRight, tagUp, tagSize.x * 0.5f, tagSize.y * 0.5f, tagCornerRadius, bg, 0f);
+                    PlaceTag(tagCount++, beat.Bar, centre + tagNormal * 0.001f, tagUp, tagNormal, fade);
                 }
             }
 
@@ -221,6 +228,23 @@ namespace PianoGlass.Highway
                 Debug.Log($"[HighwayGrid] drawing {_lanes.Count} lane lines over notes " +
                           $"{layout.LowestNote}-{layout.HighestNote}, {song.BeatsPerBar}/4 at {song.Bpm} BPM");
             }
+        }
+
+        /// <summary>
+        /// A tag's axes: facing the player's head, upright (its up as close
+        /// to the keyboard's Up as facing allows), its right along the
+        /// keyboard. Falls back to the keyboard's own frame with no camera.
+        /// </summary>
+        private static (Vector3 right, Vector3 up, Vector3 normal) TagAxes(Vector3 centre, Vector3 keyRight, Vector3 keyUp)
+        {
+            Camera cam = Camera.main;
+            Vector3 normal = cam != null ? cam.transform.position - centre : Vector3.Cross(keyRight, keyUp);
+            if (normal.sqrMagnitude < 1e-6f) normal = Vector3.Cross(keyRight, keyUp);
+            normal.Normalize();
+            Vector3 right = (keyRight - normal * Vector3.Dot(keyRight, normal)).normalized;
+            Vector3 up = Vector3.Cross(normal, right);
+            if (Vector3.Dot(up, keyUp) < 0f) up = -up;
+            return (right, up, normal);
         }
 
         /// <summary>

@@ -465,8 +465,12 @@ namespace PianoGlass.EditorTools
                 return;
             }
 
-            HighwayGrid grid = highway.GetComponent<HighwayGrid>();
-            if (grid == null) grid = highway.gameObject.AddComponent<HighwayGrid>();
+            // Re-created, not reused, so the look under review is always
+            // HighwayGrid's code defaults -- a scene copy of last week's
+            // values would silently override them.
+            HighwayGrid old = highway.GetComponent<HighwayGrid>();
+            if (old != null) Object.DestroyImmediate(old);
+            HighwayGrid grid = highway.gameObject.AddComponent<HighwayGrid>();
 
             var gridSo = new SerializedObject(grid);
             gridSo.FindProperty("highway").objectReferenceValue = highway;
@@ -476,6 +480,13 @@ namespace PianoGlass.EditorTools
             var highwaySo = new SerializedObject(highway);
             highwaySo.FindProperty("tiltDegrees").floatValue = HighwayTiltDegrees;
             highwaySo.ApplyModifiedProperties();
+
+            // The leaned-back runway runs under where the status panel used
+            // to hang, so the panel moves back past the runway's far end.
+            var calibration = Object.FindAnyObjectByType<KeyboardCalibration>();
+            Canvas canvas = Object.FindAnyObjectByType<Canvas>();
+            CanvasCalibrationFollower follower = canvas != null ? canvas.GetComponent<CanvasCalibrationFollower>() : null;
+            if (follower != null && calibration != null) WireCanvasFollower(follower, calibration);
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
@@ -611,17 +622,21 @@ namespace PianoGlass.EditorTools
 
         /// <summary>The note wall and the status panel used to share one
         /// standoff (NoteHighway.depthOffset, 0.05 in the scene). The wall now
-        /// sits HighwayDepthOffset behind the keys -- 40 mm closer to the
-        /// player -- while the panel keeps PanelDepthOffset, exactly where it
-        /// was. Both set here so the scene cannot keep a stale override.</summary>
+        /// sits HighwayDepthOffset behind the keys. Since the highway leans
+        /// back (Phase 1 grid) its 0.5 m runway reaches ~0.43 m behind the
+        /// keys and ~0.25 m up, right under the old panel spot, so the panel
+        /// sits past the runway's far end and higher. All set here so the
+        /// scene cannot keep a stale override.</summary>
         private const float HighwayDepthOffset = 0.010f;
-        private const float PanelDepthOffset = 0.05f;
+        private const float PanelDepthOffset = 0.48f;
+        private const float PanelHeightAboveKeys = 0.75f;
 
         private static void WireCanvasFollower(CanvasCalibrationFollower follower, KeyboardCalibration calibration)
         {
             var so = new SerializedObject(follower);
             so.FindProperty("calibration").objectReferenceValue = calibration;
             so.FindProperty("depthOffset").floatValue = PanelDepthOffset;
+            so.FindProperty("heightAboveKeys").floatValue = PanelHeightAboveKeys;
             so.ApplyModifiedProperties();
         }
 

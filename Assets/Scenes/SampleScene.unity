@@ -1166,20 +1166,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PianoGlass.Highway.HighwayGrid
   highway: {fileID: 1034278083}
   gridMaterial: {fileID: 2100000, guid: f94f15708a0b83c49931ca6be8f88659, type: 2}
-  laneColor: {r: 0.88, g: 0.9, b: 0.93, a: 0.75}
+  laneColor: {r: 0.88, g: 0.9, b: 0.93, a: 0.7}
   laneWidth: 0.0015
-  beatColor: {r: 0.88, g: 0.9, b: 0.93, a: 0.16}
-  barColor: {r: 0.88, g: 0.9, b: 0.93, a: 0.34}
+  beatColor: {r: 0.88, g: 0.9, b: 0.93, a: 0.06}
+  barColor: {r: 0.88, g: 0.9, b: 0.93, a: 0.15}
   beatWidth: 0.003
   lineOverhang: 0.1
   lineEndFade: 0.06
   topFadeFraction: 0.2
   tagColor: {r: 0.03, g: 0.03, b: 0.04, a: 0.92}
   tagTextColor: {r: 1, g: 1, b: 1, a: 1}
-  tagSize: {x: 0.036, y: 0.022}
-  tagCornerRadius: 0.005
+  tagSize: {x: 0.046, y: 0.028}
+  tagCornerRadius: 0.006
   tagGap: 0.006
-  tagFontSize: 0.16
+  tagFontSize: 0.22
   hitLineColor: {r: 0.02, g: 0.02, b: 0.03, a: 0.95}
   hitLineWidth: 0.012
   standoff: 0.004
@@ -1316,8 +1316,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PianoGlass.Piano.CanvasCalibrationFollower
   calibration: {fileID: 2007997132}
-  depthOffset: 0.05
-  heightAboveKeys: 0.65
+  depthOffset: 0.48
+  heightAboveKeys: 0.75
   fallbackHeight: 1.2
   invalidDistance: 0.8
   invalidDrop: 0.15
