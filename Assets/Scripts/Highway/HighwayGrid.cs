@@ -41,7 +41,10 @@ namespace PianoGlass.Highway
         // space, where a blended alpha reads much brighter than its number
         // suggests (0.16 made the beat lines as loud as the lanes, 2026-11-02).
         [SerializeField] private Color laneColor = new Color(0.88f, 0.90f, 0.93f, 0.70f);
-        [SerializeField] private float laneWidth = 0.0015f;
+        [Tooltip("0.8 mm: 1.5 mm read too heavy on the headset (2026-11-02). Far " +
+                 "away the shader's minimum on-screen width takes over, so a " +
+                 "thinner value fades the far end rather than thinning it.")]
+        [SerializeField] private float laneWidth = 0.0008f;
 
         [Header("Beat and bar lines")]
         [SerializeField] private Color beatColor = new Color(0.88f, 0.90f, 0.93f, 0.06f);

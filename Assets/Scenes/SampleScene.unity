@@ -1167,7 +1167,7 @@ MonoBehaviour:
   highway: {fileID: 1034278083}
   gridMaterial: {fileID: 2100000, guid: f94f15708a0b83c49931ca6be8f88659, type: 2}
   laneColor: {r: 0.88, g: 0.9, b: 0.93, a: 0.7}
-  laneWidth: 0.0015
+  laneWidth: 0.0008
   beatColor: {r: 0.88, g: 0.9, b: 0.93, a: 0.06}
   barColor: {r: 0.88, g: 0.9, b: 0.93, a: 0.15}
   beatWidth: 0.003
@@ -1316,8 +1316,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PianoGlass.Piano.CanvasCalibrationFollower
   calibration: {fileID: 2007997132}
-  depthOffset: 0.48
-  heightAboveKeys: 0.75
+  depthOffset: 0.05
+  heightAboveKeys: 0.65
   fallbackHeight: 1.2
   invalidDistance: 0.8
   invalidDrop: 0.15
