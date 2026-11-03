@@ -187,7 +187,8 @@ churn and one headset test.
 
    **Done, merged 2026-11-03** (branch `phase1-grid`, four headset rounds of
    phone photos through the lens). What shipped: the highway leans back 60°
-   like the video's runway and starts 20 mm behind the keys; one lane line
+   like the video's runway and starts 15 mm behind the keys (20 mm until the
+   key depth was measured on 2026-11-03); one lane line
    per octave on each C's left edge (0.8 mm wide); beat lines very faint
    (alpha 0.06), bar lines brighter but not thicker (0.15); dark rounded tag
    with a white bar number, left of the lowest key, upright and facing the

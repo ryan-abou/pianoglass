@@ -196,7 +196,7 @@ Assets/
   Scripts/Transport/
     SongTransport.cs                  play/pause/restart + MIDI chord + transport state (Meta-free)
     OvrSongTransport.cs               transport's OVRInput code
-  Tests/EditMode/                     248 tests (layout, calibration, clock, slabs, scoring, latency filter, beat grid), run headlessly
+  Tests/EditMode/                     260 tests (layout, calibration, clock, slabs, scoring, latency filter, beat grid), run headlessly
 ```
 
 OVRInput now lives in three places, split the same way as calibration:
@@ -527,7 +527,8 @@ PERFECT and ~90% accuracy is just that spread. Per-attempt mean drifts −28 to
 
 **Highway grid (Phase 1, F16/F17): merged 2026-11-03** after four headset
 rounds. The highway now leans back 60° (`NoteHighway.tiltDegrees = -60`,
-set by `SceneSetup`) and starts 20 mm behind the keys (`depthOffset`).
+set by `SceneSetup`) and starts 15 mm behind the keys (`depthOffset`;
+20 mm until the key depth was measured, 2026-11-03).
 `HighwayGrid` draws, on exactly `NoteHighway.PlaneAxes()`: one thin lane line
 per octave (each C's left edge, full keyboard width), faint beat lines, bar
 lines brighter but not thicker, a dark bar-number tag left of the lowest key,
@@ -537,14 +538,24 @@ so code defaults are the source of truth, not stale serialized values.
 **Headset photos:** Quest 2 captures never include passthrough, so the
 grid is judged from phone photos taken through the lens.
 
+**Key dimensions: merged 2026-11-03** (branch `black-key-geometry`, fronts,
+lengths and sideways positions confirmed on the headset). Measured on Ryan's
+piano: white key 147.64 mm, black key 94.45 mm long, black front 52.5 mm
+behind the white front -- constants in `PianoKeyLayout`, absolute rather than
+fractions of white depth. Black keys sit off-centre by the equal-slot model
+(C-E top split in five, F-B in seven): C♯ −2.4 mm, D♯ +2.4, F♯ −3.4, G♯ 0,
+A♯ +3.4. White key depth is a property of the piano, set in the scene by
+`PianoGlass/Scene/Configure Key Dimensions`; neither calibration file
+overrides it on load any more (`AnchoredCalibrationSession.ConfiguredWhiteKeyDepth`),
+because every file saved before held the unmeasured 145 mm.
+
 **Next, in order:**
 
 Follow the four-phase build order in `docs/feature-evaluation.md` (Part 3):
 
 1. **Highway looks finished**: ~~grid~~ (done); hit/miss/wrong colours on
    slabs (F19/F20: hit mint `#3DDC97`, missed slate `#5A636E`, wrong coral
-   `#FF6B5B`); note names (F14). Possibly first, as a small fix branch:
-   **black-key geometry** (see Open).
+   `#FF6B5B`); note names (F14).
 2. **Results, tempo, practice**: tempo ±5%, attempt schema v2, results card
    with bar heat strip, metronome (measure headset audio output latency, then
    `AudioSource.PlayScheduled`, on/off in the attempt), loop worst bar,
@@ -570,12 +581,6 @@ the 40/80/150 ms windows from more attempts; maybe a faster highway (0.5 m over
 Now / Next / Later tiers (waiting on whether the 12-week timeline is a hard
 deadline); `DeviceChecklist` step 4 never advances on device (dev tool only);
 measure the seated vertical overlay error (`docs/anchored-calibration-status.md`).
-**Black keys sit slightly wrong** (seen 2026-11-03): `PianoKeyLayout` centres
-every black key exactly between its white neighbours (`BlackKeyNudge` is all
-zero), but real C♯/F♯ sit left of centre and D♯/A♯ right (~2–3.5 mm), and
-the virtual black keys look shorter/further back than the real ones (black
-depth is a guessed 62% of a 145 mm white key). Fix with Ryan's ruler
-measurements of white and black key length.
 **Calibration UX from the grid tests:** a thumbstick nudge does not re-run
 the Middle C check, so a stale "Middle C is 488 mm off" warning stays up;
 and every note scores MISS while the flow is still in Verifying (until A).
