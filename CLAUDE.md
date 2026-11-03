@@ -179,11 +179,14 @@ Assets/
   Scripts/Song/
     Song.cs                           SongNote + SongData, hard-coded 8-bar melody (own asmdef)
     SongClock.cs                      double songTime, tempo multiplier, pre-song lead-in
+    BeatGrid.cs                       pure: which song times get beat/bar lines, bar numbers, octave lanes
     SlabGeometry.cs                   pure slab bottom/height maths, shared by highway + tests
     ActiveNoteSelector.cs             pure "is a note due soon" maths, shared by highlighter + tests
     DisplayLatencyFilter.cs           pure: rejects implausible display-latency readings, smooths ~1 s
   Scripts/Highway/
-    NoteHighway.cs                    falling-note wall, position from (noteTime − DisplaySongTime)
+    NoteHighway.cs                    falling-note wall, position from (noteTime − DisplaySongTime); PlaneAxes() = the tilted plane
+    HighwayGrid.cs                    grid on that plane: octave lanes, beat/bar lines, bar tags, hit line (one mesh,
+                                      Shaders/HighwayGrid.shader, SDF rounded rects with a minimum on-screen width)
     OvrDisplayLatency.cs              feeds SongClock the runtime's render-to-display latency
   Scripts/Scoring/
     Core/ScoringSession.cs            pure judging: matching, misses, wrong notes, per-bar stats (own asmdef)
@@ -193,7 +196,7 @@ Assets/
   Scripts/Transport/
     SongTransport.cs                  play/pause/restart + MIDI chord + transport state (Meta-free)
     OvrSongTransport.cs               transport's OVRInput code
-  Tests/EditMode/                     230 tests (layout, calibration, clock, slabs, scoring, latency filter), run headlessly
+  Tests/EditMode/                     248 tests (layout, calibration, clock, slabs, scoring, latency filter, beat grid), run headlessly
 ```
 
 OVRInput now lives in three places, split the same way as calibration:
@@ -459,8 +462,13 @@ and they keep their original commit dates.
 
 1. **Start new work from main:** `git checkout main`, `git pull`, then
    `git checkout -b <short-name>` (e.g. `phase6-twopoint`).
-2. **Commit whenever a step works.** `git status`, then `git add -A`, then
-   `git commit -m "<what changed>"`. Never `git commit -am` (it skips new files).
+2. **Commit whenever a step works, and commit often.** `git status`, then
+   `git add -A`, then `git commit -m "<what changed>"`. Never `git commit -am`
+   (it skips new files). Ryan wants a busy contribution graph, so split each
+   feature into its real logical steps (pure maths + tests, shader,
+   component, SceneSetup wiring, each headset tuning round, docs), one
+   commit each, and push after each. Every commit must compile. No padding
+   or empty commits.
 3. **Push at the end of every session, even if nothing works yet.** First push
    of a branch: `git push -u origin <short-name>`; after that, `git push`.
    This is the only off-machine backup.
@@ -517,14 +525,26 @@ PERFECT and ~90% accuracy is just that spread. Per-attempt mean drifts −28 to
 +11 ms — no audible beat to lock onto. Rushing in bars 3 (−37 ms) and 7
 (−18 ms).
 
+**Highway grid (Phase 1, F16/F17): merged 2026-11-03** after four headset
+rounds. The highway now leans back 60° (`NoteHighway.tiltDegrees = -60`,
+set by `SceneSetup`) and starts 20 mm behind the keys (`depthOffset`).
+`HighwayGrid` draws, on exactly `NoteHighway.PlaneAxes()`: one thin lane line
+per octave (each C's left edge, full keyboard width), faint beat lines, bar
+lines brighter but not thicker, a dark bar-number tag left of the lowest key,
+and a dark hit line on the runway side of the key line only.
+`PianoGlass/Scene/Configure Highway Grid` destroys and re-adds the component
+so code defaults are the source of truth, not stale serialized values.
+**Headset photos:** Quest 2 captures never include passthrough, so the
+grid is judged from phone photos taken through the lens.
+
 **Next, in order:**
 
 Follow the four-phase build order in `docs/feature-evaluation.md` (Part 3):
 
-1. **Highway looks finished**: a clean grid with bar lines, bar numbers,
-   beat and lane lines, matched to the reference video's look (agree on the
-   look from headset screenshots *before* building it); hit/miss/wrong
-   colours on slabs; note names.
+1. **Highway looks finished**: ~~grid~~ (done); hit/miss/wrong colours on
+   slabs (F19/F20: hit mint `#3DDC97`, missed slate `#5A636E`, wrong coral
+   `#FF6B5B`); note names (F14). Possibly first, as a small fix branch:
+   **black-key geometry** (see Open).
 2. **Results, tempo, practice**: tempo ±5%, attempt schema v2, results card
    with bar heat strip, metronome (measure headset audio output latency, then
    `AudioSource.PlayScheduled`, on/off in the attempt), loop worst bar,
@@ -550,6 +570,15 @@ the 40/80/150 ms windows from more attempts; maybe a faster highway (0.5 m over
 Now / Next / Later tiers (waiting on whether the 12-week timeline is a hard
 deadline); `DeviceChecklist` step 4 never advances on device (dev tool only);
 measure the seated vertical overlay error (`docs/anchored-calibration-status.md`).
+**Black keys sit slightly wrong** (seen 2026-11-03): `PianoKeyLayout` centres
+every black key exactly between its white neighbours (`BlackKeyNudge` is all
+zero), but real C♯/F♯ sit left of centre and D♯/A♯ right (~2–3.5 mm), and
+the virtual black keys look shorter/further back than the real ones (black
+depth is a guessed 62% of a 145 mm white key). Fix with Ryan's ruler
+measurements of white and black key length.
+**Calibration UX from the grid tests:** a thumbstick nudge does not re-run
+the Middle C check, so a stale "Middle C is 488 mm off" warning stays up;
+and every note scores MISS while the flow is still in Verifying (until A).
 
 The song clock must stay a `double` of seconds with a tempo multiplier, and
 note positions must derive from `(noteTime − songTime)`, never from frame
