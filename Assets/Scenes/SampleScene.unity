@@ -2155,7 +2155,7 @@ MonoBehaviour:
   keyCount: 88
   lowestNote: 21
   highestNote: 108
-  whiteKeyDepth: 0.145
+  whiteKeyDepth: 0.14764
   pointerTip: {fileID: 1356427213}
   headTransform: {fileID: 1253870630}
   loadOnStart: 1

@@ -87,7 +87,7 @@ namespace PianoGlass.Piano
             int lowestNote,
             int highestNote,
             Vector3 playerPosition,
-            float whiteKeyDepth = 0.145f)
+            float whiteKeyDepth = MeasuredWhiteKeyDepth)
             : this(lowestKeyFrontEdge, highestKeyFrontEdge, lowestNote, highestNote,
                    playerPosition - lowestKeyFrontEdge, whiteKeyDepth, facingIsDirection: true)
         {
@@ -111,7 +111,7 @@ namespace PianoGlass.Piano
             int lowestNote,
             int highestNote,
             Vector3 towardPlayer,
-            float whiteKeyDepth = 0.145f) =>
+            float whiteKeyDepth = MeasuredWhiteKeyDepth) =>
             new PianoKeyLayout(lowestKeyFrontEdge, highestKeyFrontEdge, lowestNote, highestNote,
                                towardPlayer, whiteKeyDepth, facingIsDirection: true);
 

@@ -29,8 +29,9 @@ namespace PianoGlass.Piano
         [SerializeField] private int keyCount = 61;
         [SerializeField] private int lowestNote = 36;    // C2 on a 61-key
         [SerializeField] private int highestNote = 96;   // C7 on a 61-key
-        [Tooltip("Front-to-back length of a white key, in metres. 145 mm is typical.")]
-        [SerializeField] private float whiteKeyDepth = 0.145f;
+        [Tooltip("Front-to-back length of a white key, in metres. 147.64 mm on Ryan's piano " +
+                 "(measured 2026-11-03). A property of the piano: saved calibrations do not override it.")]
+        [SerializeField] private float whiteKeyDepth = PianoKeyLayout.MeasuredWhiteKeyDepth;
 
         [Header("Pointing")]
         [Tooltip("Transform at the tip of the controller. Create an empty child of " +
@@ -50,6 +51,9 @@ namespace PianoGlass.Piano
         /// ControllerTipCalibration can move it onto the real plastic tip.</summary>
         public Transform PointerTip => pointerTip;
         public bool IsCalibrated => Layout != null;
+
+        /// <summary>The configured white key depth, in metres.</summary>
+        public float WhiteKeyDepth => whiteKeyDepth;
 
         /// <summary>
         /// Whether anything may be drawn at Layout's coordinates right now.
@@ -501,7 +505,9 @@ namespace PianoGlass.Piano
 
                 lowestNote = data.lowestNote;
                 highestNote = data.highestNote;
-                whiteKeyDepth = data.whiteKeyDepth;
+                // whiteKeyDepth is deliberately not read back: it is a property
+                // of the piano, set in the scene, and older files hold the
+                // unmeasured 145 mm default.
                 _lowPoint = data.low;
                 _highPoint = data.high;
                 _nudge = data.nudge;

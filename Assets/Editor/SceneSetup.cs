@@ -229,6 +229,32 @@ namespace PianoGlass.EditorTools
         }
 
         /// <summary>
+        /// Sets KeyboardCalibration's white key depth to the measured value
+        /// (PianoKeyLayout.MeasuredWhiteKeyDepth). Black key inset and length
+        /// are constants in PianoKeyLayout and need no scene wiring.
+        /// </summary>
+        [MenuItem("PianoGlass/Scene/Configure Key Dimensions")]
+        public static void ConfigureKeyDimensions()
+        {
+            Scene scene = OpenScene();
+
+            var calibration = Object.FindAnyObjectByType<KeyboardCalibration>();
+            if (calibration == null)
+            {
+                Debug.LogError("[SceneSetup] No KeyboardCalibration in the scene.");
+                return;
+            }
+
+            var so = new SerializedObject(calibration);
+            so.FindProperty("whiteKeyDepth").floatValue = PianoKeyLayout.MeasuredWhiteKeyDepth;
+            so.ApplyModifiedPropertiesWithoutUndo();
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            Debug.Log($"[SceneSetup] White key depth set to {PianoKeyLayout.MeasuredWhiteKeyDepth * 1000f:0.00} mm.");
+        }
+
+        /// <summary>
         /// Adds ControllerTipCalibration next to KeyboardCalibration (left
         /// menu button measures where the controller tip really is) and
         /// points it, and CalibrationPanel, at the right objects. Yaw
