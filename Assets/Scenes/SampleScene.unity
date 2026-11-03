@@ -1128,6 +1128,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PianoGlass.Highway.NoteHighway
   calibration: {fileID: 2007997132}
   clock: {fileID: 1285217052}
+  scoreKeeper: {fileID: 644933874}
   noteMaterial: {fileID: 2100000, guid: dff0fda6605ad8e499fbcb1b54937d0b, type: 2}
   noteColor: {r: 0.4, g: 0.68, b: 0.95, a: 1}
   slabThickness: 0.006
@@ -2112,6 +2113,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PianoGlass.Piano.PianoKeyHighlighter
   calibration: {fileID: 2007997132}
   clock: {fileID: 1285217052}
+  scoreKeeper: {fileID: 644933874}
   keyMaterial: {fileID: 2100000, guid: 573d3710ae164554ea3f1218a8bf61bb, type: 2}
   translucentMaterial: {fileID: 2100000, guid: 046695c57c8958e4d927a627540455e0, type: 2}
   showIdleKeys: 1

@@ -446,6 +446,25 @@ namespace PianoGlass.EditorTools
                 panelSo.ApplyModifiedProperties();
             }
 
+            // Outcome colours (F19/F20): slabs tint on hit/miss, keys pulse
+            // coral on a wrong press. Both only listen to ScoreKeeper.
+            NoteHighway highway = Object.FindAnyObjectByType<NoteHighway>();
+            if (highway != null)
+            {
+                var highwaySo = new SerializedObject(highway);
+                highwaySo.FindProperty("scoreKeeper").objectReferenceValue = keeper;
+                highwaySo.ApplyModifiedProperties();
+            }
+            PianoKeyHighlighter highlighter = Object.FindAnyObjectByType<PianoKeyHighlighter>();
+            if (highlighter != null)
+            {
+                var highlighterSo = new SerializedObject(highlighter);
+                highlighterSo.FindProperty("scoreKeeper").objectReferenceValue = keeper;
+                highlighterSo.ApplyModifiedProperties();
+            }
+            if (highway == null || highlighter == null)
+                Debug.LogWarning("[SceneSetup] NoteHighway or PianoKeyHighlighter missing -- outcome colours not wired.");
+
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
 
