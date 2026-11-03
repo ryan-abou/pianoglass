@@ -185,6 +185,17 @@ churn and one headset test.
 
    If the maths gets in the way of matching the video, change the maths.
 
+   **Done, merged 2026-11-03** (branch `phase1-grid`, four headset rounds of
+   phone photos through the lens). What shipped: the highway leans back 60°
+   like the video's runway and starts 20 mm behind the keys; one lane line
+   per octave on each C's left edge (0.8 mm wide); beat lines very faint
+   (alpha 0.06), bar lines brighter but not thicker (0.15); dark rounded tag
+   with a white bar number, left of the lowest key, upright and facing the
+   player; a dark hit line on the runway side of the key line only, so it
+   never covers the keys. Drawn by `HighwayGrid` as one SDF-shaded mesh
+   (`Assets/Shaders/HighwayGrid.shader`) with a minimum on-screen line width
+   so thin lines don't shimmer.
+
 ### Highway grid: visual target
 
 Ryan's requirement: the grid must look **exactly like the video**, and
