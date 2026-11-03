@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using PianoGlass.Piano;
+using PianoGlass.Scoring;
 using PianoGlass.Song;
 
 namespace PianoGlass.Highway
@@ -27,12 +28,20 @@ namespace PianoGlass.Highway
     /// from the player with nothing in the console to explain why it's
     /// invisible. A thin Cube looks identical to a slab and has no facing to
     /// get backwards.
+    ///
+    /// Outcome colours (F19/F20): a slab tints mint when its note is hit and
+    /// greys to slate when it is missed, fading over OutcomeTint.FadeSeconds.
+    /// Driven by ScoreKeeper's events, so judging stays in ScoringSession;
+    /// a restart puts every slab back to its base colour.
     /// </summary>
     public class NoteHighway : MonoBehaviour
     {
         [Header("Wiring")]
         [SerializeField] private KeyboardCalibration calibration;
         [SerializeField] private SongClock clock;
+        [Tooltip("Source of hit/miss judgements for the outcome colours. Optional: " +
+                 "without it the slabs simply never change colour.")]
+        [SerializeField] private ScoreKeeper scoreKeeper;
 
         [Header("Appearance")]
         [Tooltip("Assign a material made in the editor -- a runtime Shader.Find " +
@@ -92,7 +101,14 @@ namespace PianoGlass.Highway
         }
 
         private SongData _song;
-        private readonly List<(SongNote note, Renderer renderer)> _slabs = new List<(SongNote, Renderer)>();
+        // index is the note's position in _song.Notes -- what
+        // JudgementResult.noteIndex refers to. applied is the colour last
+        // written, so a slab's property block is only touched when it changes.
+        private readonly List<(SongNote note, int index, Renderer renderer)> _slabs =
+            new List<(SongNote, int, Renderer)>();
+        private Color[] _applied = new Color[0];
+        private NoteOutcome[] _outcome = new NoteOutcome[0];
+        private float[] _judgedAt = new float[0];
         private MaterialPropertyBlock _block;
 
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
@@ -105,12 +121,20 @@ namespace PianoGlass.Highway
             // expect one of each in the scene anyway.
             if (calibration == null) calibration = FindAnyObjectByType<KeyboardCalibration>();
             if (clock == null) clock = FindAnyObjectByType<SongClock>();
+            if (scoreKeeper == null) scoreKeeper = FindAnyObjectByType<ScoreKeeper>();
             _block = new MaterialPropertyBlock();
             _song = SongData.TwinkleTwinkleLittleStar();
+            _outcome = new NoteOutcome[_song.Notes.Count];
+            _judgedAt = new float[_song.Notes.Count];
         }
 
         private void OnEnable()
         {
+            if (scoreKeeper != null)
+            {
+                scoreKeeper.NoteJudged += OnNoteJudged;
+                scoreKeeper.AttemptReset += ClearOutcomes;
+            }
             if (calibration == null) return;
             calibration.Calibrated += OnCalibrated;
             calibration.PlacementValidChanged += OnPlacementValidChanged;
@@ -119,6 +143,11 @@ namespace PianoGlass.Highway
 
         private void OnDisable()
         {
+            if (scoreKeeper != null)
+            {
+                scoreKeeper.NoteJudged -= OnNoteJudged;
+                scoreKeeper.AttemptReset -= ClearOutcomes;
+            }
             if (calibration == null) return;
             calibration.Calibrated -= OnCalibrated;
             calibration.PlacementValidChanged -= OnPlacementValidChanged;
@@ -130,8 +159,22 @@ namespace PianoGlass.Highway
         private void OnPlacementValidChanged(bool valid)
         {
             if (valid) return; // Update() shows whatever is due on the next frame
-            foreach (var (_, renderer) in _slabs)
+            foreach (var (_, _, renderer) in _slabs)
                 if (renderer != null) renderer.enabled = false;
+        }
+
+        private void OnNoteJudged(JudgementResult r)
+        {
+            if (r.noteIndex < 0 || r.noteIndex >= _outcome.Length) return;
+            _outcome[r.noteIndex] = r.pressed ? NoteOutcome.Hit : NoteOutcome.Missed;
+            _judgedAt[r.noteIndex] = Time.realtimeSinceStartup;
+        }
+
+        /// <summary>Restart or a new attempt: every note is pending again.
+        /// Update() writes the base colour back on its next pass.</summary>
+        private void ClearOutcomes()
+        {
+            System.Array.Clear(_outcome, 0, _outcome.Length);
         }
 
         private void OnCalibrated(PianoKeyLayout layout)
@@ -153,7 +196,7 @@ namespace PianoGlass.Highway
         /// (it starts disabled).</summary>
         private void Build()
         {
-            foreach (var (_, renderer) in _slabs)
+            foreach (var (_, _, renderer) in _slabs)
                 if (renderer != null) Destroy(renderer.gameObject);
             _slabs.Clear();
 
@@ -163,8 +206,9 @@ namespace PianoGlass.Highway
             Material mat = noteMaterial != null ? noteMaterial : CreateFallbackMaterial();
             if (mat == null) return;
 
-            foreach (SongNote note in _song.Notes)
+            for (int index = 0; index < _song.Notes.Count; index++)
             {
+                SongNote note = _song.Notes[index];
                 if (!layout.Contains(note.Pitch)) continue; // outside this keyboard
 
                 var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -186,8 +230,10 @@ namespace PianoGlass.Highway
                 _block.SetColor(ColorId, noteColor);       // Built-in, harmless either way
                 renderer.SetPropertyBlock(_block);
 
-                _slabs.Add((note, renderer));
+                _slabs.Add((note, index, renderer));
             }
+            _applied = new Color[_slabs.Count];
+            for (int i = 0; i < _applied.Length; i++) _applied[i] = noteColor;
 
             Debug.Log($"[NoteHighway] built {_slabs.Count} note slabs for '{_song.Title}'");
         }
@@ -209,8 +255,11 @@ namespace PianoGlass.Highway
             (Vector3 tiltedUp, Vector3 normal) = PlaneAxes(layout);
             Quaternion tiltRotation = Quaternion.LookRotation(normal, tiltedUp);
 
-            foreach (var (note, renderer) in _slabs)
+            float now = Time.realtimeSinceStartup;
+
+            for (int i = 0; i < _slabs.Count; i++)
             {
+                var (note, index, renderer) = _slabs[i];
                 if (renderer == null) continue;
                 if (!layout.TryGetKey(note.Pitch, out PianoKey key)) continue;
 
@@ -236,7 +285,20 @@ namespace PianoGlass.Highway
 
                 renderer.transform.SetPositionAndRotation(pos, tiltRotation);
                 renderer.transform.localScale = new Vector3(key.Width * widthFraction, height, slabThickness);
+
+                Color color = OutcomeTint.Slab(noteColor, _outcome[index], now - _judgedAt[index],
+                                               OutcomeTint.Hit, OutcomeTint.Missed);
+                if (color != _applied[i]) SetSlabColor(renderer, i, color);
             }
+        }
+
+        private void SetSlabColor(Renderer renderer, int slab, Color color)
+        {
+            renderer.GetPropertyBlock(_block);
+            _block.SetColor(BaseColorId, color);   // URP
+            _block.SetColor(ColorId, color);       // Built-in, harmless either way
+            renderer.SetPropertyBlock(_block);
+            _applied[slab] = color;
         }
 
         // ------------------------------------------------------------------
