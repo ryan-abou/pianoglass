@@ -58,6 +58,26 @@ namespace PianoGlass.Song
         public static bool IsPulsing(float secondsSincePress) =>
             secondsSincePress >= 0f && secondsSincePress < WrongPulseSeconds;
 
+        /// <summary>Brightness of the steady coral a wrong key keeps while held.</summary>
+        public const float WrongHeldBrightness = 0.65f;
+
+        /// <summary>
+        /// A wrong key's colour <paramref name="secondsSincePress"/> after the
+        /// press. It starts bright coral; while still held it settles to a
+        /// dimmer, steady coral -- never back to the pressed-key green, which
+        /// would say the press was fine. Once released it fades to
+        /// <paramref name="idle"/>.
+        /// </summary>
+        public static Color WrongKey(Color idle, bool held, float secondsSincePress)
+        {
+            Color settled = held ? WrongHeld : idle;
+            return Color.Lerp(settled, Wrong, WrongPulse(secondsSincePress));
+        }
+
+        /// <summary>The steady coral of a wrong key still held down.</summary>
+        public static Color WrongHeld =>
+            new Color(Wrong.r * WrongHeldBrightness, Wrong.g * WrongHeldBrightness, Wrong.b * WrongHeldBrightness, 1f);
+
         private static Color FromHex(byte r, byte g, byte b) => new Color32(r, g, b, 255);
     }
 }

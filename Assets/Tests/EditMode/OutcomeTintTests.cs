@@ -53,6 +53,31 @@ namespace PianoGlass.Tests.EditMode
         }
 
         [Test]
+        public void WrongKeyStartsBrightCoralHeldOrNot()
+        {
+            Color idle = new Color(0.55f, 0.60f, 0.50f, 1f);
+            AssertColor(OutcomeTint.Wrong, OutcomeTint.WrongKey(idle, held: true, 0f));
+            AssertColor(OutcomeTint.Wrong, OutcomeTint.WrongKey(idle, held: false, 0f));
+        }
+
+        [Test]
+        public void WrongKeyStaysCoralWhileHeldAndNeverTurnsGreen()
+        {
+            Color idle = new Color(0.55f, 0.60f, 0.50f, 1f);
+            Color late = OutcomeTint.WrongKey(idle, held: true, 5f);
+            AssertColor(OutcomeTint.WrongHeld, late);
+            Assert.Greater(late.r, late.g, "still reads as coral, not green");
+            Assert.Less(late.r, OutcomeTint.Wrong.r, "dimmer than the flash");
+        }
+
+        [Test]
+        public void ReleasedWrongKeyFadesBackToIdle()
+        {
+            Color idle = new Color(0.55f, 0.60f, 0.50f, 1f);
+            AssertColor(idle, OutcomeTint.WrongKey(idle, held: false, OutcomeTint.WrongPulseSeconds));
+        }
+
+        [Test]
         public void WrongPulseOnlyEverDecays()
         {
             float last = float.MaxValue;
