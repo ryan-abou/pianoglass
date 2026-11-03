@@ -41,6 +41,8 @@ namespace PianoGlass.Piano
         ///                note due within activeKeyLookaheadSeconds needs it,
         ///                or while the real key is actually held (green) --
         ///                both read from SongClock/MidiInput every frame.
+        ///                Lit keys draw at activeKeysAlpha on
+        ///                translucentMaterial, so a hand shows through.
         /// EdgeMarkers    the same "only when relevant" rule as
         ///                ActiveKeysOnly, but each key shows as a thin bar
         ///                across its far portion (edgeMarkerDepthFraction of
@@ -99,6 +101,21 @@ namespace PianoGlass.Piano
         [Tooltip("Alpha applied to every colour in Translucent mode. Default " +
                  "0.25 -- faint enough to still show a hand through it.")]
         [SerializeField] private float translucentAlpha = 0.25f;
+
+        [Tooltip("Alpha of a lit key (due, pressed or wrong) in ActiveKeysOnly. " +
+                 "Less see-through than Translucent so the key still reads as lit, " +
+                 "but enough to see a hand through it (Ryan, 2026-11-03).")]
+        [Range(0.1f, 1f)]
+        [SerializeField] private float activeKeysAlpha = 0.55f;
+
+        /// <summary>The alpha every key colour is drawn with in the current
+        /// mode; 1 means the opaque material.</summary>
+        private float ModeAlpha => displayMode switch
+        {
+            DisplayMode.Translucent    => translucentAlpha,
+            DisplayMode.ActiveKeysOnly => activeKeysAlpha,
+            _                          => 1f,
+        };
 
         [Tooltip("How far ahead of its due time a note's key appears in " +
                  "ActiveKeysOnly/EdgeMarkers. Default 0.5 s.")]
@@ -356,7 +373,7 @@ namespace PianoGlass.Piano
         /// keyMaterial/the fallback everywhere else.</summary>
         private void ApplyMaterialForMode()
         {
-            Material mat = (displayMode == DisplayMode.Translucent && translucentMaterial != null)
+            Material mat = (ModeAlpha < 1f && translucentMaterial != null)
                 ? translucentMaterial
                 : _opaqueMaterial;
             if (mat == null) return;
@@ -414,8 +431,9 @@ namespace PianoGlass.Piano
 
             if (forceVisible && PlacementValid) renderer.enabled = true;
 
-            if (displayMode == DisplayMode.Translucent)
-                color = new Color(color.r, color.g, color.b, translucentAlpha);
+            // Opaque modes ignore alpha; the rest write the mode's alpha so the
+            // transparent material shows the hand through the key.
+            color = new Color(color.r, color.g, color.b, ModeAlpha);
 
             renderer.GetPropertyBlock(_block);
             _block.SetColor(BaseColorId, color);   // URP
