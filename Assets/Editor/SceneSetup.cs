@@ -671,13 +671,15 @@ namespace PianoGlass.EditorTools
         /// standoff (NoteHighway.depthOffset, 0.05 in the scene). The wall now
         /// sits HighwayDepthOffset behind the keys -- 10 mm put the hit line
         /// over the key ends (2026-11-02, with a guessed 145 mm key), 20 mm
-        /// left a visible gap once the key was measured at 147.64 mm, so
-        /// 15 mm (2026-11-03); grid, hit line and slabs all move together -- while the panel keeps
+        /// left a visible gap once the key was measured at 147.64 mm; at
+        /// 15 mm FullOverlay photos still showed a clean strip with no real
+        /// key ends in it, so 5 mm (2026-11-03) -- just clear of the key
+        /// slabs; grid, hit line and slabs all move together -- while the panel keeps
         /// its original spot. The leaned-back runway passes under the panel;
         /// that is accepted, since the panel is a development readout that
         /// the Phase 2/4 menus replace. All set here so the scene cannot keep
         /// a stale override.</summary>
-        private const float HighwayDepthOffset = 0.015f;
+        private const float HighwayDepthOffset = 0.005f;
         private const float PanelDepthOffset = 0.05f;
         private const float PanelHeightAboveKeys = 0.65f;
 
