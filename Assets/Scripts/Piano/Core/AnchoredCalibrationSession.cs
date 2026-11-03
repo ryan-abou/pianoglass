@@ -123,6 +123,12 @@ namespace PianoGlass.Piano
         public int HighestNote { get; private set; }
         public float WhiteKeyDepth { get; private set; }
 
+        /// <summary>The piano's white key depth as configured in the scene.
+        /// When set, it wins over the depth saved in the profile: the depth is
+        /// a property of the piano, and profiles saved before the keys were
+        /// measured hold the old 145 mm guess. Null keeps the saved value.</summary>
+        public float? ConfiguredWhiteKeyDepth { get; set; }
+
         /// <summary>Millimetres along (right, up, toward player). The store
         /// root's tipNudgeKeyboardMm: survives recalibration.</summary>
         public Vector3 NudgeMm { get; private set; }
@@ -507,7 +513,7 @@ namespace PianoGlass.Piano
                 case AnchorStatus.Success:
                     LastProblem = null;
                     Attach(r.Handle, _savedProfile.LocalGeometry, _savedProfile.lowestNote,
-                           _savedProfile.highestNote, _savedProfile.whiteKeyDepth);
+                           _savedProfile.highestNote, ConfiguredWhiteKeyDepth ?? _savedProfile.whiteKeyDepth);
                     await Fire(FlowEvent.LocalizeSucceeded);
                     break;
 

@@ -152,6 +152,34 @@ namespace PianoGlass.Tests.EditMode
         }
 
         [Test]
+        public void ConfiguredKeyDepthOverridesTheSavedOneOnRelaunch()
+        {
+            // Profiles saved before the keys were measured hold the old
+            // 145 mm default; the piano's dimensions come from the scene.
+            Calibrated();
+            _fake.EndSession();
+
+            AnchoredCalibrationSession s = NewSession();
+            s.ConfiguredWhiteKeyDepth = 0.14764f;
+            Run(s.StartAsync());
+
+            Assert.AreEqual(0.14764f, s.WhiteKeyDepth, 1e-6f);
+            Assert.AreEqual(0.14764f, s.BuildLayout().WhiteKeyDepth, 1e-6f);
+        }
+
+        [Test]
+        public void WithoutAConfiguredDepthTheSavedOneIsUsed()
+        {
+            Calibrated();
+            _fake.EndSession();
+
+            AnchoredCalibrationSession s = NewSession();
+            Run(s.StartAsync());
+
+            Assert.AreEqual(Depth, s.WhiteKeyDepth, 1e-6f);
+        }
+
+        [Test]
         public void RecenterWhileRunningMovesTheLayoutWithTheAnchor()
         {
             AnchoredCalibrationSession s = Calibrated();
