@@ -61,6 +61,16 @@ namespace PianoGlass.Scoring
         public bool AttemptSaved { get; private set; }
         public string LastSavedPath { get; private set; }
 
+        /// <summary>Every judgement of whichever attempt is running, so views
+        /// (slab and key colours) need not track which Session is current.
+        /// noteIndex is an index into SongData.Notes.</summary>
+        public event Action<JudgementResult> NoteJudged;
+        /// <summary>Every wrong or extra press of the running attempt.</summary>
+        public event Action<WrongNote> WrongNotePlayed;
+        /// <summary>The attempt was dropped (restart or seek back) or a new
+        /// one began: every note is unjudged again.</summary>
+        public event Action AttemptReset;
+
         private SongData _song;
         private readonly List<(int pitch, double realtime)> _pending = new List<(int, double)>();
         private double _lastSongTime = double.NegativeInfinity;
@@ -109,6 +119,7 @@ namespace PianoGlass.Scoring
                     Save(AttemptRecord.Abandoned);
                 Session = null;
                 _pending.Clear();
+                AttemptReset?.Invoke();
             }
             _lastSongTime = songTime;
 
@@ -142,6 +153,9 @@ namespace PianoGlass.Scoring
             PianoKeyLayout layout = calibration != null ? calibration.Layout : null;
             Session = new ScoringSession(_song, new TimingWindows(perfectMs, greatMs, goodMs),
                                          layout != null ? (Func<int, bool>)layout.Contains : null);
+            AttemptReset?.Invoke();
+            Session.Judged += r => NoteJudged?.Invoke(r);
+            Session.WrongNotePlayed += w => WrongNotePlayed?.Invoke(w);
             if (logEachNote)
             {
                 Session.Judged += r => Debug.Log(
