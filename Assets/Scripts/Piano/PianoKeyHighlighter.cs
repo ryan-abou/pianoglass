@@ -22,9 +22,10 @@ namespace PianoGlass.Piano
     /// mode here except FullOverlay exists to paint less of the keyboard, so
     /// there is less overlay for a hand to disappear under. See DisplayMode.
     ///
-    /// A wrong or extra press pulses the pressed key coral once (F19/F20,
-    /// OutcomeTint.WrongPulse), in every display mode, then settles back to
-    /// green if still held or to its resting state if not.
+    /// A wrong or extra press flashes the pressed key coral (F19/F20,
+    /// OutcomeTint.WrongKey), in every display mode. It stays a dimmer coral
+    /// while held -- never green, which would read as "correct" -- and goes
+    /// back to its resting state once released.
     /// </summary>
     public class PianoKeyHighlighter : MonoBehaviour
     {
@@ -226,9 +227,10 @@ namespace PianoGlass.Piano
             }
         }
 
-        /// <summary>Coral mixed over what the key would otherwise show --
-        /// green while held, its idle colour if not -- fading out over
-        /// OutcomeTint.WrongPulseSeconds; then the key is handed back.</summary>
+        /// <summary>A wrong key flashes coral, stays a steady dimmer coral for
+        /// as long as it is held -- never the pressed-key green, which would
+        /// say the press was fine -- and once released fades to its idle
+        /// colour and is handed back to its resting state.</summary>
         private void UpdateWrongPulses()
         {
             if (_wrongAt.Count == 0) return;
@@ -239,21 +241,18 @@ namespace PianoGlass.Piano
             {
                 int note = kv.Key;
                 float t = now - kv.Value;
-                if (!OutcomeTint.IsPulsing(t)) { _pulseDone.Add(note); continue; }
-                SetColor(note, Color.Lerp(Underlying(note), OutcomeTint.Wrong, OutcomeTint.WrongPulse(t)),
-                         forceVisible: true);
+                bool held = IsHeld(note);
+                if (!held && !OutcomeTint.IsPulsing(t)) { _pulseDone.Add(note); continue; }
+                Color idle = PianoKeyLayout.IsBlackKey(note) ? idleBlackKey : idleWhiteKey;
+                SetColor(note, OutcomeTint.WrongKey(idle, held, t), forceVisible: true);
             }
 
             foreach (int note in _pulseDone)
             {
                 _wrongAt.Remove(note);
-                if (IsHeld(note)) SetColor(note, pressedKey, forceVisible: true);
-                else ApplyRestState(note, PianoKeyLayout.IsBlackKey(note));
+                ApplyRestState(note, PianoKeyLayout.IsBlackKey(note));
             }
         }
-
-        private Color Underlying(int note) =>
-            IsHeld(note) ? pressedKey : (PianoKeyLayout.IsBlackKey(note) ? idleBlackKey : idleWhiteKey);
 
         private static bool IsHeld(int note) => MidiInput.Instance != null && MidiInput.Instance.IsHeld(note);
 
@@ -389,6 +388,10 @@ namespace PianoGlass.Piano
             // Without this, a note-on after Recalibrate() re-showed keys at
             // the old layout's coordinates.
             if (!PlacementValid) return;
+
+            // A fresh press starts clean. If it is wrong too, ScoreKeeper says
+            // so later this frame and the coral comes straight back.
+            _wrongAt.Remove(note);
 
             // Velocity brightens the flash a little — free feedback on touch,
             // and a hint of the dynamics scoring you can add later.
