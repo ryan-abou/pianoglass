@@ -650,14 +650,15 @@ namespace PianoGlass.EditorTools
 
         /// <summary>The note wall and the status panel used to share one
         /// standoff (NoteHighway.depthOffset, 0.05 in the scene). The wall now
-        /// sits HighwayDepthOffset behind the keys -- 20 mm since 2026-11-02,
-        /// when headset photos showed the hit line over the key ends at
-        /// 10 mm; grid, hit line and slabs all move together -- while the panel keeps
+        /// sits HighwayDepthOffset behind the keys -- 10 mm put the hit line
+        /// over the key ends (2026-11-02, with a guessed 145 mm key), 20 mm
+        /// left a visible gap once the key was measured at 147.64 mm, so
+        /// 15 mm (2026-11-03); grid, hit line and slabs all move together -- while the panel keeps
         /// its original spot. The leaned-back runway passes under the panel;
         /// that is accepted, since the panel is a development readout that
         /// the Phase 2/4 menus replace. All set here so the scene cannot keep
         /// a stale override.</summary>
-        private const float HighwayDepthOffset = 0.020f;
+        private const float HighwayDepthOffset = 0.015f;
         private const float PanelDepthOffset = 0.05f;
         private const float PanelHeightAboveKeys = 0.65f;
 

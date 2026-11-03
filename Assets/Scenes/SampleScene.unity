@@ -1135,7 +1135,7 @@ MonoBehaviour:
   noteGapMetres: 0.008
   leadTimeSeconds: 3
   highwayHeight: 0.5
-  depthOffset: 0.02
+  depthOffset: 0.015
   tiltDegrees: -60
 --- !u!4 &1034278084
 Transform:
