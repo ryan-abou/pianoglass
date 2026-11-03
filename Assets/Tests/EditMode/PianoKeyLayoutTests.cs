@@ -76,21 +76,68 @@ namespace PianoGlass.Tests.EditMode
         }
 
         [Test]
-        public void BlackKeySitsBetweenItsNeighboursAndStandsProud()
+        public void BlackKeyStartsAtTheMeasuredInsetAndStandsProud()
         {
             PianoKeyLayout layout = BuildLayout();
-            // C#4 (61): one white key (C4) below it.
+            // C#4 (61): one white key (C4) below it, nudged left a tenth of a key.
             Assert.IsTrue(layout.TryGetKey(61, out PianoKey key));
             Assert.IsTrue(key.IsBlack);
 
             float spacing = PianoKeyLayout.StandardWhiteKeySpacing;
-            float blackDepth = Depth * 0.62f;
-            float along = 0.5f * spacing;                       // half a white key in
-            float backOffset = Depth - blackDepth * 0.5f;        // aligned to the back
+            float along = (0.5f - 0.1f) * spacing;
+            float backOffset = 0.0525f + 0.09445f * 0.5f;   // measured inset + half its measured length
             const float blackRise = 0.010f;
 
-            Vector3 expected = new Vector3(along, blackRise, -backOffset);
-            AssertApprox(expected, key.Center);
+            AssertApprox(new Vector3(along, blackRise, -backOffset), key.Center);
+            Assert.AreEqual(0.09445f, key.Depth, 1e-6f);
+        }
+
+        [Test]
+        public void BlackKeyDoesNotDependOnWhiteKeyDepth()
+        {
+            // Inset and length are measured, not a fraction of white depth.
+            var shortWhites = new PianoKeyLayout(Vector3.zero,
+                new Vector3(PianoKeyLayout.StandardWhiteKeySpacing * 7f, 0f, 0f),
+                LowestNote, HighestNote, new Vector3(0f, 0f, 1f), 0.12f);
+            Assert.IsTrue(shortWhites.TryGetKey(61, out PianoKey key));
+            Assert.AreEqual(-(0.0525f + 0.09445f * 0.5f), key.Center.z, 1e-4f);
+        }
+
+        [Test]
+        public void BlackKeyFrontEdgeIsAtTheMeasuredInset()
+        {
+            PianoKeyLayout layout = BuildLayout();
+            AssertApprox(new Vector3(0.4f * PianoKeyLayout.StandardWhiteKeySpacing, 0.010f, -0.0525f),
+                         layout.FrontEdgeCenter(61));
+        }
+
+        // Equal-slot model: the top of C-E split into five, F-B into seven.
+        [TestCase(61, -0.1f)]       // C#: left
+        [TestCase(63, 0.1f)]        // D#: right
+        [TestCase(66, -1f / 7f)]    // F#: further left
+        [TestCase(68, 0f)]          // G#: centred
+        [TestCase(70, 1f / 7f)]     // A#: further right
+        [TestCase(60, 0f)]          // white keys are never nudged
+        [TestCase(-11, -0.1f)]      // negative note numbers still find their pitch class
+        public void BlackKeyNudgeFollowsTheEqualSlotModel(int note, float expected)
+        {
+            Assert.AreEqual(expected, PianoKeyLayout.BlackKeyNudgeFor(note), 1e-6f);
+        }
+
+        [Test]
+        public void BlackKeySidewaysOffsetsAreAboutTwoToThreeAndAHalfMillimetres()
+        {
+            PianoKeyLayout layout = BuildLayout();
+            float s = PianoKeyLayout.StandardWhiteKeySpacing;
+            // Offset from the midpoint between its white neighbours, in mm.
+            float Offset(int note, int whitesBelow) =>
+                (layout.Keys[note].Center.x - (whitesBelow - 0.5f) * s) * 1000f;
+
+            Assert.AreEqual(-2.35f, Offset(61, 1), 0.01f);  // C#4
+            Assert.AreEqual(2.35f, Offset(63, 2), 0.01f);   // D#4
+            Assert.AreEqual(-3.357f, Offset(66, 4), 0.01f); // F#4
+            Assert.AreEqual(0f, Offset(68, 5), 0.01f);      // G#4
+            Assert.AreEqual(3.357f, Offset(70, 6), 0.01f);  // A#4
         }
 
         [Test]

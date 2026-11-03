@@ -57,10 +57,29 @@ namespace PianoGlass.Piano
         public IReadOnlyDictionary<int, PianoKey> Keys => _keys;
         public int KeyCount => _keys.Count;
 
-        /// <summary>Black key nudge, in fractions of a white key width, indexed by
-        /// pitch class. Real acoustic pianos are not perfectly centred; leave these
-        /// at zero until you can see the misalignment on your own keyboard.</summary>
-        public static readonly float[] BlackKeyNudge = new float[12];
+        /// <summary>
+        /// Black key offset from "exactly between its white neighbours", in
+        /// fractions of a white key width, indexed by pitch class. Real pianos
+        /// split the top of each white-key group into equal slots: C-E (three
+        /// white keys) into five, F-B (four) into seven. That puts C# and F#
+        /// left of centre, D# and A# right, and G# dead centre -- about 2.4 mm
+        /// and 3.4 mm on a 23.5 mm key.
+        /// </summary>
+        private static readonly float[] BlackKeyNudge =
+        {
+            0f, -0.1f, 0f, 0.1f, 0f,                  // C  C#  D  D#  E
+            0f, -1f / 7f, 0f, 0f, 0f, 1f / 7f, 0f     // F  F#  G  G#  A  A#  B
+        };
+
+        /// <summary>Sideways offset of a black key from centred, in white key widths (0 for white keys).</summary>
+        public static float BlackKeyNudgeFor(int note) => BlackKeyNudge[((note % 12) + 12) % 12];
+
+        // Measured with a ruler on Ryan's piano (2026-11-03). The black-key
+        // numbers are absolute, not a fraction of white key depth: the black
+        // keys' front line sits a fixed distance behind the white front.
+        public const float MeasuredWhiteKeyDepth = 0.14764f;
+        public const float BlackKeyFrontInset = 0.0525f;   // white front -> black front
+        public const float BlackKeyLength = 0.09445f;
 
         public PianoKeyLayout(
             Vector3 lowestKeyFrontEdge,
@@ -144,7 +163,6 @@ namespace PianoGlass.Piano
             Build();
         }
 
-        private const float BlackDepthFraction = 0.62f;
         private const float BlackRise = 0.010f;   // black keys stand about 1 cm proud
 
         /// <summary>Front-edge centre of the lowest key -- the first captured point.</summary>
@@ -165,8 +183,7 @@ namespace PianoGlass.Piano
             Vector3 front = _lowFrontEdge + Right * AlongFor(note);
             if (!IsBlackKey(note)) return front;
 
-            float blackDepth = WhiteKeyDepth * BlackDepthFraction;
-            return front - Forward * (WhiteKeyDepth - blackDepth) + Up * BlackRise;
+            return front - Forward * BlackKeyFrontInset + Up * BlackRise;
         }
 
         /// <summary>Distance along Right from the lowest key's centre line to this key's.</summary>
@@ -176,17 +193,16 @@ namespace PianoGlass.Piano
                 return CountWhiteKeysBelow(LowestNote, note) * WhiteKeySpacing;
 
             // A black key sits between the white key below and the white
-            // key above it: exactly half a white key back from the count
-            // of white keys beneath it.
-            return (CountWhiteKeysBelow(LowestNote, note) - 0.5f) * WhiteKeySpacing
-                   + BlackKeyNudge[note % 12] * WhiteKeySpacing;
+            // key above it -- half a white key back from the count of white
+            // keys beneath it -- then shifted by its pitch class's nudge.
+            return (CountWhiteKeysBelow(LowestNote, note) - 0.5f + BlackKeyNudgeFor(note)) * WhiteKeySpacing;
         }
 
         private void Build()
         {
             _keys.Clear();
 
-            float blackDepth = WhiteKeyDepth * BlackDepthFraction;
+            float blackDepth = BlackKeyLength;
             float blackWidth = WhiteKeySpacing * 0.55f;
             float blackRise = BlackRise;
 
@@ -198,10 +214,11 @@ namespace PianoGlass.Piano
                 float depth = black ? blackDepth : WhiteKeyDepth;
 
                 // Captured points are front edges, so step back by half a key to
-                // reach the centre of the playing surface. Black keys are aligned
-                // to the BACK of the white keys, so they step back further.
+                // reach the centre of the playing surface. Black keys start a
+                // measured distance behind the white front, then step back
+                // half their own length.
                 float backOffset = black
-                    ? WhiteKeyDepth - blackDepth * 0.5f
+                    ? BlackKeyFrontInset + blackDepth * 0.5f
                     : WhiteKeyDepth * 0.5f;
 
                 Vector3 center = _lowFrontEdge
