@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using PianoGlass.Midi;
+using PianoGlass.Scoring;
 using PianoGlass.Song;
 
 namespace PianoGlass.Piano
@@ -20,6 +21,10 @@ namespace PianoGlass.Piano
     /// always drawn on top of the player's hand -- passthrough or not. Every
     /// mode here except FullOverlay exists to paint less of the keyboard, so
     /// there is less overlay for a hand to disappear under. See DisplayMode.
+    ///
+    /// A wrong or extra press pulses the pressed key coral once (F19/F20,
+    /// OutcomeTint.WrongPulse), in every display mode, then settles back to
+    /// green if still held or to its resting state if not.
     /// </summary>
     public class PianoKeyHighlighter : MonoBehaviour
     {
@@ -48,6 +53,8 @@ namespace PianoGlass.Piano
         [Tooltip("Needed for ActiveKeysOnly/EdgeMarkers, which show a key ahead " +
                  "of when its note is due. Unused by FullOverlay/Translucent.")]
         [SerializeField] private SongClock clock;
+        [Tooltip("Source of wrong-note events for the coral pulse. Optional.")]
+        [SerializeField] private ScoreKeeper scoreKeeper;
 
         [Header("Appearance")]
         [Tooltip("Assign a material made in the editor. Leave empty and one is " +
@@ -111,6 +118,9 @@ namespace PianoGlass.Piano
 
         private readonly Dictionary<int, Renderer> _renderers = new Dictionary<int, Renderer>();
         private readonly HashSet<int> _dueSoon = new HashSet<int>();
+        /// <summary>Keys pulsing coral, and when the wrong press happened (realtime).</summary>
+        private readonly Dictionary<int, float> _wrongAt = new Dictionary<int, float>();
+        private readonly List<int> _pulseDone = new List<int>();
         private MaterialPropertyBlock _block;
         private Material _opaqueMaterial;
         private PianoKeyLayout _layout;
@@ -127,6 +137,7 @@ namespace PianoGlass.Piano
             // only ever expect one calibration in the scene anyway.
             if (calibration == null) calibration = FindAnyObjectByType<KeyboardCalibration>();
             if (clock == null) clock = FindAnyObjectByType<SongClock>();
+            if (scoreKeeper == null) scoreKeeper = FindAnyObjectByType<ScoreKeeper>();
 
             // Same hard-coded song NoteHighway uses. Each reads it
             // independently rather than sharing a reference, the same way
@@ -164,6 +175,7 @@ namespace PianoGlass.Piano
                 MidiInput.Instance.NoteOn += OnNoteOn;
                 MidiInput.Instance.NoteOff += OnNoteOff;
             }
+            if (scoreKeeper != null) scoreKeeper.WrongNotePlayed += OnWrongNote;
         }
 
         private void OnDisable()
@@ -178,6 +190,7 @@ namespace PianoGlass.Piano
                 MidiInput.Instance.NoteOn -= OnNoteOn;
                 MidiInput.Instance.NoteOff -= OnNoteOff;
             }
+            if (scoreKeeper != null) scoreKeeper.WrongNotePlayed -= OnWrongNote;
         }
 
         /// <summary>
@@ -189,9 +202,14 @@ namespace PianoGlass.Piano
         /// </summary>
         private void Update()
         {
-            if (clock == null || _renderers.Count == 0 || !PlacementValid) return;
-            if (displayMode != DisplayMode.ActiveKeysOnly && displayMode != DisplayMode.EdgeMarkers) return;
+            if (_renderers.Count == 0 || !PlacementValid) return;
+            if (clock != null && (displayMode == DisplayMode.ActiveKeysOnly || displayMode == DisplayMode.EdgeMarkers))
+                UpdateDueKeys();
+            UpdateWrongPulses();
+        }
 
+        private void UpdateDueKeys()
+        {
             ActiveNoteSelector.CollectDueSoonPitches(_song.Notes, clock.DisplaySongTime, activeKeyLookaheadSeconds, _dueSoon);
 
             foreach (var kv in _renderers)
@@ -200,11 +218,52 @@ namespace PianoGlass.Piano
                 Renderer renderer = kv.Value;
                 if (renderer == null) continue;
                 if (MidiInput.Instance != null && MidiInput.Instance.IsHeld(note)) continue;
+                if (_wrongAt.ContainsKey(note)) continue; // UpdateWrongPulses owns it
 
                 bool relevant = _dueSoon.Contains(note);
                 renderer.enabled = relevant;
                 if (relevant) SetColor(note, PianoKeyLayout.IsBlackKey(note) ? idleBlackKey : idleWhiteKey);
             }
+        }
+
+        /// <summary>Coral mixed over what the key would otherwise show --
+        /// green while held, its idle colour if not -- fading out over
+        /// OutcomeTint.WrongPulseSeconds; then the key is handed back.</summary>
+        private void UpdateWrongPulses()
+        {
+            if (_wrongAt.Count == 0) return;
+            float now = Time.realtimeSinceStartup;
+            _pulseDone.Clear();
+
+            foreach (var kv in _wrongAt)
+            {
+                int note = kv.Key;
+                float t = now - kv.Value;
+                if (!OutcomeTint.IsPulsing(t)) { _pulseDone.Add(note); continue; }
+                SetColor(note, Color.Lerp(Underlying(note), OutcomeTint.Wrong, OutcomeTint.WrongPulse(t)),
+                         forceVisible: true);
+            }
+
+            foreach (int note in _pulseDone)
+            {
+                _wrongAt.Remove(note);
+                if (IsHeld(note)) SetColor(note, pressedKey, forceVisible: true);
+                else ApplyRestState(note, PianoKeyLayout.IsBlackKey(note));
+            }
+        }
+
+        private Color Underlying(int note) =>
+            IsHeld(note) ? pressedKey : (PianoKeyLayout.IsBlackKey(note) ? idleBlackKey : idleWhiteKey);
+
+        private static bool IsHeld(int note) => MidiInput.Instance != null && MidiInput.Instance.IsHeld(note);
+
+        private void OnWrongNote(WrongNote w) => PulseWrong(w.pressedPitch);
+
+        /// <summary>Pulse a key coral once. Public so wait mode can reuse it.</summary>
+        public void PulseWrong(int note)
+        {
+            if (!PlacementValid || !_renderers.ContainsKey(note)) return;
+            _wrongAt[note] = Time.realtimeSinceStartup;
         }
 
         // ------------------------------------------------------------------
