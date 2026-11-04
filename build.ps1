@@ -53,9 +53,19 @@ Write-Host "Building $(if ($Development) {'development'} else {'release'}) — t
 Write-Host "Watch progress in another window with:" -ForegroundColor DarkGray
 Write-Host "  Get-Content `"$LogFile`" -Wait -Tail 20" -ForegroundColor DarkGray
 
+# A running adb server crashes batchmode Unity (0xC0000409) before the
+# build script runs. Unity's Android module restarts it when it needs it.
+# try/catch: with ErrorActionPreference Stop, PowerShell 5.1 turns adb's
+# "server not running" on stderr into a terminating error.
+try { & adb kill-server 2>&1 | Out-Null } catch { }
+
 $started = Get-Date
 
-$process = Start-Process -FilePath $Unity -Wait -PassThru -ArgumentList @(
+# -PassThru + WaitForExit, not -Wait: -Wait waits for the whole process
+# tree, and the adb server Unity's Android module starts outlives Unity, so
+# -Wait can hang long after the build has finished. Touching .Handle first
+# keeps the exit code readable after the process is gone.
+$process = Start-Process -FilePath $Unity -PassThru -ArgumentList @(
     '-batchmode'
     '-quit'
     '-projectPath', $ProjectDir
@@ -63,6 +73,8 @@ $process = Start-Process -FilePath $Unity -Wait -PassThru -ArgumentList @(
     '-executeMethod', $Method
     '-logFile', $LogFile
 )
+$null = $process.Handle
+$process.WaitForExit()
 
 $elapsed = (Get-Date) - $started
 
