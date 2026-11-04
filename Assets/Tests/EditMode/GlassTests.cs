@@ -54,7 +54,7 @@ namespace PianoGlass.Tests.EditMode
         {
             GlassTokens t = NewTokens();
             Assert.AreEqual("E9EEF2", ColorUtility.ToHtmlStringRGB(t.textPrimary));
-            Assert.AreEqual("8A96A3", ColorUtility.ToHtmlStringRGB(t.textSecondary));
+            Assert.AreEqual("A3AEBA", ColorUtility.ToHtmlStringRGB(t.textSecondary));
             Object.DestroyImmediate(t);
         }
 
@@ -69,14 +69,54 @@ namespace PianoGlass.Tests.EditMode
         }
 
         [Test]
-        public void GlassIsTranslucentWithABrighterRim()
+        public void PanelIsTranslucentAndDarkEnoughForLightText()
         {
             GlassTokens t = NewTokens();
-            Assert.Greater(t.tint.a, 0.3f, "light text must stay readable over a bright window");
-            Assert.Less(t.tint.a, 0.9f, "it is glass: the room shows through");
-            Assert.Greater(t.rimColor.a, t.tint.a);
-            Assert.Less(t.rimBottom, 1f, "rim brightest along the top");
+            Assert.Greater(t.panel.tint.a, 0.3f, "light text must stay readable over a bright window");
+            Assert.Less(t.panel.tint.a, 0.9f, "it is glass: the room shows through");
+            Assert.Less(t.panel.tint.grayscale, 0.3f);
             Object.DestroyImmediate(t);
+        }
+
+        [Test]
+        public void NestedLayersAreLighterAndSmaller()
+        {
+            GlassTokens t = NewTokens();
+            Assert.Less(t.row.cornerRadius, t.panel.cornerRadius, "concentric curves");
+            Assert.Less(t.row.bevelWidth, t.panel.bevelWidth);
+            Assert.Less(t.row.tint.a, t.panel.tint.a, "a row is a lighter frost on the panel");
+            Assert.AreEqual(t.row.cornerRadius, t.Layer(GlassStyle.Row).cornerRadius);
+            Assert.AreEqual(t.pill.tint, t.Layer(GlassStyle.Pill).tint);
+            Assert.AreEqual(t.panel.tint, t.Layer(GlassStyle.Panel).tint);
+            Object.DestroyImmediate(t);
+        }
+
+        [Test]
+        public void HairlineIsBrightAndThin()
+        {
+            GlassTokens t = NewTokens();
+            Assert.Greater(t.hairlineColor.grayscale, 0.9f);
+            Assert.Less(t.hairlineWidth, 0.002f);
+            Object.DestroyImmediate(t);
+        }
+
+        // ------------------------------------------------------------------
+        // Radii
+        // ------------------------------------------------------------------
+
+        [Test]
+        public void APillIsAlwaysFullyRound()
+        {
+            Assert.AreEqual(0.014f, GlassShape.RadiusFor(GlassStyle.Pill, 0f, new Vector2(0.06f, 0.014f)), 1e-6f);
+            Assert.AreEqual(0.02f, GlassShape.RadiusFor(GlassStyle.Panel, 0.02f, new Vector2(0.2f, 0.1f)), 1e-6f);
+            Assert.AreEqual(0.05f, GlassShape.RadiusFor(GlassStyle.Row, 0.2f, new Vector2(0.2f, 0.05f)), 1e-6f);
+        }
+
+        [Test]
+        public void ConcentricRadiusIsParentMinusInset()
+        {
+            Assert.AreEqual(0.016f, GlassShape.Concentric(0.028f, 0.012f), 1e-6f);
+            Assert.AreEqual(0.004f, GlassShape.Concentric(0.010f, 0.020f), 1e-6f, "never below the minimum");
         }
 
         [Test]
