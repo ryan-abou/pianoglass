@@ -91,7 +91,11 @@ if ($process.ExitCode -eq 0) {
 
     if ($Install) {
         Write-Host "Installing to headset..." -ForegroundColor Cyan
-        & adb install -r $Apk
+        # The build killed the adb server, so adb starts a new one and says
+        # so on stderr -- which PowerShell 5.1 turns into a terminating error
+        # under ErrorActionPreference Stop. Judge adb by its exit code instead.
+        $ErrorActionPreference = 'Continue'
+        & adb install -r $Apk 2>&1 | ForEach-Object { Write-Host $_ }
         if ($LASTEXITCODE -ne 0) {
             Write-Host "adb install failed. Is the headset awake, plugged in, and authorised?" -ForegroundColor Red
             exit 1
