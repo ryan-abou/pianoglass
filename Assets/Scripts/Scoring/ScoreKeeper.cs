@@ -80,6 +80,13 @@ namespace PianoGlass.Scoring
         /// <summary>The attempt was dropped (restart or seek back) or a new
         /// one began: every note is unjudged again.</summary>
         public event Action AttemptReset;
+        /// <summary>An attempt ended and was saved (completed or abandoned):
+        /// the record as written, and the file it went to (null if the write
+        /// failed). The results card listens.</summary>
+        public event Action<AttemptRecord, string> AttemptEnded;
+
+        /// <summary>Where attempt files go on this device.</summary>
+        public static string AttemptsDirectory => Path.Combine(Application.persistentDataPath, AttemptsFolder);
 
         private SongData _song;
         private readonly List<(int pitch, double realtime)> _pending = new List<(int, double)>();
@@ -199,7 +206,7 @@ namespace PianoGlass.Scoring
             AttemptSaved = false;
             _startedUtc = DateTime.UtcNow.ToString("o");
             string stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
-            _path = Path.Combine(Application.persistentDataPath, AttemptsFolder, $"{stamp}-{Slug(_song.Title)}.json");
+            _path = Path.Combine(AttemptsDirectory, $"{stamp}-{Slug(_song.Title)}.json");
             Debug.Log($"[Score] attempt started at song time {songTime:0.0}: '{_song.Title}', {Session.ScorableCount} notes, " +
                       $"windows {perfectMs:0}/{greatMs:0}/{goodMs:0} ms, offset {inputOffsetMs:0} ms, tempo {clock.TempoMultiplier:0.##}");
         }
@@ -214,7 +221,7 @@ namespace PianoGlass.Scoring
         private void Save(string outcome)
         {
             AttemptSaved = true;
-            Write(outcome);
+            AttemptRecord rec = Write(outcome);
 
             (double mean, double sd, int n) = Session.ErrorStats();
             BarStats worst = Session.WorstBar();
@@ -224,16 +231,19 @@ namespace PianoGlass.Scoring
                       $"mean error {mean:+0.0;-0.0;0} ms (sd {sd:0.0}, n {n})" +
                       (worst != null ? $", worst bar {worst.bar} ({worst.accuracy:0}%)" : "") +
                       $" -> {LastSavedPath ?? "not saved"}");
+
+            if (rec != null) AttemptEnded?.Invoke(rec, LastSavedPath == _path ? _path : null);
         }
 
-        private void Write(string outcome)
+        private AttemptRecord Write(string outcome)
         {
+            AttemptRecord rec = null;
             try
             {
                 // The slowest tempo it was played at: a tempo change while
                 // paused keeps the attempt going rather than restarting it.
                 double tempo = double.IsInfinity(Session.LowestTempo) ? clock.TempoMultiplier : Session.LowestTempo;
-                AttemptRecord rec = Session.ToRecord(outcome, _startedUtc, DateTime.UtcNow.ToString("o"),
+                rec = Session.ToRecord(outcome, _startedUtc, DateTime.UtcNow.ToString("o"),
                                                      tempo, inputOffsetMs);
                 rec.displayLatencyMs = clock.DisplayLatencySeconds * 1000.0;
                 Directory.CreateDirectory(Path.GetDirectoryName(_path));
@@ -244,6 +254,7 @@ namespace PianoGlass.Scoring
             {
                 Debug.LogError($"[Score] attempt not saved to {_path}: {e.Message}");
             }
+            return rec;
         }
 
         private bool SongUses(int pitch)
