@@ -712,8 +712,11 @@ They are build-time leftovers: revert/delete them (keep the tracked
    `BeatGrid` beat times minus that latency; accent the first beat of each
    bar. **It clicks during the 3 s lead-in too** (Ryan, 2026-11-03 — this is
    the count-in coming back, by request). On/off toggle, recorded as
-   `metronome` in the attempt. The toggle's control is not chosen yet: ask
-   Ryan, offering a piano chord in the same A0 family.
+   `metronome` in the attempt. **Toggle: hold A0, press C♯1 (MIDI 25)**
+   (Ryan, 2026-11-03), only while stopped or paused, saved in PlayerPrefs.
+   Output latency (`SceneSetup.MetronomeOutputLatencyMs`) ships as 0 ms in
+   the first round and is measured on video in that round: clicks against
+   bar lines reaching the hit line.
 
 ### Batch C — all build on the loop
 
