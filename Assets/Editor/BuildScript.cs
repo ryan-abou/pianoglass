@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
 
@@ -66,7 +67,42 @@ namespace PianoGlass.EditorTools
 
         // ------------------------------------------------------------------
 
+        /// <summary>
+        /// Development builds trade runtime speed for build speed: IL2CPP
+        /// "Faster (smaller) builds" code generation and the Debug C++
+        /// configuration cut most of the 11-13 min the release settings cost.
+        /// The previous values are put back before Unity exits, so release
+        /// builds and ProjectSettings.asset are untouched. Unity exits from
+        /// inside <see cref="Exit"/>, which is why this restores explicitly
+        /// rather than relying on a finally block.
+        /// </summary>
         private static void Build(bool development)
+        {
+            var target = NamedBuildTarget.Android;
+            Il2CppCodeGeneration previousCodeGen = PlayerSettings.GetIl2CppCodeGeneration(target);
+            Il2CppCompilerConfiguration previousConfig = PlayerSettings.GetIl2CppCompilerConfiguration(target);
+
+            if (development)
+            {
+                PlayerSettings.SetIl2CppCodeGeneration(target, Il2CppCodeGeneration.OptimizeSize);
+                PlayerSettings.SetIl2CppCompilerConfiguration(target, Il2CppCompilerConfiguration.Debug);
+                Debug.Log($"{ResultTag} development IL2CPP: OptimizeSize + Debug " +
+                          $"(was {previousCodeGen} + {previousConfig}, restored after the build)");
+            }
+
+            int code = BuildAndReport(development);
+
+            if (development)
+            {
+                PlayerSettings.SetIl2CppCodeGeneration(target, previousCodeGen);
+                PlayerSettings.SetIl2CppCompilerConfiguration(target, previousConfig);
+            }
+
+            Exit(code);
+        }
+
+        /// <summary>Runs the build and returns the exit code: 0 succeeded, 1 failed.</summary>
+        private static int BuildAndReport(bool development)
         {
             try
             {
@@ -79,9 +115,8 @@ namespace PianoGlass.EditorTools
                 string[] scenes = EnabledScenes();
                 if (scenes.Length == 0)
                 {
-                    Fail("No enabled scenes in the build list. Open File > Build Profiles, " +
+                    return Fail("No enabled scenes in the build list. Open File > Build Profiles, " +
                          "select the Android profile, and use Add Open Scenes.");
-                    return;
                 }
 
                 if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.Android)
@@ -116,7 +151,7 @@ namespace PianoGlass.EditorTools
                 {
                     double mb = summary.totalSize / 1024.0 / 1024.0;
                     Debug.Log($"{ResultTag} SUCCEEDED  {mb:0.0} MB  in {summary.totalTime.TotalSeconds:0} s  →  {output}");
-                    Exit(0);
+                    return 0;
                 }
                 else
                 {
@@ -127,12 +162,12 @@ namespace PianoGlass.EditorTools
                             if (message.type == LogType.Error || message.type == LogType.Exception)
                                 Debug.LogError($"{ResultTag} {step.name}: {message.content}");
 
-                    Fail($"{summary.result} with {summary.totalErrors} error(s).");
+                    return Fail($"{summary.result} with {summary.totalErrors} error(s).");
                 }
             }
             catch (Exception e)
             {
-                Fail($"threw {e.GetType().Name}: {e.Message}");
+                return Fail($"threw {e.GetType().Name}: {e.Message}");
             }
         }
 
@@ -155,10 +190,10 @@ namespace PianoGlass.EditorTools
             return null;
         }
 
-        private static void Fail(string reason)
+        private static int Fail(string reason)
         {
             Debug.LogError($"{ResultTag} FAILED — {reason}");
-            Exit(1);
+            return 1;
         }
 
         /// <summary>
