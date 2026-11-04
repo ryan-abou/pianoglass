@@ -183,7 +183,7 @@ namespace PianoGlass.Scoring
             }
 
             _worst = Text("Worst", 16f, _secondary, TextAlignmentOptions.TopLeft,
-                          new Vector2(Left, -size.y * 0.5f + 23f), 300f);
+                          new Vector2(Left, -size.y * 0.5f + 26f), 300f);
         }
 
         private void FillStrip(IReadOnlyList<BarCell> bars)
