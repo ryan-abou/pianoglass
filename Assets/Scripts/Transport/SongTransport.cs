@@ -25,6 +25,9 @@ namespace PianoGlass.Transport
     /// records the slowest tempo it was played at (ScoringSession.LowestTempo,
     /// Ryan 2026-11-03). The tempo is saved to PlayerPrefs and applied to
     /// the clock on launch.
+    ///
+    /// Metronome (F27): hold A0 and press C#1 to turn it on or off, also
+    /// only while stopped or paused.
     /// </summary>
     public class SongTransport : MonoBehaviour
     {
@@ -47,6 +50,10 @@ namespace PianoGlass.Transport
         [Header("Tempo chord (hold chordNoteA)")]
         [SerializeField] private int slowerNote = TransportChord.B0;
         [SerializeField] private int fasterNote = TransportChord.C1;
+        [SerializeField] private int metronomeNote = TransportChord.CSharp1;
+
+        [Header("Metronome")]
+        [SerializeField] private Metronome metronome;
 
         private const string TempoPrefsKey = "PianoGlass.TempoPercent";
 
@@ -57,6 +64,7 @@ namespace PianoGlass.Transport
         {
             if (clock == null) clock = FindAnyObjectByType<SongClock>();
             if (calibration == null) calibration = FindAnyObjectByType<KeyboardCalibration>();
+            if (metronome == null) metronome = FindAnyObjectByType<Metronome>();
             _song = SongData.TwinkleTwinkleLittleStar();
 
             if (clock != null)
@@ -149,6 +157,19 @@ namespace PianoGlass.Transport
                       $"at t = {clock.SongTime:0.0}s");
         }
 
+        /// <summary>Metronome on/off. Ignored while playing, so an attempt
+        /// either has it or does not.</summary>
+        public void ToggleMetronome()
+        {
+            if (!CanAcceptInput || metronome == null) return;
+            if (clock != null && clock.IsPlaying)
+            {
+                Debug.Log("[Transport] metronome toggle ignored while playing");
+                return;
+            }
+            metronome.Toggle();
+        }
+
         // ------------------------------------------------------------------
 
         private void OnNoteOn(int note, int velocity, double time)
@@ -161,7 +182,7 @@ namespace PianoGlass.Transport
             if (!CanAcceptInput) return;
 
             ChordAction action = TransportChord.OnNoteOn(note, MidiInput.Instance.IsHeld,
-                                                         chordNoteA, chordNoteB, slowerNote, fasterNote);
+                                                         chordNoteA, chordNoteB, slowerNote, fasterNote, metronomeNote);
             switch (action)
             {
                 case ChordAction.Restart:
@@ -174,6 +195,9 @@ namespace PianoGlass.Transport
                     break;
                 case ChordAction.Faster:
                     StepTempo(+1);
+                    break;
+                case ChordAction.ToggleMetronome:
+                    ToggleMetronome();
                     break;
             }
         }
