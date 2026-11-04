@@ -111,6 +111,8 @@ namespace PianoGlass.Scoring
         public string endedUtc;
         /// <summary>Completed, or Abandoned (restarted part-way).</summary>
         public string outcome;
+        /// <summary>The slowest tempo the attempt was played at (tempo can
+        /// change while paused part-way).</summary>
         public double tempo;
         public double inputOffsetMs;
         /// <summary>How far ahead the highway was drawn when the attempt was

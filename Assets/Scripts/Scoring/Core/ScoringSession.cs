@@ -50,6 +50,13 @@ namespace PianoGlass.Scoring
         public JudgementResult LastResult { get; private set; }
         public WrongNote LastWrongNote { get; private set; }
 
+        /// <summary>The slowest tempo this attempt was played at, from every
+        /// OnNoteOn and Advance; +inf before either. Tempo can change while
+        /// paused part-way (F26), and the attempt then records this one: it
+        /// was not done at full speed until it was done at full speed
+        /// throughout.</summary>
+        public double LowestTempo { get; private set; } = double.PositiveInfinity;
+
         /// <summary>Song time of the first scorable note, or +inf if none.</summary>
         public double FirstNoteTime { get; }
 
@@ -91,6 +98,7 @@ namespace PianoGlass.Scoring
         /// it was noticed in.</summary>
         public void OnNoteOn(int pitch, double pressSongTime, double tempo)
         {
+            NoteTempo(tempo);
             double window = NoteJudge.WindowSongSeconds(Windows.goodMs, tempo);
 
             int match = -1;
@@ -154,6 +162,7 @@ namespace PianoGlass.Scoring
         /// window without a press is a MISS.</summary>
         public void Advance(double songTime, double tempo)
         {
+            NoteTempo(tempo);
             double window = NoteJudge.WindowSongSeconds(Windows.goodMs, tempo);
             foreach (int i in _scorable)
             {
@@ -162,6 +171,11 @@ namespace PianoGlass.Scoring
                 if (_judged[i]) continue;
                 Record(JudgementResult.Missed(i, n.Pitch, Song.BarOf(n.StartTime), n.StartTime));
             }
+        }
+
+        private void NoteTempo(double tempo)
+        {
+            if (tempo > 0 && tempo < LowestTempo) LowestTempo = tempo;
         }
 
         private void Record(JudgementResult r)
