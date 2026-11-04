@@ -17,6 +17,14 @@ namespace PianoGlass.Transport
     /// playing, the controllers are on the floor. The two lowest keys of an
     /// 88 (A0 + A#0 by default) held together restart from the top and play.
     /// No song here uses that chord, and it can't be hit by accident.
+    ///
+    /// Tempo (F26) is on the same bottom key: hold A0 and press B0 for -5%,
+    /// C1 for +5%, 25-200% (TransportChord and TempoStep, both pure). Only
+    /// while the song is stopped or paused, so each attempt has one tempo:
+    /// a change while paused part-way also rewinds to the top (paused), which
+    /// ends that attempt the way a restart does -- otherwise its first half
+    /// would be at one tempo and its record would claim the other. The
+    /// tempo is saved to PlayerPrefs and applied to the clock on launch.
     /// </summary>
     public class SongTransport : MonoBehaviour
     {
@@ -36,6 +44,12 @@ namespace PianoGlass.Transport
         [SerializeField] private int chordNoteA = 21; // A0
         [SerializeField] private int chordNoteB = 22; // A#0
 
+        [Header("Tempo chord (hold chordNoteA)")]
+        [SerializeField] private int slowerNote = TransportChord.B0;
+        [SerializeField] private int fasterNote = TransportChord.C1;
+
+        private const string TempoPrefsKey = "PianoGlass.TempoPercent";
+
         private bool _chordLatched;
         private SongData _song;
 
@@ -44,6 +58,13 @@ namespace PianoGlass.Transport
             if (clock == null) clock = FindAnyObjectByType<SongClock>();
             if (calibration == null) calibration = FindAnyObjectByType<KeyboardCalibration>();
             _song = SongData.TwinkleTwinkleLittleStar();
+
+            if (clock != null)
+            {
+                int stored = PlayerPrefs.GetInt(TempoPrefsKey, 100);
+                clock.TempoMultiplier = TempoStep.Sanitize(stored / 100f);
+                Debug.Log($"[Transport] {TempoStep.Label(clock.TempoMultiplier)} (saved {stored}%)");
+            }
         }
 
         /// <summary>Derived fresh from clock + song each read, not cached --
@@ -102,25 +123,61 @@ namespace PianoGlass.Transport
             clock.Play();
         }
 
+        /// <summary>One 5% tempo step (direction -1 or +1). Ignored while
+        /// playing; while paused part-way it also rewinds to the top.</summary>
+        public void StepTempo(int direction)
+        {
+            if (!CanAcceptInput || clock == null) return;
+            if (clock.IsPlaying)
+            {
+                Debug.Log($"[Transport] tempo change ignored while playing ({TempoStep.Label(clock.TempoMultiplier)})");
+                return;
+            }
+
+            float before = clock.TempoMultiplier;
+            float after = TempoStep.Step(before, direction);
+            if (Mathf.Approximately(before, after))
+            {
+                Debug.Log($"[Transport] {TempoStep.Label(after)} -- already at the limit");
+                return;
+            }
+
+            bool rewound = clock.SongTime > -clock.LeadInSeconds + 1e-6;
+            if (rewound) clock.Restart();
+            clock.TempoMultiplier = after;
+            PlayerPrefs.SetInt(TempoPrefsKey, TempoStep.ToPercent(after));
+            PlayerPrefs.Save();
+            Debug.Log($"[Transport] {TempoStep.Label(before)} -> {TempoStep.Label(after)}" +
+                      (rewound ? ", rewound to the top" : ""));
+        }
+
         // ------------------------------------------------------------------
 
         private void OnNoteOn(int note, int velocity, double time)
         {
-            if (note != chordNoteA && note != chordNoteB) return;
-            if (_chordLatched) return;
+            if (MidiInput.Instance == null) return;
 
             // Ignored entirely while mid-calibration -- not even latched --
             // so finishing calibration with the chord still held requires a
             // fresh press before it can fire.
             if (!CanAcceptInput) return;
 
-            bool bothHeld = MidiInput.Instance != null &&
-                            MidiInput.Instance.IsHeld(chordNoteA) &&
-                            MidiInput.Instance.IsHeld(chordNoteB);
-            if (!bothHeld) return;
-
-            _chordLatched = true; // fire once per press, not every frame it's held
-            RestartAndPlay();
+            ChordAction action = TransportChord.OnNoteOn(note, MidiInput.Instance.IsHeld,
+                                                         chordNoteA, chordNoteB, slowerNote, fasterNote);
+            switch (action)
+            {
+                case ChordAction.Restart:
+                    if (_chordLatched) return;
+                    _chordLatched = true; // fire once per press, not every frame it's held
+                    RestartAndPlay();
+                    break;
+                case ChordAction.Slower:
+                    StepTempo(-1);
+                    break;
+                case ChordAction.Faster:
+                    StepTempo(+1);
+                    break;
+            }
         }
 
         private void OnNoteOff(int note, double time)
