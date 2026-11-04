@@ -772,6 +772,8 @@ namespace PianoGlass.EditorTools
             cardSo.FindProperty("scoreKeeper").objectReferenceValue = scoreKeeper;
             cardSo.FindProperty("tokens").objectReferenceValue = tokens;
             cardSo.FindProperty("font").objectReferenceValue = font;
+            cardSo.FindProperty("textMaterial").objectReferenceValue = GlassTextMaterial.GetOrCreate(font);
+            cardSo.FindProperty("glassMaterial").objectReferenceValue = material;
             cardSo.ApplyModifiedProperties();
 
             CanvasCalibrationFollower follower = go.GetComponent<CanvasCalibrationFollower>();

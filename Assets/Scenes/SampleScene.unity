@@ -225,9 +225,9 @@ GameObject:
   m_Component:
   - component: {fileID: 257032940}
   - component: {fileID: 257032939}
-  - component: {fileID: 257032938}
   - component: {fileID: 257032937}
   - component: {fileID: 257032936}
+  - component: {fileID: 257032941}
   m_Layer: 0
   m_Name: ResultsCard
   m_TagString: Untagged
@@ -269,27 +269,9 @@ MonoBehaviour:
   scoreKeeper: {fileID: 644933874}
   tokens: {fileID: 11400000, guid: 6e1c965f1596bd0428a742c42c2ed149, type: 2}
   font: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  size: {x: 460, y: 270}
-  margin: 22
-  cellHeight: 30
-  cellGap: 6
-  outline: 3
---- !u!114 &257032938
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 257032935}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fc3f6d0c9c3314b41a399360d5001cd1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PianoGlass.UI.GlassPanel
+  textMaterial: {fileID: 2100000, guid: 9db6a86f3b7f23b46a70504a041bbd0e, type: 2}
   glassMaterial: {fileID: 2100000, guid: 12caf58afa1d3f94797270c64a710ab1, type: 2}
-  tokens: {fileID: 11400000, guid: 6e1c965f1596bd0428a742c42c2ed149, type: 2}
-  paddingMetres: {x: 0.012, y: 0.012}
-  depthBehindMetres: 0.002
+  size: {x: 460, y: 270}
 --- !u!223 &257032939
 Canvas:
   m_ObjectHideFlags: 0
@@ -333,6 +315,23 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &257032941
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 257032935}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fc3f6d0c9c3314b41a399360d5001cd1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PianoGlass.UI.GlassPanel
+  glassMaterial: {fileID: 2100000, guid: 12caf58afa1d3f94797270c64a710ab1, type: 2}
+  tokens: {fileID: 11400000, guid: 6e1c965f1596bd0428a742c42c2ed149, type: 2}
+  style: 0
+  paddingMetres: {x: 0.012, y: 0.012}
+  depthBehindMetres: 0.002
 --- !u!1 &377889052
 GameObject:
   m_ObjectHideFlags: 0
