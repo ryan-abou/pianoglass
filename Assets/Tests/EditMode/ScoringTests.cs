@@ -324,7 +324,7 @@ namespace PianoGlass.Tests.EditMode
             AttemptRecord rec = s.ToRecord(AttemptRecord.Abandoned, "2026-10-27T10:00:00Z", "2026-10-27T10:00:05Z", 1.0, 12.5);
             AttemptRecord back = JsonUtility.FromJson<AttemptRecord>(JsonUtility.ToJson(rec));
 
-            Assert.AreEqual(1, back.schema);
+            Assert.AreEqual(AttemptRecord.CurrentSchema, back.schema);
             Assert.AreEqual("Twinkle, Twinkle, Little Star", back.song);
             Assert.AreEqual(AttemptRecord.Abandoned, back.outcome);
             Assert.AreEqual(12.5, back.inputOffsetMs, 1e-9);
