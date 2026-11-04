@@ -144,7 +144,12 @@ namespace PianoGlass.Piano
 
         /// <summary>Last thing that went wrong, in words for the panel; null
         /// once something succeeds.</summary>
-        public string LastProblem { get; private set; }
+        public string LastProblem
+        {
+            get => _lastProblem;
+            private set { _lastProblem = value; _problemIsMiddleCMeasurement = false; }
+        }
+        private string _lastProblem;
 
         /// <summary>The anchor UUID piano_profiles.json currently names.</summary>
         public string SavedAnchorUuid { get; private set; }
@@ -197,6 +202,10 @@ namespace PianoGlass.Piano
         /// that follows: the applied shift, anchor-local mm.</summary>
         private Vector3? _writeCorrectionMm;
         private bool _savedAnchorGone;
+        /// <summary>LastProblem is a refused Middle C touch's "N mm off":
+        /// a measurement against the placement at the time, so any nudge or
+        /// yaw change makes it stale.</summary>
+        private bool _problemIsMiddleCMeasurement;
         private int _loadGeneration;
 
         private readonly struct Capture
@@ -343,6 +352,7 @@ namespace PianoGlass.Piano
             {
                 Log($"{error} -- rejected, over {AnchoredKeyboard.MovedMetres * 1000f:0} mm");
                 LastProblem = c.Reason;
+                _problemIsMiddleCMeasurement = true;
                 return Fire(FlowEvent.CorrectionRejectedMoved);
             }
 
@@ -387,6 +397,7 @@ namespace PianoGlass.Piano
         public void Nudge(Vector3 deltaKeyboardMetres)
         {
             NudgeMm += deltaKeyboardMetres * 1000f;
+            ClearStaleMeasurement();
             PlacementChanged?.Invoke();
         }
 
@@ -401,14 +412,30 @@ namespace PianoGlass.Piano
             // RotateYaw works in its frame unchanged.
             LocalGeometry = AnchoredKeyboard.RotateYaw(LocalGeometry, step);
             SessionYawDegrees = target;
+            ClearStaleMeasurement();
             PlacementChanged?.Invoke();
         }
 
         public void ClearNudge()
         {
             NudgeMm = Vector3.zero;
+            ClearStaleMeasurement();
             PlacementChanged?.Invoke();
             Persist();
+        }
+
+        /// <summary>The keys moved since the last refused Middle C touch, so
+        /// its "N mm off" no longer describes what is drawn. Cleared rather
+        /// than recomputed: the touch was one moment's measurement, and
+        /// re-scoring it against a nudged placement would read as if the
+        /// nudge had fixed the piano. A fresh right-grip touch measures again.
+        /// Other problems (e.g. no Middle C on this keyboard) stay.</summary>
+        private void ClearStaleMeasurement()
+        {
+            if (!_problemIsMiddleCMeasurement) return;
+            Log("nudge/yaw changed: cleared the refused Middle C warning");
+            LastProblem = null;
+            _problemIsMiddleCMeasurement = false;
         }
 
         /// <summary>
