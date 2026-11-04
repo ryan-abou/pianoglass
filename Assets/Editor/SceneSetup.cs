@@ -67,7 +67,7 @@ namespace PianoGlass.EditorTools
             CalibrationPanel panel = Object.FindAnyObjectByType<CalibrationPanel>();
             if (panel != null) WireCalibrationPanel(panel, transport, clock);
 
-            Canvas canvas = Object.FindAnyObjectByType<Canvas>();
+            Canvas canvas = StatusCanvas();
             if (canvas != null)
             {
                 CanvasCalibrationFollower follower = canvas.GetComponent<CanvasCalibrationFollower>();
@@ -531,7 +531,7 @@ namespace PianoGlass.EditorTools
             // runway now runs under it: it is a development readout that the
             // menus replace, not part of the finished look (Ryan, 2026-11-02).
             var calibration = Object.FindAnyObjectByType<KeyboardCalibration>();
-            Canvas canvas = Object.FindAnyObjectByType<Canvas>();
+            Canvas canvas = StatusCanvas();
             CanvasCalibrationFollower follower = canvas != null ? canvas.GetComponent<CanvasCalibrationFollower>() : null;
             if (follower != null && calibration != null) WireCanvasFollower(follower, calibration);
 
@@ -628,8 +628,7 @@ namespace PianoGlass.EditorTools
         {
             Scene scene = OpenScene();
 
-            var panel = Object.FindAnyObjectByType<CalibrationPanel>();
-            Canvas canvas = panel != null ? panel.GetComponentInParent<Canvas>() : null;
+            Canvas canvas = StatusCanvas();
             if (canvas == null)
             {
                 Debug.LogError("[SceneSetup] No Canvas holding the CalibrationPanel -- nothing to put glass behind.");
@@ -697,6 +696,78 @@ namespace PianoGlass.EditorTools
             return tokens;
         }
 
+        /// <summary>The card sits low and close: its centre this far above the
+        /// keys, at the foot of the leaned-back wall, in front of the status
+        /// panel rather than on top of it. Shown only between attempts, when
+        /// the wall is empty.</summary>
+        private const float ResultsHeightAboveKeys = 0.24f;
+        private const float ResultsDepthOffset = 0.0f;
+
+        /// <summary>
+        /// The results card (Batch B2, F30 + F32): a world-space Canvas of
+        /// its own on Liquid Glass, registered on the keyboard by a
+        /// CanvasCalibrationFollower. ResultsCard builds its text and bar
+        /// cells in code; this only makes the Canvas and wires it. Created
+        /// if missing, otherwise updated; GlassPanel re-created as in
+        /// Configure Liquid Glass.
+        /// </summary>
+        [MenuItem("PianoGlass/Scene/Configure Results Card")]
+        public static void ConfigureResultsCard()
+        {
+            Scene scene = OpenScene();
+
+            var calibration = Object.FindAnyObjectByType<KeyboardCalibration>();
+            var scoreKeeper = Object.FindAnyObjectByType<ScoreKeeper>();
+            var font = AssetDatabase.LoadAssetAtPath<TMPro.TMP_FontAsset>(LabelFontPath);
+            if (calibration == null || scoreKeeper == null || font == null)
+            {
+                Debug.LogError("[SceneSetup] Results card needs KeyboardCalibration, ScoreKeeper and the TMP font -- " +
+                               "run Configure Scoring first.");
+                return;
+            }
+
+            Material material = GetOrCreateGlassMaterial();
+            PianoGlass.UI.GlassTokens tokens = GetOrCreateGlassTokens();
+            if (material == null || tokens == null) return;
+
+            ResultsCard card = Object.FindAnyObjectByType<ResultsCard>();
+            GameObject go;
+            if (card != null) go = card.gameObject;
+            else
+            {
+                go = new GameObject("ResultsCard", typeof(RectTransform));
+                go.AddComponent<Canvas>();
+            }
+
+            var canvas = go.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.WorldSpace;
+            go.transform.localScale = Vector3.one * 0.001f;
+
+            PianoGlass.UI.GlassPanel glass = AddGlass(go, material, tokens);
+            if (card == null) card = go.AddComponent<ResultsCard>();
+            // GlassPanel was re-added after ResultsCard; component order
+            // does not matter, ResultsCard looks it up in Awake.
+
+            var cardSo = new SerializedObject(card);
+            cardSo.FindProperty("scoreKeeper").objectReferenceValue = scoreKeeper;
+            cardSo.FindProperty("tokens").objectReferenceValue = tokens;
+            cardSo.FindProperty("font").objectReferenceValue = font;
+            cardSo.ApplyModifiedProperties();
+
+            CanvasCalibrationFollower follower = go.GetComponent<CanvasCalibrationFollower>();
+            if (follower == null) follower = go.AddComponent<CanvasCalibrationFollower>();
+            var so = new SerializedObject(follower);
+            so.FindProperty("calibration").objectReferenceValue = calibration;
+            so.FindProperty("depthOffset").floatValue = ResultsDepthOffset;
+            so.FindProperty("heightAboveKeys").floatValue = ResultsHeightAboveKeys;
+            so.ApplyModifiedProperties();
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            Debug.Log($"[SceneSetup] Results card configured ({glass.name}), " +
+                      $"{ResultsHeightAboveKeys} m above the keys.");
+        }
+
         [MenuItem("PianoGlass/Scene/Remove Test Cube")]
         public static void RemoveTestCube()
         {
@@ -738,6 +809,21 @@ namespace PianoGlass.EditorTools
             if (scene.path != ScenePath)
                 scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
             return scene;
+        }
+
+        /// <summary>The status panel's Canvas: the one holding CalibrationPanel.
+        /// Not "any Canvas" -- the results card is a second one.</summary>
+        private static Canvas StatusCanvas()
+        {
+            var panel = Object.FindAnyObjectByType<CalibrationPanel>();
+            if (panel != null)
+            {
+                Canvas c = panel.GetComponentInParent<Canvas>();
+                if (c != null) return c;
+            }
+            foreach (Canvas c in Object.FindObjectsByType<Canvas>(FindObjectsSortMode.None))
+                if (c.GetComponent<ResultsCard>() == null) return c;
+            return null;
         }
 
         private static T GetOrAdd<T>(string objectName) where T : Component
