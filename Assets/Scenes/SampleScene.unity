@@ -1345,7 +1345,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PianoGlass.Transport.Metronome
   clock: {fileID: 1285217052}
-  outputLatencyMs: 0
+  outputLatencyMs: 140
   lookaheadSeconds: 0.3
   volume: 0.6
   accentVolume: 0.9

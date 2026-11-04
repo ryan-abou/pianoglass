@@ -21,6 +21,10 @@ namespace PianoGlass.Transport
     /// stopped or paused, and saved to PlayerPrefs. ScoreKeeper records
     /// whether it clicked during each attempt.
     ///
+    /// "Now" on the DSP clock comes from DspClockEstimator, not a raw
+    /// AudioSettings.dspTime read: that is up to a buffer stale on Android,
+    /// and scheduling from it made the first build's clicks wander +-50 ms.
+    ///
     /// The clicks are generated in code (short decaying sine bursts), so
     /// there is no audio asset to import or strip.
     /// </summary>
@@ -42,6 +46,7 @@ namespace PianoGlass.Transport
 
         private SongData _song;
         private MetronomeSchedule _schedule;
+        private readonly DspClockEstimator _dsp = new DspClockEstimator();
         private readonly List<MetronomeClick> _clicks = new List<MetronomeClick>();
         private AudioSource[] _voices;
         private int _nextVoice;
@@ -86,6 +91,11 @@ namespace PianoGlass.Transport
 
         private void Update()
         {
+            // Every frame, on or off, so the estimate is warm before the
+            // first click. Raw dspTime is a buffer stale on Android.
+            double real = Time.realtimeSinceStartupAsDouble;
+            _dsp.Observe(real, AudioSettings.dspTime);
+
             if (clock == null) return;
             bool playing = clock.IsPlaying;
             double songTime = clock.SongTime;
@@ -104,7 +114,7 @@ namespace PianoGlass.Transport
             if (!IsOn || !playing) return;
 
             _schedule.Collect(_song.Bpm, _song.BeatsPerBar, -clock.LeadInSeconds, _song.Duration,
-                              songTime, clock.TempoMultiplier, AudioSettings.dspTime, _clicks);
+                              songTime, clock.TempoMultiplier, _dsp.Estimate(real), _clicks);
             foreach (MetronomeClick c in _clicks)
             {
                 AudioSource v = _voices[_nextVoice];
