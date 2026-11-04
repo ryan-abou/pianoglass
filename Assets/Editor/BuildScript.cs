@@ -69,8 +69,11 @@ namespace PianoGlass.EditorTools
 
         /// <summary>
         /// Development builds trade runtime speed for build speed: IL2CPP
-        /// "Faster (smaller) builds" code generation and the Debug C++
-        /// configuration cut most of the 11-13 min the release settings cost.
+        /// "Faster (smaller) builds" code generation cuts most of the 11-13 min
+        /// the release settings cost. The C++ configuration stays Release: the
+        /// Debug configuration (Batch A) built in ~150 s but ran at ~40/72 fps
+        /// on the headset (VrApi log, 2026-11-03) -- unoptimised C++ blew the
+        /// 13.9 ms frame budget.
         /// The previous values are put back before Unity exits, so release
         /// builds and ProjectSettings.asset are untouched. Unity exits from
         /// inside <see cref="Exit"/>, which is why this restores explicitly
@@ -85,8 +88,8 @@ namespace PianoGlass.EditorTools
             if (development)
             {
                 PlayerSettings.SetIl2CppCodeGeneration(target, Il2CppCodeGeneration.OptimizeSize);
-                PlayerSettings.SetIl2CppCompilerConfiguration(target, Il2CppCompilerConfiguration.Debug);
-                Debug.Log($"{ResultTag} development IL2CPP: OptimizeSize + Debug " +
+                PlayerSettings.SetIl2CppCompilerConfiguration(target, Il2CppCompilerConfiguration.Release);
+                Debug.Log($"{ResultTag} development IL2CPP: OptimizeSize + Release " +
                           $"(was {previousCodeGen} + {previousConfig}, restored after the build)");
             }
 
