@@ -31,6 +31,16 @@ namespace PianoGlass.Scoring
     /// clock jumps back -- restart -- part-way (abandoned). Each attempt is
     /// one file in persistentDataPath/attempts/, rewritten if the app is
     /// backgrounded mid-attempt and again when it ends.
+    ///
+    /// Verifying (anchored calibration, until A): nothing is scored. Presses
+    /// were always ignored then, but the clock -- started by the restart
+    /// chord -- kept advancing the session, so every note went by as a MISS
+    /// and its slab went slate. Now no attempt starts or advances while
+    /// calibration.AwaitingConfirmation; one in progress when Verifying
+    /// begins (a Middle C fix mid-song) is dropped like a restart, since the
+    /// keys it was judged against are being re-checked. After A, a new
+    /// attempt starts from that moment and scores only the notes still
+    /// ahead (ScoringSession's scoreNotesFrom).
     /// </summary>
     [DefaultExecutionOrder(100)]
     public class ScoreKeeper : MonoBehaviour
@@ -123,13 +133,28 @@ namespace PianoGlass.Scoring
             }
             _lastSongTime = songTime;
 
+            if (calibration != null && calibration.AwaitingConfirmation)
+            {
+                _pending.Clear();
+                if (Session != null && !AttemptSaved)
+                {
+                    bool progress = Session.JudgedCount + Session.WrongNotes.Count > 0;
+                    if (progress) Save(AttemptRecord.Abandoned);
+                    Debug.Log("[Score] keys awaiting confirmation: attempt " +
+                              (progress ? "abandoned" : "dropped") + ", nothing scored until A");
+                    Session = null;
+                    AttemptReset?.Invoke();
+                }
+                return;
+            }
+
             if (!clock.IsPlaying || tempo <= 0.0)
             {
                 _pending.Clear();
                 return;
             }
 
-            if (Session == null) Begin();
+            if (Session == null) Begin(songTime, tempo);
 
             if (!AttemptSaved)
             {
@@ -148,11 +173,16 @@ namespace PianoGlass.Scoring
             _pending.Clear();
         }
 
-        private void Begin()
+        /// <summary>Begins at the start of the song (the lead-in) after a
+        /// restart, or part-way through when the keys were only just
+        /// confirmed; either way only notes still hittable from now count.</summary>
+        private void Begin(double songTime, double tempo)
         {
             PianoKeyLayout layout = calibration != null ? calibration.Layout : null;
+            double scoreFrom = songTime - NoteJudge.WindowSongSeconds(goodMs, tempo);
             Session = new ScoringSession(_song, new TimingWindows(perfectMs, greatMs, goodMs),
-                                         layout != null ? (Func<int, bool>)layout.Contains : null);
+                                         layout != null ? (Func<int, bool>)layout.Contains : null,
+                                         scoreFrom);
             AttemptReset?.Invoke();
             Session.Judged += r => NoteJudged?.Invoke(r);
             Session.WrongNotePlayed += w => WrongNotePlayed?.Invoke(w);
@@ -170,7 +200,7 @@ namespace PianoGlass.Scoring
             _startedUtc = DateTime.UtcNow.ToString("o");
             string stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
             _path = Path.Combine(Application.persistentDataPath, AttemptsFolder, $"{stamp}-{Slug(_song.Title)}.json");
-            Debug.Log($"[Score] attempt started: '{_song.Title}', {Session.ScorableCount} notes, " +
+            Debug.Log($"[Score] attempt started at song time {songTime:0.0}: '{_song.Title}', {Session.ScorableCount} notes, " +
                       $"windows {perfectMs:0}/{greatMs:0}/{goodMs:0} ms, offset {inputOffsetMs:0} ms, tempo {clock.TempoMultiplier:0.##}");
         }
 

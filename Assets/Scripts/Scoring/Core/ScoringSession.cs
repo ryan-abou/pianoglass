@@ -64,14 +64,23 @@ namespace PianoGlass.Scoring
 
         /// <param name="isPlayable">Whether a pitch is on the player's
         /// keyboard; null means every pitch is.</param>
-        public ScoringSession(SongData song, TimingWindows windows, Func<int, bool> isPlayable = null)
+        /// <param name="scoreNotesFrom">Song time before which notes are not
+        /// part of this attempt at all -- neither hit nor missed. For an
+        /// attempt that begins part-way through the song (the keys were
+        /// confirmed while it was already playing): ScoreKeeper passes "now
+        /// minus the GOOD window", so every note still hittable counts and
+        /// none that went by unplayable is charged as a MISS.</param>
+        public ScoringSession(SongData song, TimingWindows windows, Func<int, bool> isPlayable = null,
+                              double scoreNotesFrom = double.NegativeInfinity)
         {
             Song = song ?? throw new ArgumentNullException(nameof(song));
             Windows = windows;
             _judged = new bool[song.Notes.Count];
 
             for (int i = 0; i < song.Notes.Count; i++)
-                if (isPlayable == null || isPlayable(song.Notes[i].Pitch)) _scorable.Add(i);
+                if ((isPlayable == null || isPlayable(song.Notes[i].Pitch)) &&
+                    song.Notes[i].StartTime >= scoreNotesFrom)
+                    _scorable.Add(i);
             _scorable.Sort((a, b) => song.Notes[a].StartTime.CompareTo(song.Notes[b].StartTime));
 
             FirstNoteTime = _scorable.Count > 0 ? song.Notes[_scorable[0]].StartTime : double.PositiveInfinity;

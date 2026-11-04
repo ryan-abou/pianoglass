@@ -51,6 +51,46 @@ namespace PianoGlass.Tests.EditMode
         }
 
         // ------------------------------------------------------------------
+        // Scoring from part-way through (attempt begun after a Verifying A)
+        // ------------------------------------------------------------------
+
+        [Test]
+        public void NotesBeforeScoreFromAreNotScored()
+        {
+            var s = new ScoringSession(SongData.TwinkleTwinkleLittleStar(), W, null, scoreNotesFrom: 1.0);
+            int all = Twinkle().ScorableCount;
+
+            Assert.AreEqual(all - 2, s.ScorableCount, "the two C4s at 0 and 0.5 s are out");
+            Assert.AreEqual(1.0, s.FirstNoteTime, 1e-9);
+        }
+
+        [Test]
+        public void NotesBeforeScoreFromAreNeverMissed()
+        {
+            var s = new ScoringSession(SongData.TwinkleTwinkleLittleStar(), W, null, scoreNotesFrom: 1.0);
+            s.Advance(1.05, 1.0);
+
+            Assert.AreEqual(0, s.Miss, "nothing before 1.0 s is judged, and 1.0 s is still in its window");
+            Assert.AreEqual(0, s.JudgedCount);
+        }
+
+        [Test]
+        public void ANoteAtScoreFromStillCounts()
+        {
+            var s = new ScoringSession(SongData.TwinkleTwinkleLittleStar(), W, null, scoreNotesFrom: 1.0);
+            s.OnNoteOn(G4, 1.010, 1.0);
+
+            Assert.AreEqual(1, s.Perfect);
+        }
+
+        [Test]
+        public void DefaultScoresEveryNote()
+        {
+            var s = new ScoringSession(SongData.TwinkleTwinkleLittleStar(), W);
+            Assert.AreEqual(SongData.TwinkleTwinkleLittleStar().Notes.Count, s.ScorableCount);
+        }
+
+        // ------------------------------------------------------------------
         // Matching
         // ------------------------------------------------------------------
 
