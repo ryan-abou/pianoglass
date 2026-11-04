@@ -297,6 +297,58 @@ namespace PianoGlass.Tests.EditMode
             Assert.AreEqual(AnchorPanelStatus.Recalibrating, s.Status);
         }
 
+        // ------------------------------------------------------------------
+        // A refused Middle C warning goes stale once the placement moves
+        // ------------------------------------------------------------------
+
+        private AnchoredCalibrationSession Refused()
+        {
+            AnchoredCalibrationSession s = StartCorrecting(CalibratedWithError(new Vector3(-0.036f, 0f, -0.036f)));
+            Run(s.OnMiddleCTouchedAsync(RealMiddleC()));
+            StringAssert.Contains("mm off", s.LastProblem);
+            return s;
+        }
+
+        [Test]
+        public void NudgeClearsARefusedMiddleCWarning()
+        {
+            AnchoredCalibrationSession s = Refused();
+            s.Nudge(new Vector3(0.001f, 0f, 0f));
+            Assert.IsNull(s.LastProblem, "the N mm was measured against the old placement");
+        }
+
+        [Test]
+        public void YawAdjustClearsARefusedMiddleCWarning()
+        {
+            AnchoredCalibrationSession s = Refused();
+            s.AdjustYaw(0.5f);
+            Assert.IsNull(s.LastProblem);
+        }
+
+        [Test]
+        public void ClearingTheNudgeClearsARefusedMiddleCWarning()
+        {
+            AnchoredCalibrationSession s = Refused();
+            s.ClearNudge();
+            Assert.IsNull(s.LastProblem);
+        }
+
+        [Test]
+        public void NudgeKeepsAProblemThatIsNotAboutPlacement()
+        {
+            // C5 to C8, as above: "not on this keyboard" does not depend on
+            // where the keys are drawn, so a nudge must not hide it.
+            float spacing = PianoKeyLayout.StandardWhiteKeySpacing;
+            float span = (PianoKeyLayout.CountWhiteKeys(72, 108) - 1) * spacing;
+            AnchoredCalibrationSession s = CalibratedWithError(Vector3.zero, 72, 108,
+                new Vector3(-span / 2f, 0.75f, 0.5f), new Vector3(span / 2f, 0.75f, 0.5f));
+            Run(s.ToggleCorrectionAsync());
+            StringAssert.Contains("not on this keyboard", s.LastProblem);
+
+            s.Nudge(new Vector3(0.001f, 0f, 0f));
+            StringAssert.Contains("not on this keyboard", s.LastProblem);
+        }
+
         [Test]
         public void ATouchOutsideACorrectionIsIgnored()
         {
