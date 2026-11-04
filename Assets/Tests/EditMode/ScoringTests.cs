@@ -84,6 +84,26 @@ namespace PianoGlass.Tests.EditMode
         }
 
         [Test]
+        public void LowestTempoIsTheSlowestEverPlayed()
+        {
+            ScoringSession s = Twinkle();
+            Assert.IsTrue(double.IsPositiveInfinity(s.LowestTempo));
+            s.Advance(0.1, 1.0);
+            s.Advance(0.2, 0.8);   // slowed while paused
+            s.OnNoteOn(G4, 1.0, 0.9);
+            s.Advance(1.2, 1.05);  // then sped up past where it started
+            Assert.AreEqual(0.8, s.LowestTempo, 1e-12);
+        }
+
+        [Test]
+        public void ZeroTempoIsNotATempo()
+        {
+            ScoringSession s = Twinkle();
+            s.Advance(0.1, 0.0);
+            Assert.IsTrue(double.IsPositiveInfinity(s.LowestTempo));
+        }
+
+        [Test]
         public void DefaultScoresEveryNote()
         {
             var s = new ScoringSession(SongData.TwinkleTwinkleLittleStar(), W);

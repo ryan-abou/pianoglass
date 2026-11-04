@@ -230,8 +230,11 @@ namespace PianoGlass.Scoring
         {
             try
             {
+                // The slowest tempo it was played at: a tempo change while
+                // paused keeps the attempt going rather than restarting it.
+                double tempo = double.IsInfinity(Session.LowestTempo) ? clock.TempoMultiplier : Session.LowestTempo;
                 AttemptRecord rec = Session.ToRecord(outcome, _startedUtc, DateTime.UtcNow.ToString("o"),
-                                                     clock.TempoMultiplier, inputOffsetMs);
+                                                     tempo, inputOffsetMs);
                 rec.displayLatencyMs = clock.DisplayLatencySeconds * 1000.0;
                 Directory.CreateDirectory(Path.GetDirectoryName(_path));
                 File.WriteAllText(_path, JsonUtility.ToJson(rec, true));
