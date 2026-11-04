@@ -583,6 +583,133 @@ Follow the four-phase build order in `docs/feature-evaluation.md` (Part 3):
 Personal bests / XP / achievements come after that. Multiplayer is much later,
 if ever.
 
+---
+
+## Batches (decided 2026-11-03)
+
+Features now ship in **batches**: several per headset round instead of one.
+The last features each drew one or two pieces of feedback and no bugs, and
+the bottleneck is the 11–13 min build and the single headset, not writing
+code. When Ryan says "do Batch A" (or B, C), follow this section.
+
+### How a batch runs
+
+1. **One branch per feature**, each started from the previous feature's
+   branch when they touch the same files (`SongClock`, `SongTransport`,
+   `ScoreKeeper`, `NoteHighway`), otherwise from `main`. Name them
+   `batchA-<feature>`. Same commit rules as always: real logical steps
+   (pure maths + tests, component, SceneSetup wiring, docs), each compiles,
+   push after each.
+2. **Do not parallelise with subagents or worktrees.** Every test run,
+   SceneSetup run and build needs exclusive use of `Library/`; extra
+   worktrees each need a full reimport. Write the features back to back.
+3. **Run the EditMode tests after each feature** (headless command in the
+   memory file / `adb kill-server` first).
+4. **One integration branch for the build**: `batchA-test`, made by merging
+   every feature branch of the batch. It is **never merged into main**. One
+   development build of it, one install, one headset session.
+5. **One combined checklist** for Ryan, grouped by feature, saying exactly
+   what to look at and what "pass" means.
+6. **Merge each passing feature branch into main separately** (in dependency
+   order), then record the results in this file and
+   `docs/feature-evaluation.md`. A feature that needs changes stays on its
+   branch and goes into the next batch's round; it does not block the rest.
+7. Tuning feedback from a round (colours, sizes, timings) becomes a small
+   branch in the next batch.
+
+Build housekeeping: an interrupted or failed build can leave
+`ProjectSettings.asset` with an extra `preloadedAssets` entry and
+`Assets/StreamingAssets/`, `Assets/Resources/PerformanceTestRun*` behind.
+They are build-time leftovers: revert/delete them (keep the tracked
+`Assets/StreamingAssets.meta`). A `clang++ ... failed due to signal`
+(0xC0000005) during IL2CPP is a toolchain crash, not our code: retry once.
+
+### Batch A — independent, mostly different files
+
+1. **Faster development builds** (tooling, do first). In
+   `Assets/Editor/BuildScript.cs`, for **development builds only**:
+   IL2CPP code generation "Faster (smaller) builds"
+   (`PlayerSettings.SetIl2CppCodeGeneration(NamedBuildTarget.Android,
+   Il2CppCodeGeneration.OptimizeSize)`) and C++ compiler configuration
+   `Debug` (`PlayerSettings.SetIl2CppCompilerConfiguration`). Set them for
+   the build and **restore the previous values afterwards** so release builds
+   and `ProjectSettings.asset` are untouched. Time one build before (the
+   baseline is 690–810 s) and after; record both here. Check on the headset
+   that it still holds 72 Hz.
+2. **Note names on slabs (F14).** Pure helper (pitch → "C", "F♯"; whether a
+   slab is tall enough for its label) with tests. In `NoteHighway`, one 3D
+   TextMeshPro label per slab near its bottom, on `PlaneAxes()`; font
+   material assigned by `SceneSetup`, never `Shader.Find`. No finger numbers.
+   One label per slab is fine for Twinkle; pool them when MIDI loading (F38)
+   arrives. Check the font has the ♯ glyph; fall back to "#" if not.
+   Headset: legible at playing distance.
+3. **Two calibration UX fixes** (from the grid tests): every note scores
+   MISS while the flow is still in Verifying (until A) — `ScoreKeeper` should
+   not start or advance an attempt while `calibration.AwaitingConfirmation`
+   (and the slabs then don't go slate); and a thumbstick nudge does not
+   re-run the Middle C check, leaving a stale "Middle C is N mm off" warning
+   — clear or recompute it when the nudge changes. Anchored-calibration
+   behaviour goes in Core with a test first.
+4. **Tempo ±5% (F26)**, 50–100%. **Control: a piano chord** (Ryan's choice,
+   2026-11-03): **hold A0 (MIDI 21) and press B0 (23) for −5%, C1 (24) for
+   +5%**, modelled on the existing A0 + A♯0 restart chord in
+   `SongTransport`. Only acts while the song is stopped or paused (each
+   attempt records one tempo); ignored while playing. Pure stepping/clamping
+   rule with tests; `SongTransport` applies it to `SongClock.TempoMultiplier`;
+   the panel shows "Tempo 85%"; the value persists in PlayerPrefs. A0 alone
+   must not trigger anything, and A0 + A♯0 must still restart.
+5. **Attempt schema v2.** Nothing visible. Add in one change:
+   `schemaVersion: 2`, `mode` ("continuous" / "wait"), `loopFromBar` /
+   `loopToBar` (−1 = no loop), `hand` ("both"), `metronome` (bool). Tests
+   that the existing v1 attempt files still load with sensible defaults.
+
+### Batch B — needs nothing from A except tempo (for the card)
+
+1. **Liquid Glass shader + shared colour tokens.** Hand-written URP unlit
+   transparent shader like `HighwayGrid.shader`: SDF rounded corners, tint,
+   rim brightest along the top, Fresnel sheen from the view angle. A
+   ScriptableObject token asset (glass tint/alpha/rim/radius, text
+   `#E9EEF2` / `#8A96A3`, the outcome colours from `OutcomeTint`). Material
+   created and assigned in `SceneSetup`. Try it first on the status panel.
+   Headset: readable over a bright window and a dark wall; 72 Hz.
+2. **Results card (F30) + bar heat strip (F32)**, built in that glass. A pure
+   tested summary from the attempt record: headline accuracy, verdict,
+   change vs the last attempt **at the same tempo and mode** (read from the
+   attempts folder), timing as "▼ 37 ms late" (▲/▼ + ms, never colour
+   alone), wrong-note count, one cell per bar on the score ramp with the
+   worst bar outlined. World-space canvas registered on the keyboard
+   (`CanvasCalibrationFollower`), built by `SceneSetup`; shows when an
+   attempt ends, hides on play.
+3. **Metronome (F27).** First measure the headset's audio output latency
+   (phone video/audio: click vs key light). Then schedule clicks on
+   `AudioSettings.dspTime` with `AudioSource.PlayScheduled`, from the
+   `BeatGrid` beat times minus that latency; accent the first beat of each
+   bar. **It clicks during the 3 s lead-in too** (Ryan, 2026-11-03 — this is
+   the count-in coming back, by request). On/off toggle, recorded as
+   `metronome` in the attempt. The toggle's control is not chosen yet: ask
+   Ryan, offering a piano chord in the same A0 family.
+
+### Batch C — all build on the loop
+
+1. **Loop worst bar ± 1 (F33).** Pure tested range rule from the worst bar,
+   clamped to the song. `SongClock` jumps back to just before the range when
+   it passes the end. `ScoreKeeper` today treats any backwards jump as a
+   restart (abandoned); a loop wrap must instead save that pass as its own
+   attempt with `loopFromBar`/`loopToBar`, judging only notes in the range.
+   Slabs already reset on `AttemptReset`.
+2. **Auto-tempo in the loop (F35).** Pure tested rule, shown on screen: after
+   a pass, accuracy ≥ 90% → +5% (max 100%), < 70% → −5% (min 50%), else hold.
+3. **Wait mode (F22).** Pure tested gate: the clock holds at the next note
+   until every pitch of it (chords included) is pressed. Pitch-only judging,
+   no PERFECT/GREAT; attempt `mode: "wait"`, never compared with continuous
+   attempts.
+4. **Memory fade (F36).** Pure tested opacity per loop pass (e.g. 100 / 60 /
+   30 / hidden); needs a transparent slab material assigned in `SceneSetup`.
+   **Open question — ask Ryan when Batch C starts:** should a faded note
+   still turn mint/slate once judged?
+
+After Batch C, Phase 3 starts with MIDI file loading (F38).
+
 The beat-lines branch was dropped on 2026-10-30 because of how the lines
 looked, not because of the idea. The grid is back in phase 1, and it must
 look **exactly like the reference video**, nothing like that branch. The
@@ -596,9 +723,8 @@ the 40/80/150 ms windows from more attempts; maybe a faster highway (0.5 m over
 Now / Next / Later tiers (waiting on whether the 12-week timeline is a hard
 deadline); `DeviceChecklist` step 4 never advances on device (dev tool only);
 measure the seated vertical overlay error (`docs/anchored-calibration-status.md`).
-**Calibration UX from the grid tests:** a thumbstick nudge does not re-run
-the Middle C check, so a stale "Middle C is 488 mm off" warning stays up;
-and every note scores MISS while the flow is still in Verifying (until A).
+The two calibration UX issues from the grid tests (stale Middle C warning
+after a nudge; MISS while in Verifying) are scheduled in Batch A.
 
 The song clock must stay a `double` of seconds with a tempo multiplier, and
 note positions must derive from `(noteTime − songTime)`, never from frame

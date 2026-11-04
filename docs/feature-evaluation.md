@@ -182,6 +182,8 @@ churn and one headset test.
    - no lines limited to the song's key range;
    - no count-in. It was dropped with the branch on 2026-10-30 and not
      revisited in the brainstorm; bring it back only if Ryan asks.
+     **Ryan asked (2026-11-03):** the metronome (step 8) clicks during the
+     3 s lead-in, which is the count-in returning as audio, not as lines.
 
    If the maths gets in the way of matching the video, change the maths.
 
@@ -251,6 +253,11 @@ point for the spike, not a substitute for looking at those frames.
 
 ### Phase 2: Results, tempo and practice
 
+Steps 5–12 (and F14, plus two calibration fixes) are grouped into
+Batches A, B and C, each tested in one headset round; see "Batches" in
+`CLAUDE.md`. Tempo (step 5) is changed with a piano chord: hold A0 and press
+B0 (−5%) or C1 (+5%).
+
 5. **Tempo ±5% (F26).**
 6. **Attempt schema v2.** It is not a feature but a prerequisite. Add `mode`
    (continuous/wait), `loopFromBar`/`loopToBar`, `hand`, `metronome` in one
@@ -260,7 +267,8 @@ point for the spike, not a substitute for looking at those frames.
    first real menu, so the shared glass shader is made here and every later
    panel reuses it. The card needs step 5 to compare at the same tempo.
 8. **Metronome (F27).** Independent; it is the first in-app audio, so the
-   latency measurement here also serves F9 if it ever happens.
+   latency measurement here also serves F9 if it ever happens. Clicks during
+   the lead-in too (Ryan, 2026-11-03).
 9. **Loop worst bar ± 1 (F33).** Most useful with step 7 showing which bar.
 10. **Auto-tempo in the loop (F35).** Needs steps 5 and 9.
 11. **Wait mode (F22).** After the loop, so scoring and transport aren't
