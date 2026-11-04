@@ -181,6 +181,7 @@ Assets/
     SongClock.cs                      double songTime, tempo multiplier, pre-song lead-in
     BeatGrid.cs                       pure: which song times get beat/bar lines, bar numbers, octave lanes
     SlabGeometry.cs                   pure slab bottom/height maths, shared by highway + tests
+    OutcomeTint.cs                    pure: outcome colours (mint/slate/coral) and their fade/pulse timing
     ActiveNoteSelector.cs             pure "is a note due soon" maths, shared by highlighter + tests
     DisplayLatencyFilter.cs           pure: rejects implausible display-latency readings, smooths ~1 s
   Scripts/Highway/
@@ -196,7 +197,7 @@ Assets/
   Scripts/Transport/
     SongTransport.cs                  play/pause/restart + MIDI chord + transport state (Meta-free)
     OvrSongTransport.cs               transport's OVRInput code
-  Tests/EditMode/                     260 tests (layout, calibration, clock, slabs, scoring, latency filter, beat grid), run headlessly
+  Tests/EditMode/                     270 tests (layout, calibration, clock, slabs, scoring, latency filter, beat grid), run headlessly
 ```
 
 OVRInput now lives in three places, split the same way as calibration:
@@ -285,7 +286,7 @@ Translucent mode (`Assets/KeyOverlayTranslucent.mat`), and adds
 |---|---|---|
 | `FullOverlay` | all 88 keys, opaque | the original behaviour; baseline to compare the others against |
 | `Translucent` | all 88 keys, alpha = `translucentAlpha` (0.25) | same coverage, see-through — needs the Transparent material above |
-| `ActiveKeysOnly` (default) | nothing | only a key whose note is due within `activeKeyLookaheadSeconds` (0.5 s) or is actually held lights up |
+| `ActiveKeysOnly` (default) | nothing | only a key whose note is due within `activeKeyLookaheadSeconds` (0.5 s) or is actually held lights up, at `activeKeysAlpha` (0.55) so a hand shows through |
 | `EdgeMarkers` | nothing | same "only when relevant" rule as `ActiveKeysOnly`, but each key shows as a thin bar across its far portion (`edgeMarkerDepthFraction` of key depth) instead of the full key, clear of where a resting finger touches |
 
 The Quest 2 has no depth sensor, so *any* virtual slab over a key draws on
@@ -527,8 +528,9 @@ PERFECT and ~90% accuracy is just that spread. Per-attempt mean drifts −28 to
 
 **Highway grid (Phase 1, F16/F17): merged 2026-11-03** after four headset
 rounds. The highway now leans back 60° (`NoteHighway.tiltDegrees = -60`,
-set by `SceneSetup`) and starts 15 mm behind the keys (`depthOffset`;
-20 mm until the key depth was measured, 2026-11-03).
+set by `SceneSetup`) and starts 5 mm behind the keys (`depthOffset`; 20 mm
+until the key depth was measured, then 15 mm, then 5 mm on 2026-11-03 once
+FullOverlay photos showed no real key ends behind the virtual ones).
 `HighwayGrid` draws, on exactly `NoteHighway.PlaneAxes()`: one thin lane line
 per octave (each C's left edge, full keyboard width), faint beat lines, bar
 lines brighter but not thicker, a dark bar-number tag left of the lowest key,
@@ -549,13 +551,26 @@ A♯ +3.4. White key depth is a property of the piano, set in the scene by
 overrides it on load any more (`AnchoredCalibrationSession.ConfiguredWhiteKeyDepth`),
 because every file saved before held the unmeasured 145 mm.
 
+**Outcome colours (Phase 1, F19/F20): merged 2026-11-03** (branch
+`phase1-outcome-colours`, three headset rounds). A hit slab fades to mint
+`#3DDC97` over 120 ms; a missed one to slate `#5A636E`; a restart puts every
+slab back to blue. A wrong or extra press turns its key bright coral
+`#FF6B5B` at once, a dimmer steady coral while held -- **never green**, which
+read as "that was fine" -- and on release fades out *as coral* over 300 ms
+(blends to the idle colour only in FullOverlay/Translucent, where a key is
+always drawn). All values in `OutcomeTint` (`Scripts/Song/`, pure, tested);
+`ScoreKeeper` forwards `NoteJudged` / `WrongNotePlayed` / `AttemptReset`, and
+`NoteHighway` and `PianoKeyHighlighter` only listen. Same branch: lit keys in
+ActiveKeysOnly draw at 55% opacity on the translucent material so hands show
+through. **Deliberately provisional:** colours, timings and alphas are to be
+revisited after more people have tried them.
+
 **Next, in order:**
 
 Follow the four-phase build order in `docs/feature-evaluation.md` (Part 3):
 
-1. **Highway looks finished**: ~~grid~~ (done); hit/miss/wrong colours on
-   slabs (F19/F20: hit mint `#3DDC97`, missed slate `#5A636E`, wrong coral
-   `#FF6B5B`); note names (F14).
+1. **Highway looks finished**: ~~grid~~ (done); ~~hit/miss/wrong colours~~
+   (done); note names (F14).
 2. **Results, tempo, practice**: tempo ±5%, attempt schema v2, results card
    with bar heat strip, metronome (measure headset audio output latency, then
    `AudioSource.PlayScheduled`, on/off in the attempt), loop worst bar,

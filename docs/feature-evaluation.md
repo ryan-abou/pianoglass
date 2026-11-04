@@ -187,8 +187,8 @@ churn and one headset test.
 
    **Done, merged 2026-11-03** (branch `phase1-grid`, four headset rounds of
    phone photos through the lens). What shipped: the highway leans back 60°
-   like the video's runway and starts 15 mm behind the keys (20 mm until the
-   key depth was measured on 2026-11-03); one lane line
+   like the video's runway and starts 5 mm behind the keys (20 mm until the
+   key depth was measured on 2026-11-03, then 15, then 5); one lane line
    per octave on each C's left edge (0.8 mm wide); beat lines very faint
    (alpha 0.06), bar lines brighter but not thicker (0.15); dark rounded tag
    with a white bar number, left of the lowest key, upright and facing the
@@ -240,6 +240,13 @@ point for the spike, not a substitute for looking at those frames.
 - Keep them in a scratch folder, not in the repo.
 3. **Outcome colouring (F19/F20).** After the grid, so the outcome colours
    are chosen against the final background.
+
+   **Done, merged 2026-11-03** (branch `phase1-outcome-colours`). Hit slab →
+   mint, missed slab → slate, each over 120 ms; wrong key → coral at once,
+   steady dimmer coral while held, fades out as coral on release (Ryan: going
+   back to green read as "correct"). Lit keys in ActiveKeysOnly at 55%
+   opacity so hands show through. Values are provisional, to be tuned after
+   more testers.
 4. **Note names on slabs (F14).**
 
 ### Phase 2: Results, tempo and practice
