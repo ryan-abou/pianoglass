@@ -138,6 +138,8 @@ namespace PianoGlass.Piano
         private readonly HashSet<int> _dueSoon = new HashSet<int>();
         /// <summary>Keys pulsing coral, and when the wrong press happened (realtime).</summary>
         private readonly Dictionary<int, float> _wrongAt = new Dictionary<int, float>();
+        /// <summary>Wrong keys already released, and when (realtime): fading out.</summary>
+        private readonly Dictionary<int, float> _wrongReleasedAt = new Dictionary<int, float>();
         private readonly List<int> _pulseDone = new List<int>();
         private MaterialPropertyBlock _block;
         private Material _opaqueMaterial;
@@ -244,10 +246,14 @@ namespace PianoGlass.Piano
             }
         }
 
-        /// <summary>A wrong key flashes coral, stays a steady dimmer coral for
-        /// as long as it is held -- never the pressed-key green, which would
-        /// say the press was fine -- and once released fades to its idle
-        /// colour and is handed back to its resting state.</summary>
+        /// <summary>
+        /// A wrong key flashes coral and stays a steady dimmer coral while
+        /// held. Once released it fades OUT as coral -- more transparent
+        /// until gone -- never through green or the greenish idle colour,
+        /// which read as "that was fine". In FullOverlay/Translucent with
+        /// idle keys showing, a key is always drawn, so there it blends to
+        /// the idle colour instead. Then the key is handed back.
+        /// </summary>
         private void UpdateWrongPulses()
         {
             if (_wrongAt.Count == 0) return;
@@ -257,18 +263,58 @@ namespace PianoGlass.Piano
             foreach (var kv in _wrongAt)
             {
                 int note = kv.Key;
-                float t = now - kv.Value;
-                bool held = IsHeld(note);
-                if (!held && !OutcomeTint.IsPulsing(t)) { _pulseDone.Add(note); continue; }
-                Color idle = PianoKeyLayout.IsBlackKey(note) ? idleBlackKey : idleWhiteKey;
-                SetColor(note, OutcomeTint.WrongKey(idle, held, t), forceVisible: true);
+                Color hue = OutcomeTint.WrongKeyHue(now - kv.Value);
+
+                if (IsHeld(note))
+                {
+                    _wrongReleasedAt.Remove(note);
+                    SetColor(note, hue, forceVisible: true);
+                    continue;
+                }
+
+                if (!_wrongReleasedAt.TryGetValue(note, out float released))
+                    _wrongReleasedAt[note] = released = now;
+                float fade = OutcomeTint.WrongReleaseFade(now - released);
+                if (fade <= 0f) { _pulseDone.Add(note); continue; }
+
+                if (IdleKeysVisible)
+                {
+                    Color idle = PianoKeyLayout.IsBlackKey(note) ? idleBlackKey : idleWhiteKey;
+                    SetColor(note, Color.Lerp(idle, hue, fade), forceVisible: true);
+                }
+                else
+                {
+                    FadeOut(note, hue, ModeAlpha * fade);
+                }
             }
 
             foreach (int note in _pulseDone)
             {
                 _wrongAt.Remove(note);
+                _wrongReleasedAt.Remove(note);
+                if (_renderers.TryGetValue(note, out var renderer) && renderer != null)
+                    renderer.sharedMaterial = MaterialForMode;
                 ApplyRestState(note, PianoKeyLayout.IsBlackKey(note));
             }
+        }
+
+        /// <summary>Whether a key at rest is drawn at all in this mode.</summary>
+        private bool IdleKeysVisible =>
+            showIdleKeys && (displayMode == DisplayMode.FullOverlay || displayMode == DisplayMode.Translucent);
+
+        /// <summary>Draws one key with an explicit alpha on the transparent
+        /// material, even in an otherwise opaque mode (EdgeMarkers), so a
+        /// released wrong key can fade out instead of popping off.</summary>
+        private void FadeOut(int note, Color color, float alpha)
+        {
+            if (!_renderers.TryGetValue(note, out var renderer) || renderer == null) return;
+            if (translucentMaterial != null) renderer.sharedMaterial = translucentMaterial;
+            renderer.enabled = true;
+            color.a = alpha;
+            renderer.GetPropertyBlock(_block);
+            _block.SetColor(BaseColorId, color);
+            _block.SetColor(ColorId, color);
+            renderer.SetPropertyBlock(_block);
         }
 
         private static bool IsHeld(int note) => MidiInput.Instance != null && MidiInput.Instance.IsHeld(note);
@@ -280,6 +326,10 @@ namespace PianoGlass.Piano
         {
             if (!PlacementValid || !_renderers.ContainsKey(note)) return;
             _wrongAt[note] = Time.realtimeSinceStartup;
+            _wrongReleasedAt.Remove(note);
+            // Coral now: ScoreKeeper runs after this component's Update, so
+            // waiting for the next pass would show a frame of green first.
+            SetColor(note, OutcomeTint.Wrong, forceVisible: true);
         }
 
         // ------------------------------------------------------------------
@@ -371,11 +421,12 @@ namespace PianoGlass.Piano
         /// using -- translucentMaterial in Translucent mode (its Transparent
         /// surface is what makes the alpha SetColor writes actually visible),
         /// keyMaterial/the fallback everywhere else.</summary>
+        private Material MaterialForMode =>
+            (ModeAlpha < 1f && translucentMaterial != null) ? translucentMaterial : _opaqueMaterial;
+
         private void ApplyMaterialForMode()
         {
-            Material mat = (ModeAlpha < 1f && translucentMaterial != null)
-                ? translucentMaterial
-                : _opaqueMaterial;
+            Material mat = MaterialForMode;
             if (mat == null) return;
 
             foreach (var renderer in _renderers.Values)
@@ -408,7 +459,12 @@ namespace PianoGlass.Piano
 
             // A fresh press starts clean. If it is wrong too, ScoreKeeper says
             // so later this frame and the coral comes straight back.
-            _wrongAt.Remove(note);
+            if (_wrongAt.Remove(note))
+            {
+                _wrongReleasedAt.Remove(note);
+                if (_renderers.TryGetValue(note, out var r) && r != null && MaterialForMode != null)
+                    r.sharedMaterial = MaterialForMode;
+            }
 
             // Velocity brightens the flash a little — free feedback on touch,
             // and a hint of the dynamics scoring you can add later.
@@ -419,6 +475,13 @@ namespace PianoGlass.Piano
         private void OnNoteOff(int note, double time)
         {
             if (!_renderers.ContainsKey(note)) return;
+            // A wrong key fades out as coral from here (UpdateWrongPulses);
+            // resting it now would blink it to idle/hidden for a frame.
+            if (_wrongAt.ContainsKey(note))
+            {
+                _wrongReleasedAt[note] = Time.realtimeSinceStartup;
+                return;
+            }
             ApplyRestState(note, PianoKeyLayout.IsBlackKey(note));
         }
 
