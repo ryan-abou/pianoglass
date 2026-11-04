@@ -251,6 +251,10 @@ point for the spike, not a substitute for looking at those frames.
    more testers.
 4. **Note names on slabs (F14).**
 
+   **Done, merged 2026-11-03** (Batch A). One TMP label per slab near its
+   bottom, on the wall plane, using the real ♯ glyph through the dynamic
+   LiberationSans fallback. Hidden when the slab is too short to hold it.
+
 ### Phase 2: Results, tempo and practice
 
 Steps 5–12 (and F14, plus two calibration fixes) are grouped into
@@ -258,10 +262,13 @@ Batches A, B and C, each tested in one headset round; see "Batches" in
 `CLAUDE.md`. Tempo (step 5) is changed with a piano chord: hold A0 and press
 B0 (−5%) or C1 (+5%).
 
-5. **Tempo ±5% (F26).**
+5. **Tempo ±5% (F26).** **Done, merged 2026-11-03** (Batch A). 25–200%,
+   saved in PlayerPrefs, always shown on the panel. A change while paused
+   part-way keeps the song where it is; the attempt records its slowest tempo.
 6. **Attempt schema v2.** It is not a feature but a prerequisite. Add `mode`
    (continuous/wait), `loopFromBar`/`loopToBar`, `hand`, `metronome` in one
-   change, so steps 7–12 don't each bump the schema.
+   change, so steps 7–12 don't each bump the schema. **Done, merged
+   2026-11-03** (Batch A): `schema` = 2; v1 files load with v1 defaults.
 7. **Liquid Glass material and colour-token asset**, then the **results
    card (F30) + bar heat strip (F32)** built in that glass. The card is the
    first real menu, so the shared glass shader is made here and every later

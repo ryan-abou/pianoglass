@@ -570,8 +570,9 @@ revisited after more people have tried them.
 Follow the four-phase build order in `docs/feature-evaluation.md` (Part 3):
 
 1. **Highway looks finished**: ~~grid~~ (done); ~~hit/miss/wrong colours~~
-   (done); note names (F14).
-2. **Results, tempo, practice**: tempo ±5%, attempt schema v2, results card
+   (done); ~~note names (F14)~~ (done, Batch A).
+2. **Results, tempo, practice**: ~~tempo ±5%~~, ~~attempt schema v2~~ (both
+   done, Batch A), results card
    with bar heat strip, metronome (measure headset audio output latency, then
    `AudioSource.PlayScheduled`, on/off in the attempt), loop worst bar,
    auto-tempo, wait mode (pitch-only judging), memory fade.
@@ -626,6 +627,24 @@ They are build-time leftovers: revert/delete them (keep the tracked
 
 ### Batch A — independent, mostly different files
 
+**Done: all five passed one headset round and were merged into main on
+2026-11-03** (branches `batchA-fastbuild`, `-notenames`, `-calibux`,
+`-schema2`, `-tempo`). Changes from the plan, all agreed with Ryan:
+- The schema version stays in the existing `schema` field (now 2)
+  instead of a new `schemaVersion`: v1 files store `"schema": 1`, so
+  they can be told apart, and `AttemptRecord.Parse` gives them the v1
+  defaults (continuous, no loop, both hands, no metronome).
+- Changing tempo while paused part-way keeps the song where it is. The
+  attempt records the **slowest** tempo it was played at
+  (`ScoringSession.LowestTempo`).
+- Pressing A while the song is already playing starts an attempt that
+  scores only the notes still ahead (`scoreNotesFrom`). An attempt that
+  is running when Verifying begins (a Middle C fix mid-song) is saved
+  as abandoned.
+- A nudge clears a refused Middle C warning rather than recomputing it.
+- `build.ps1` now runs `adb kill-server` first and waits for Unity
+  alone (`WaitForExit`), not its lingering adb child.
+
 1. **Faster development builds** (tooling, do first). In
    `Assets/Editor/BuildScript.cs`, for **development builds only**:
    IL2CPP code generation "Faster (smaller) builds"
@@ -639,7 +658,7 @@ They are build-time leftovers: revert/delete them (keep the tracked
    **Measured 2026-11-03:** before 690–810 s (release IL2CPP settings);
    after, a development build of `batchA-test` took **166 s** wall clock
    (Unity's own report 149 s), and **92 s** for the rebuild after a small
-   script change. 72 Hz on the headset: not yet checked.
+   script change. Holds 72 Hz on the headset (passed 2026-11-03).
 2. **Note names on slabs (F14).** Pure helper (pitch → "C", "F♯"; whether a
    slab is tall enough for its label) with tests. In `NoteHighway`, one 3D
    TextMeshPro label per slab near its bottom, on `PlaneAxes()`; font
