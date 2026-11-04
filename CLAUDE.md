@@ -636,6 +636,10 @@ They are build-time leftovers: revert/delete them (keep the tracked
    and `ProjectSettings.asset` are untouched. Time one build before (the
    baseline is 690–810 s) and after; record both here. Check on the headset
    that it still holds 72 Hz.
+   **Measured 2026-11-03:** before 690–810 s (release IL2CPP settings);
+   after, a development build of `batchA-test` took **166 s** wall clock
+   (Unity's own report 149 s), and **92 s** for the rebuild after a small
+   script change. 72 Hz on the headset: not yet checked.
 2. **Note names on slabs (F14).** Pure helper (pitch → "C", "F♯"; whether a
    slab is tall enough for its label) with tests. In `NoteHighway`, one 3D
    TextMeshPro label per slab near its bottom, on `PlaneAxes()`; font
