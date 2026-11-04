@@ -20,11 +20,11 @@ namespace PianoGlass.Transport
     ///
     /// Tempo (F26) is on the same bottom key: hold A0 and press B0 for -5%,
     /// C1 for +5%, 25-200% (TransportChord and TempoStep, both pure). Only
-    /// while the song is stopped or paused, so each attempt has one tempo:
-    /// a change while paused part-way also rewinds to the top (paused), which
-    /// ends that attempt the way a restart does -- otherwise its first half
-    /// would be at one tempo and its record would claim the other. The
-    /// tempo is saved to PlayerPrefs and applied to the clock on launch.
+    /// while the song is stopped or paused. A change while paused part-way
+    /// keeps the song where it is and the attempt going; the attempt then
+    /// records the slowest tempo it was played at (ScoringSession.LowestTempo,
+    /// Ryan 2026-11-03). The tempo is saved to PlayerPrefs and applied to
+    /// the clock on launch.
     /// </summary>
     public class SongTransport : MonoBehaviour
     {
@@ -124,7 +124,7 @@ namespace PianoGlass.Transport
         }
 
         /// <summary>One 5% tempo step (direction -1 or +1). Ignored while
-        /// playing; while paused part-way it also rewinds to the top.</summary>
+        /// playing; while paused part-way the song stays where it is.</summary>
         public void StepTempo(int direction)
         {
             if (!CanAcceptInput || clock == null) return;
@@ -142,13 +142,11 @@ namespace PianoGlass.Transport
                 return;
             }
 
-            bool rewound = clock.SongTime > -clock.LeadInSeconds + 1e-6;
-            if (rewound) clock.Restart();
             clock.TempoMultiplier = after;
             PlayerPrefs.SetInt(TempoPrefsKey, TempoStep.ToPercent(after));
             PlayerPrefs.Save();
-            Debug.Log($"[Transport] {TempoStep.Label(before)} -> {TempoStep.Label(after)}" +
-                      (rewound ? ", rewound to the top" : ""));
+            Debug.Log($"[Transport] {TempoStep.Label(before)} -> {TempoStep.Label(after)} " +
+                      $"at t = {clock.SongTime:0.0}s");
         }
 
         // ------------------------------------------------------------------
