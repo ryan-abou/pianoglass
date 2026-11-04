@@ -32,5 +32,19 @@ namespace PianoGlass.UI
         /// a flat side missing.</summary>
         public static float ClampRadius(float radius, Vector2 glassHalf) =>
             Mathf.Clamp(radius, 0f, Mathf.Min(glassHalf.x, glassHalf.y));
+
+        /// <summary>The radius a surface of <paramref name="style"/> is drawn
+        /// with: a pill is always fully round at its short side; panels and
+        /// rows use their token radius, clamped to fit.</summary>
+        public static float RadiusFor(GlassStyle style, float tokenRadius, Vector2 glassHalf) =>
+            style == GlassStyle.Pill
+                ? Mathf.Min(glassHalf.x, glassHalf.y)
+                : ClampRadius(tokenRadius, glassHalf);
+
+        /// <summary>A nested surface's radius for concentric curves: the
+        /// parent's radius minus the inset between them, never below
+        /// <paramref name="minimum"/>.</summary>
+        public static float Concentric(float parentRadius, float inset, float minimum = 0.004f) =>
+            Mathf.Max(minimum, parentRadius - Mathf.Max(0f, inset));
     }
 }
