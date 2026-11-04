@@ -636,15 +636,18 @@ namespace PianoGlass.EditorTools
             }
 
             Material material = GetOrCreateGlassMaterial();
-            PianoGlass.UI.GlassTokens tokens = GetOrCreateGlassTokens();
+            PianoGlass.UI.GlassTokens tokens = GetOrCreateGlassTokens(resetToCodeDefaults: true);
             if (material == null || tokens == null) return;
 
             AddGlass(canvas.gameObject, material, tokens);
+            var font = AssetDatabase.LoadAssetAtPath<TMPro.TMP_FontAsset>(LabelFontPath);
+            Material textMaterial = GlassTextMaterial.GetOrCreate(font);
 
             foreach (TMPro.TMP_Text t in canvas.GetComponentsInChildren<TMPro.TMP_Text>(true))
             {
                 Undo.RecordObject(t, "Glass text colour");
                 t.color = tokens.textPrimary;
+                if (textMaterial != null && t.font == font) t.fontSharedMaterial = textMaterial;
                 EditorUtility.SetDirty(t);
             }
 
@@ -683,10 +686,27 @@ namespace PianoGlass.EditorTools
             return mat;
         }
 
-        private static PianoGlass.UI.GlassTokens GetOrCreateGlassTokens()
+        /// <param name="resetToCodeDefaults">Overwrite the asset with
+        /// GlassTokens' code defaults, so the look under review is the one in
+        /// the code (as Configure Highway Grid does), not values saved by an
+        /// earlier version. Only Configure Liquid Glass passes true.</param>
+        private static PianoGlass.UI.GlassTokens GetOrCreateGlassTokens(bool resetToCodeDefaults = false)
         {
             var existing = AssetDatabase.LoadAssetAtPath<PianoGlass.UI.GlassTokens>(GlassTokensPath);
-            if (existing != null) return existing;
+            if (existing != null)
+            {
+                if (resetToCodeDefaults)
+                {
+                    var fresh = ScriptableObject.CreateInstance<PianoGlass.UI.GlassTokens>();
+                    EditorUtility.CopySerialized(fresh, existing);
+                    existing.name = "GlassTokens";   // CopySerialized copies the empty name too
+                    Object.DestroyImmediate(fresh);
+                    EditorUtility.SetDirty(existing);
+                    AssetDatabase.SaveAssets();
+                    Debug.Log($"[SceneSetup] {GlassTokensPath} reset to code defaults");
+                }
+                return existing;
+            }
 
             if (!AssetDatabase.IsValidFolder(UiFolder)) AssetDatabase.CreateFolder("Assets", "UI");
             var tokens = ScriptableObject.CreateInstance<PianoGlass.UI.GlassTokens>();
