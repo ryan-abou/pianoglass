@@ -63,15 +63,24 @@ namespace PianoGlass.Song
 
         /// <summary>
         /// A wrong key's colour <paramref name="secondsSincePress"/> after the
-        /// press. It starts bright coral; while still held it settles to a
-        /// dimmer, steady coral -- never back to the pressed-key green, which
-        /// would say the press was fine. Once released it fades to
-        /// <paramref name="idle"/>.
+        /// press: bright coral, settling to a dimmer steady coral. Always
+        /// coral -- never the pressed-key green (which says "correct") nor
+        /// the greenish idle colour; going back to either read as the press
+        /// having been fine (Ryan, 2026-11-03).
         /// </summary>
-        public static Color WrongKey(Color idle, bool held, float secondsSincePress)
+        public static Color WrongKeyHue(float secondsSincePress) =>
+            Color.Lerp(WrongHeld, Wrong, WrongPulse(secondsSincePress));
+
+        public const float WrongReleaseFadeSeconds = 0.3f;
+
+        /// <summary>Opacity of a wrong key after release: 1 at the release,
+        /// 0 after WrongReleaseFadeSeconds. It fades out as coral rather
+        /// than turning another colour.</summary>
+        public static float WrongReleaseFade(float secondsSinceRelease)
         {
-            Color settled = held ? WrongHeld : idle;
-            return Color.Lerp(settled, Wrong, WrongPulse(secondsSincePress));
+            if (secondsSinceRelease <= 0f) return 1f;
+            if (secondsSinceRelease >= WrongReleaseFadeSeconds) return 0f;
+            return 1f - secondsSinceRelease / WrongReleaseFadeSeconds;
         }
 
         /// <summary>The steady coral of a wrong key still held down.</summary>

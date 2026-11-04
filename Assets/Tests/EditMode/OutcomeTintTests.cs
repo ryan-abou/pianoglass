@@ -53,28 +53,31 @@ namespace PianoGlass.Tests.EditMode
         }
 
         [Test]
-        public void WrongKeyStartsBrightCoralHeldOrNot()
+        public void WrongKeyStartsBrightCoralAndSettlesToDimmerCoral()
         {
-            Color idle = new Color(0.55f, 0.60f, 0.50f, 1f);
-            AssertColor(OutcomeTint.Wrong, OutcomeTint.WrongKey(idle, held: true, 0f));
-            AssertColor(OutcomeTint.Wrong, OutcomeTint.WrongKey(idle, held: false, 0f));
+            AssertColor(OutcomeTint.Wrong, OutcomeTint.WrongKeyHue(0f));
+            AssertColor(OutcomeTint.WrongHeld, OutcomeTint.WrongKeyHue(5f));
+            Assert.Less(OutcomeTint.WrongHeld.r, OutcomeTint.Wrong.r, "dimmer than the flash");
         }
 
         [Test]
-        public void WrongKeyStaysCoralWhileHeldAndNeverTurnsGreen()
+        public void WrongKeyIsNeverGreenAtAnyTime()
         {
-            Color idle = new Color(0.55f, 0.60f, 0.50f, 1f);
-            Color late = OutcomeTint.WrongKey(idle, held: true, 5f);
-            AssertColor(OutcomeTint.WrongHeld, late);
-            Assert.Greater(late.r, late.g, "still reads as coral, not green");
-            Assert.Less(late.r, OutcomeTint.Wrong.r, "dimmer than the flash");
+            for (float t = 0f; t < 2f; t += 0.01f)
+            {
+                Color c = OutcomeTint.WrongKeyHue(t);
+                Assert.Greater(c.r, c.g, $"coral, not green, at {t:0.00} s");
+                Assert.Greater(c.r, c.b, $"coral, not blue, at {t:0.00} s");
+            }
         }
 
         [Test]
-        public void ReleasedWrongKeyFadesBackToIdle()
+        public void ReleasedWrongKeyFadesOutOverAboutAThirdOfASecond()
         {
-            Color idle = new Color(0.55f, 0.60f, 0.50f, 1f);
-            AssertColor(idle, OutcomeTint.WrongKey(idle, held: false, OutcomeTint.WrongPulseSeconds));
+            Assert.AreEqual(1f, OutcomeTint.WrongReleaseFade(0f));
+            Assert.AreEqual(0.5f, OutcomeTint.WrongReleaseFade(OutcomeTint.WrongReleaseFadeSeconds * 0.5f), 1e-5f);
+            Assert.AreEqual(0f, OutcomeTint.WrongReleaseFade(OutcomeTint.WrongReleaseFadeSeconds));
+            Assert.AreEqual(0f, OutcomeTint.WrongReleaseFade(5f));
         }
 
         [Test]
