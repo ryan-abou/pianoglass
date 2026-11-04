@@ -615,6 +615,11 @@ namespace PianoGlass.EditorTools
         private const string UiFolder = "Assets/UI";
         private const string GlassTokensPath = "Assets/UI/GlassTokens.asset";
 
+        /// <summary>Outfit's built-in line height is 1.26 em against
+        /// LiberationSans's 1.15; this keeps the status panel's many lines
+        /// the height they were laid out for (TMP units: 1/100 em).</summary>
+        private const float GlassLineSpacing = -11f;
+
         /// <summary>
         /// Liquid Glass (Batch B1): the shared glass material and token
         /// asset, created if missing, and a GlassPanel behind the status
@@ -640,14 +645,16 @@ namespace PianoGlass.EditorTools
             if (material == null || tokens == null) return;
 
             AddGlass(canvas.gameObject, material, tokens);
-            var font = AssetDatabase.LoadAssetAtPath<TMPro.TMP_FontAsset>(LabelFontPath);
+            TMPro.TMP_FontAsset font = GlassFont.GetOrCreate();
             Material textMaterial = GlassTextMaterial.GetOrCreate(font);
 
             foreach (TMPro.TMP_Text t in canvas.GetComponentsInChildren<TMPro.TMP_Text>(true))
             {
-                Undo.RecordObject(t, "Glass text colour");
+                Undo.RecordObject(t, "Glass text");
                 t.color = tokens.textPrimary;
-                if (textMaterial != null && t.font == font) t.fontSharedMaterial = textMaterial;
+                if (font != null) t.font = font;
+                if (textMaterial != null) t.fontSharedMaterial = textMaterial;
+                t.lineSpacing = GlassLineSpacing;
                 EditorUtility.SetDirty(t);
             }
 
@@ -738,10 +745,10 @@ namespace PianoGlass.EditorTools
 
             var calibration = Object.FindAnyObjectByType<KeyboardCalibration>();
             var scoreKeeper = Object.FindAnyObjectByType<ScoreKeeper>();
-            var font = AssetDatabase.LoadAssetAtPath<TMPro.TMP_FontAsset>(LabelFontPath);
+            TMPro.TMP_FontAsset font = GlassFont.GetOrCreate();
             if (calibration == null || scoreKeeper == null || font == null)
             {
-                Debug.LogError("[SceneSetup] Results card needs KeyboardCalibration, ScoreKeeper and the TMP font -- " +
+                Debug.LogError("[SceneSetup] Results card needs KeyboardCalibration, ScoreKeeper and the glass font -- " +
                                "run Configure Scoring first.");
                 return;
             }
