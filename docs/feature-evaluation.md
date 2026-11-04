@@ -104,7 +104,7 @@ A session is roughly one evening.
 | F14 | **Note name on each slab** (no finger numbers) | | Small. Pooled TMP labels in `NoteHighway`, `MidiInput.NoteName` | None |
 | F16 | **Bar lines and bar numbers on the highway**, cleanly drawn, matching the video's look | Maybe later | Small code, real visual risk (see "Harder than it looks"). Reuse `BeatGrid` maths from commit `cf0f8bc`; drawing in `NoteHighway` | None |
 | F17 | **Beat lines and lane lines**, as clean as the video's grid and as close to it as possible | Skip | Same as F16: one grid, built together | None |
-| F26 | **Tempo ±5% in the headset**, 50–100% | | Small. `SongTransport`, `OvrSongTransport` (or MIDI chord), readout on the panel | None |
+| F26 | **Tempo ±5% in the headset**, 25–200% (widened from 50–100% on 2026-11-03), always shown on the panel | | Small. `SongTransport`, `OvrSongTransport` (or MIDI chord), readout on the panel | None |
 | F27 | **Metronome** (already Next #1 in `CLAUDE.md`) | | Medium. Measure audio output latency, `AudioSource.PlayScheduled`, on/off in the attempt | None |
 | F30 | **Results card**: headline accuracy, verdict, change vs last attempt at the same tempo, wrong notes | | Small–medium. `ScoreKeeper` reads the previous attempt JSON; new results layout | None |
 | F32 | **Bar heat strip** on the results, worst bar outlined | | Small. UI cells from `ScoringSession.Bars()` | None |

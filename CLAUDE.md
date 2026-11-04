@@ -650,13 +650,16 @@ They are build-time leftovers: revert/delete them (keep the tracked
    re-run the Middle C check, leaving a stale "Middle C is N mm off" warning
    — clear or recompute it when the nudge changes. Anchored-calibration
    behaviour goes in Core with a test first.
-4. **Tempo ±5% (F26)**, 50–100%. **Control: a piano chord** (Ryan's choice,
+4. **Tempo ±5% (F26)**, **25–200%** (Ryan, 2026-11-03; was 50–100%). **Control: a piano chord** (Ryan's choice,
    2026-11-03): **hold A0 (MIDI 21) and press B0 (23) for −5%, C1 (24) for
    +5%**, modelled on the existing A0 + A♯0 restart chord in
    `SongTransport`. Only acts while the song is stopped or paused (each
    attempt records one tempo); ignored while playing. Pure stepping/clamping
    rule with tests; `SongTransport` applies it to `SongClock.TempoMultiplier`;
-   the panel shows "Tempo 85%"; the value persists in PlayerPrefs. A0 alone
+   the status panel **always** shows the tempo ("Tempo 85%"), not only
+   after a change; the value persists in PlayerPrefs. Above 100% the notes
+   give less warning (3 s of song time is 1.5 s real at 200%) and judging
+   windows stay in real ms, so nothing else needs changing. A0 alone
    must not trigger anything, and A0 + A♯0 must still restart.
 5. **Attempt schema v2.** Nothing visible. Add in one change:
    `schemaVersion: 2`, `mode` ("continuous" / "wait"), `loopFromBar` /
@@ -698,7 +701,9 @@ They are build-time leftovers: revert/delete them (keep the tracked
    attempt with `loopFromBar`/`loopToBar`, judging only notes in the range.
    Slabs already reset on `AttemptReset`.
 2. **Auto-tempo in the loop (F35).** Pure tested rule, shown on screen: after
-   a pass, accuracy ≥ 90% → +5% (max 100%), < 70% → −5% (min 50%), else hold.
+   a pass, accuracy ≥ 90% → +5% (up to 100%: the goal is full speed, so
+   auto-tempo never goes past it even though manual tempo can), < 70% → −5%
+   (down to 25%), else hold.
 3. **Wait mode (F22).** Pure tested gate: the clock holds at the next note
    until every pitch of it (chords included) is pressed. Pitch-only judging,
    no PERFECT/GREAT; attempt `mode: "wait"`, never compared with continuous
