@@ -117,7 +117,8 @@ namespace PianoGlass.Piano
             if (transport != null && clock != null)
             {
                 _sb.AppendLine();
-                _sb.AppendLine($"transport:  {StateLabel(transport.CurrentState)}   t = {clock.SongTime:0.0}s");
+                _sb.AppendLine($"transport:  {StateLabel(transport.CurrentState)}   t = {clock.SongTime:0.0}s   " +
+                               $"{TempoStep.Label(clock.TempoMultiplier)}");
             }
 
             if (score != null && score.Session != null) AppendScore(score);
