@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using PianoGlass.Piano;
 using PianoGlass.Scoring;
@@ -33,6 +34,13 @@ namespace PianoGlass.Highway
     /// greys to slate when it is missed, fading over OutcomeTint.FadeSeconds.
     /// Driven by ScoreKeeper's events, so judging stays in ScoringSession;
     /// a restart puts every slab back to its base colour.
+    ///
+    /// Note names (F14): each slab carries its pitch name ("C", "F♯") as a
+    /// 3D TextMeshPro label lying on the wall just in front of the slab,
+    /// at its bottom end -- the end that meets the key line. NoteLabel
+    /// (pure, tested) decides the text and whether the slab is tall enough
+    /// to hold it. One label per slab, built with the slabs; fine for an
+    /// 8-bar song, to be pooled when MIDI file loading (F38) arrives.
     /// </summary>
     public class NoteHighway : MonoBehaviour
     {
@@ -59,6 +67,22 @@ namespace PianoGlass.Highway
                  "note in a row read as two notes, not one long bar. Drawing " +
                  "only: note timing is untouched.")]
         [SerializeField] private float noteGapMetres = 0.008f;
+
+        [Header("Note names (F14)")]
+        [SerializeField] private bool showNoteNames = true;
+        [Tooltip("Assigned by SceneSetup (Configure Note Names) -- never looked up at runtime.")]
+        [SerializeField] private TMP_FontAsset labelFont;
+        [Tooltip("The font's SDF material, assigned by SceneSetup.")]
+        [SerializeField] private Material labelMaterial;
+        [SerializeField] private Color labelColor = new Color(0.04f, 0.07f, 0.12f, 0.92f);
+        [Tooltip("TMP font size; auto-sized down from this only where a name is " +
+                 "wider than its slab (two-character names on black keys).")]
+        [SerializeField] private float labelFontSize = 0.11f;
+        [Tooltip("Metres of wall the label takes up, along the wall.")]
+        [SerializeField] private float labelHeight = 0.011f;
+        [Tooltip("Clear wall above and below the label; a slab shorter than " +
+                 "labelHeight + 2 x this shows no name.")]
+        [SerializeField] private float labelPadding = 0.003f;
 
         [Header("Highway")]
         [Tooltip("Seconds of warning before a note is due -- how far up the wall it spawns.")]
@@ -106,6 +130,8 @@ namespace PianoGlass.Highway
         // written, so a slab's property block is only touched when it changes.
         private readonly List<(SongNote note, int index, Renderer renderer)> _slabs =
             new List<(SongNote, int, Renderer)>();
+        // Parallel to _slabs; null where labels are off or no font is assigned.
+        private readonly List<TextMeshPro> _labels = new List<TextMeshPro>();
         private Color[] _applied = new Color[0];
         private NoteOutcome[] _outcome = new NoteOutcome[0];
         private float[] _judgedAt = new float[0];
@@ -161,6 +187,7 @@ namespace PianoGlass.Highway
             if (valid) return; // Update() shows whatever is due on the next frame
             foreach (var (_, _, renderer) in _slabs)
                 if (renderer != null) renderer.enabled = false;
+            foreach (TextMeshPro label in _labels) SetLabelVisible(label, false);
         }
 
         private void OnNoteJudged(JudgementResult r)
@@ -199,12 +226,26 @@ namespace PianoGlass.Highway
             foreach (var (_, _, renderer) in _slabs)
                 if (renderer != null) Destroy(renderer.gameObject);
             _slabs.Clear();
+            foreach (TextMeshPro label in _labels)
+                if (label != null) Destroy(label.gameObject);
+            _labels.Clear();
 
             if (calibration == null || !calibration.IsCalibrated) return;
             PianoKeyLayout layout = calibration.Layout;
 
             Material mat = noteMaterial != null ? noteMaterial : CreateFallbackMaterial();
             if (mat == null) return;
+
+            bool labels = showNoteNames && labelFont != null;
+            if (showNoteNames && labelFont == null)
+                Debug.LogError("[NoteHighway] Note names on but no label font assigned -- " +
+                               "run PianoGlass/Scene/Configure Note Names.");
+            // Asked of the font itself, fallbacks included, so a font swap
+            // that loses the glyph degrades to "F#" rather than a box.
+            bool sharpGlyph = labels && labelFont.HasCharacter(NoteLabel.SharpGlyph, true, true);
+            if (labels)
+                Debug.Log("[NoteHighway] note names on, sharp drawn as " +
+                          (sharpGlyph ? "U+266F" : "'#' (font has no U+266F)"));
 
             for (int index = 0; index < _song.Notes.Count; index++)
             {
@@ -231,6 +272,7 @@ namespace PianoGlass.Highway
                 renderer.SetPropertyBlock(_block);
 
                 _slabs.Add((note, index, renderer));
+                _labels.Add(labels ? CreateLabel(note.Pitch, sharpGlyph, layout) : null);
             }
             _applied = new Color[_slabs.Count];
             for (int i = 0; i < _applied.Length; i++) _applied[i] = noteColor;
@@ -273,7 +315,12 @@ namespace PianoGlass.Highway
                 // needed on top of it.
                 bool visible = height > 0f;
                 renderer.enabled = visible;
-                if (!visible) continue;
+                TextMeshPro label = _labels[i];
+                if (!visible)
+                {
+                    SetLabelVisible(label, false);
+                    continue;
+                }
 
                 // PianoKey.Center is the middle of the key's playing surface
                 // (front to back), and Forward points at the player, so the
@@ -285,6 +332,23 @@ namespace PianoGlass.Highway
 
                 renderer.transform.SetPositionAndRotation(pos, tiltRotation);
                 renderer.transform.localScale = new Vector3(key.Width * widthFraction, height, slabThickness);
+
+                if (label != null)
+                {
+                    bool fits = NoteLabel.Fits(height, labelHeight, labelPadding);
+                    SetLabelVisible(label, fits);
+                    if (fits)
+                    {
+                        // Just proud of the slab's front face, so it never
+                        // z-fights it. TMP reads correctly with its +z
+                        // pointing away from the viewer: -normal, as
+                        // HighwayGrid's bar tags do.
+                        Vector3 labelPos = farEdge
+                            + tiltedUp * (b + NoteLabel.CentreAboveBottom(labelHeight, labelPadding))
+                            + normal * (slabThickness * 0.5f + 0.0005f);
+                        label.transform.SetPositionAndRotation(labelPos, Quaternion.LookRotation(-normal, tiltedUp));
+                    }
+                }
 
                 Color color = OutcomeTint.Slab(noteColor, _outcome[index], now - _judgedAt[index],
                                                OutcomeTint.Hit, OutcomeTint.Missed);
@@ -299,6 +363,36 @@ namespace PianoGlass.Highway
             _block.SetColor(ColorId, color);       // Built-in, harmless either way
             renderer.SetPropertyBlock(_block);
             _applied[slab] = color;
+        }
+
+        private TextMeshPro CreateLabel(int pitch, bool sharpGlyph, PianoKeyLayout layout)
+        {
+            // Its own object, not a child of the slab: the slab's scale is
+            // rewritten every frame and non-uniform, which would stretch the text.
+            var go = new GameObject($"Label_{pitch}");
+            go.transform.SetParent(transform, false);
+            var tmp = go.AddComponent<TextMeshPro>();
+            tmp.font = labelFont;
+            if (labelMaterial != null) tmp.fontSharedMaterial = labelMaterial;
+            tmp.text = NoteLabel.Name(pitch, sharpGlyph);
+            tmp.alignment = TextAlignmentOptions.Center;
+            tmp.fontStyle = FontStyles.Bold;
+            tmp.textWrappingMode = TextWrappingModes.NoWrap;
+            tmp.color = labelColor;
+            float width = layout.TryGetKey(pitch, out PianoKey key) ? key.Width * widthFraction : labelHeight * 2f;
+            tmp.rectTransform.sizeDelta = new Vector2(width, labelHeight);
+            tmp.enableAutoSizing = true;
+            tmp.fontSizeMax = labelFontSize;
+            tmp.fontSizeMin = labelFontSize * 0.5f;
+            tmp.fontSize = labelFontSize;
+            go.SetActive(false);
+            return tmp;
+        }
+
+        private static void SetLabelVisible(TextMeshPro label, bool visible)
+        {
+            if (label != null && label.gameObject.activeSelf != visible)
+                label.gameObject.SetActive(visible);
         }
 
         // ------------------------------------------------------------------
