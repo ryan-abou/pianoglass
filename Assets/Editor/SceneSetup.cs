@@ -569,6 +569,47 @@ namespace PianoGlass.EditorTools
             return mat;
         }
 
+        private const string LabelFontPath = "Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF.asset";
+
+        /// <summary>
+        /// Note names on the slabs (F14): gives NoteHighway its label font and
+        /// the font's own SDF material. Assigned here rather than looked up at
+        /// runtime -- a runtime lookup is the Shader.Find trap again. The
+        /// static LiberationSans atlas has no U+266F, but its fallback table
+        /// points at the dynamic LiberationSans atlas, whose TTF does, so the
+        /// real sharp sign draws; NoteHighway checks and falls back to '#'.
+        /// </summary>
+        [MenuItem("PianoGlass/Scene/Configure Note Names")]
+        public static void ConfigureNoteNames()
+        {
+            Scene scene = OpenScene();
+
+            var highway = Object.FindAnyObjectByType<NoteHighway>();
+            if (highway == null)
+            {
+                Debug.LogError("[SceneSetup] NoteHighway missing -- run Add Falling-Note Highway first.");
+                return;
+            }
+
+            var font = AssetDatabase.LoadAssetAtPath<TMPro.TMP_FontAsset>(LabelFontPath);
+            if (font == null)
+            {
+                Debug.LogError($"[SceneSetup] {LabelFontPath} not found -- import TMP Essential Resources.");
+                return;
+            }
+
+            var so = new SerializedObject(highway);
+            so.FindProperty("showNoteNames").boolValue = true;
+            so.FindProperty("labelFont").objectReferenceValue = font;
+            so.FindProperty("labelMaterial").objectReferenceValue = font.material;
+            so.ApplyModifiedProperties();
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+
+            Debug.Log($"[SceneSetup] Note names configured: font '{font.name}', material '{font.material.name}'.");
+        }
+
         [MenuItem("PianoGlass/Scene/Remove Test Cube")]
         public static void RemoveTestCube()
         {

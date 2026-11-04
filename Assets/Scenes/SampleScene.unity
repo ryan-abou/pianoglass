@@ -1134,6 +1134,13 @@ MonoBehaviour:
   slabThickness: 0.006
   widthFraction: 0.9
   noteGapMetres: 0.008
+  showNoteNames: 1
+  labelFont: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  labelMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  labelColor: {r: 0.04, g: 0.07, b: 0.12, a: 0.92}
+  labelFontSize: 0.11
+  labelHeight: 0.011
+  labelPadding: 0.003
   leadTimeSeconds: 3
   highwayHeight: 0.5
   depthOffset: 0.005
@@ -2124,6 +2131,7 @@ MonoBehaviour:
   surfaceOffset: 0.001
   displayMode: 2
   translucentAlpha: 0.25
+  activeKeysAlpha: 0.55
   activeKeyLookaheadSeconds: 0.5
   edgeMarkerDepthFraction: 0.2
 --- !u!114 &2007997131
