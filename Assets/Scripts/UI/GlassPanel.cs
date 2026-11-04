@@ -67,6 +67,10 @@ namespace PianoGlass.UI
             _renderer.sharedMaterial = glassMaterial;
             _renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             _renderer.receiveShadows = false;
+            // Awake runs even on a disabled component (ResultsCard may have
+            // hidden it first), and then OnEnable/OnDisable do not -- so the
+            // quad starts out matching this component's own state.
+            _renderer.enabled = enabled;
         }
 
         private void OnEnable()
