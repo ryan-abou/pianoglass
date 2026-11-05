@@ -5,6 +5,7 @@
         "PianoGlass.Piano.Core",
         "PianoGlass.Song",
         "PianoGlass.Scoring",
+        "PianoGlass.UI.Core",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

@@ -610,6 +610,113 @@ namespace PianoGlass.EditorTools
             Debug.Log($"[SceneSetup] Note names configured: font '{font.name}', material '{font.material.name}'.");
         }
 
+        private const string GlassShaderPath = "Assets/Shaders/LiquidGlass.shader";
+        private const string GlassMaterialPath = "Assets/LiquidGlass.mat";
+        private const string UiFolder = "Assets/UI";
+        private const string GlassTokensPath = "Assets/UI/GlassTokens.asset";
+
+        /// <summary>
+        /// Liquid Glass (Batch B1): the shared glass material and token
+        /// asset, created if missing, and a GlassPanel behind the status
+        /// panel's Canvas -- the first surface to try it on. The panel's text
+        /// takes the primary text colour from the tokens. The GlassPanel is
+        /// re-created so its code defaults (padding, depth) are the ones
+        /// under review, as Configure Highway Grid does.
+        /// </summary>
+        [MenuItem("PianoGlass/Scene/Configure Liquid Glass")]
+        public static void ConfigureLiquidGlass()
+        {
+            Scene scene = OpenScene();
+
+            var panel = Object.FindAnyObjectByType<CalibrationPanel>();
+            Canvas canvas = panel != null ? panel.GetComponentInParent<Canvas>() : null;
+            if (canvas == null)
+            {
+                Debug.LogError("[SceneSetup] No Canvas holding the CalibrationPanel -- nothing to put glass behind.");
+                return;
+            }
+
+            Material material = GetOrCreateGlassMaterial();
+            PianoGlass.UI.GlassTokens tokens = GetOrCreateGlassTokens(resetToCodeDefaults: true);
+            if (material == null || tokens == null) return;
+
+            AddGlass(canvas.gameObject, material, tokens);
+            var font = AssetDatabase.LoadAssetAtPath<TMPro.TMP_FontAsset>(LabelFontPath);
+            Material textMaterial = GlassTextMaterial.GetOrCreate(font);
+
+            foreach (TMPro.TMP_Text t in canvas.GetComponentsInChildren<TMPro.TMP_Text>(true))
+            {
+                Undo.RecordObject(t, "Glass text colour");
+                t.color = tokens.textPrimary;
+                if (textMaterial != null && t.font == font) t.fontSharedMaterial = textMaterial;
+                EditorUtility.SetDirty(t);
+            }
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            Debug.Log($"[SceneSetup] Liquid Glass on '{canvas.name}': {GlassMaterialPath}, {GlassTokensPath}.");
+        }
+
+        private static PianoGlass.UI.GlassPanel AddGlass(GameObject target, Material material, PianoGlass.UI.GlassTokens tokens)
+        {
+            var old = target.GetComponent<PianoGlass.UI.GlassPanel>();
+            if (old != null) Object.DestroyImmediate(old);
+            var glass = target.AddComponent<PianoGlass.UI.GlassPanel>();
+            var so = new SerializedObject(glass);
+            so.FindProperty("glassMaterial").objectReferenceValue = material;
+            so.FindProperty("tokens").objectReferenceValue = tokens;
+            so.ApplyModifiedProperties();
+            return glass;
+        }
+
+        private static Material GetOrCreateGlassMaterial()
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<Material>(GlassMaterialPath);
+            if (existing != null) return existing;
+
+            var shader = AssetDatabase.LoadAssetAtPath<Shader>(GlassShaderPath);
+            if (shader == null)
+            {
+                Debug.LogError($"[SceneSetup] {GlassShaderPath} not found -- no glass material.");
+                return null;
+            }
+            var mat = new Material(shader) { name = "LiquidGlass" };
+            AssetDatabase.CreateAsset(mat, GlassMaterialPath);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"[SceneSetup] created {GlassMaterialPath}");
+            return mat;
+        }
+
+        /// <param name="resetToCodeDefaults">Overwrite the asset with
+        /// GlassTokens' code defaults, so the look under review is the one in
+        /// the code (as Configure Highway Grid does), not values saved by an
+        /// earlier version. Only Configure Liquid Glass passes true.</param>
+        private static PianoGlass.UI.GlassTokens GetOrCreateGlassTokens(bool resetToCodeDefaults = false)
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<PianoGlass.UI.GlassTokens>(GlassTokensPath);
+            if (existing != null)
+            {
+                if (resetToCodeDefaults)
+                {
+                    var fresh = ScriptableObject.CreateInstance<PianoGlass.UI.GlassTokens>();
+                    EditorUtility.CopySerialized(fresh, existing);
+                    existing.name = "GlassTokens";   // CopySerialized copies the empty name too
+                    Object.DestroyImmediate(fresh);
+                    EditorUtility.SetDirty(existing);
+                    AssetDatabase.SaveAssets();
+                    Debug.Log($"[SceneSetup] {GlassTokensPath} reset to code defaults");
+                }
+                return existing;
+            }
+
+            if (!AssetDatabase.IsValidFolder(UiFolder)) AssetDatabase.CreateFolder("Assets", "UI");
+            var tokens = ScriptableObject.CreateInstance<PianoGlass.UI.GlassTokens>();
+            AssetDatabase.CreateAsset(tokens, GlassTokensPath);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"[SceneSetup] created {GlassTokensPath}");
+            return tokens;
+        }
+
         [MenuItem("PianoGlass/Scene/Remove Test Cube")]
         public static void RemoveTestCube()
         {

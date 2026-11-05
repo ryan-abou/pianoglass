@@ -1,0 +1,16 @@
+{
+    "name": "PianoGlass.UI.Core",
+    "rootNamespace": "",
+    "references": [
+        "PianoGlass.Song"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
