@@ -40,6 +40,11 @@ namespace PianoGlass.UI
         private Rect _builtRect;
         private float _builtScale = -1f;
         private Color? _tintOverride;
+        private bool _plain;
+        private int _sortingOrder;
+        private CanvasGroup[] _groups;
+        private float _fade = 1f;
+        private float _bottomExtension;
 
         private static readonly int TintId = Shader.PropertyToID("_Tint");
         private static readonly int TopGlowId = Shader.PropertyToID("_TopGlow");
@@ -55,6 +60,7 @@ namespace PianoGlass.UI
         private static readonly int ChromaId = Shader.PropertyToID("_ChromaStrength");
         private static readonly int HalfSizeId = Shader.PropertyToID("_HalfSize");
         private static readonly int RadiusId = Shader.PropertyToID("_Radius");
+        private static readonly int FadeId = Shader.PropertyToID("_Fade");
 
         public GlassTokens Tokens => tokens;
 
@@ -80,6 +86,40 @@ namespace PianoGlass.UI
             _builtScale = -1f; // re-applied on the next LateUpdate
         }
 
+        /// <summary>Extra glass below the rect, canvas units: text that runs
+        /// past its rect stays on the glass.</summary>
+        public void SetBottomExtension(float units)
+        {
+            if (Mathf.Approximately(units, _bottomExtension)) return;
+            _bottomExtension = units;
+            _builtScale = -1f;
+        }
+
+        /// <summary>A flat rounded shape, with no rim, sheen or fringe: thin
+        /// chart bars, where those would be all there is to see.</summary>
+        public void SetPlain(bool plain)
+        {
+            _plain = plain;
+            _builtScale = -1f;
+        }
+
+        /// <summary>Draw before glass with a higher order, whatever the
+        /// distances: a panel that slides out from behind another.</summary>
+        public void SetSortingOrder(int order)
+        {
+            _sortingOrder = order;
+            if (_renderer != null) _renderer.sortingOrder = order;
+        }
+
+        /// <summary>Update now rather than in LateUpdate: previews in edit
+        /// mode, where LateUpdate does not run.</summary>
+        public void RebuildNow()
+        {
+            if (_renderer == null) return;
+            Rebuild(_rect.rect, Mathf.Abs(transform.lossyScale.x));
+            ApplyFade();
+        }
+
         private void Awake()
         {
             _rect = (RectTransform)transform;
@@ -101,6 +141,7 @@ namespace PianoGlass.UI
             _renderer.sharedMaterial = glassMaterial;
             _renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             _renderer.receiveShadows = false;
+            _renderer.sortingOrder = _sortingOrder;
             // Awake runs even on a disabled component (ResultsCard may have
             // hidden it first), and then OnEnable/OnDisable do not -- so the
             // quad starts out matching this component's own state.
@@ -109,7 +150,7 @@ namespace PianoGlass.UI
 
         private void OnEnable()
         {
-            if (_renderer != null) _renderer.enabled = true;
+            if (_renderer != null) _renderer.enabled = _fade > 0f;
         }
 
         private void OnDisable()
@@ -129,6 +170,26 @@ namespace PianoGlass.UI
             Rect rect = _rect.rect;
             float scale = Mathf.Abs(transform.lossyScale.x);
             if (rect != _builtRect || !Mathf.Approximately(scale, _builtScale)) Rebuild(rect, scale);
+            ApplyFade();
+        }
+
+        /// <summary>A quad is not a Canvas graphic, so a CanvasGroup's alpha
+        /// does not reach it by itself. Costs one float compare a frame unless
+        /// the alpha is actually changing.</summary>
+        private void ApplyFade()
+        {
+            if (_groups == null) _groups = GetComponentsInParent<CanvasGroup>(true);
+            if (_groups.Length == 0) return;
+
+            float fade = 1f;
+            foreach (CanvasGroup g in _groups) fade *= g.alpha;
+            if (Mathf.Approximately(fade, _fade)) return;
+
+            _fade = fade;
+            _renderer.GetPropertyBlock(_block);
+            _block.SetFloat(FadeId, fade);
+            _renderer.SetPropertyBlock(_block);
+            _renderer.enabled = enabled && fade > 0f;
         }
 
         private void Rebuild(Rect rect, float metresPerUnit)
@@ -137,6 +198,7 @@ namespace PianoGlass.UI
             _builtScale = metresPerUnit;
             if (metresPerUnit <= 0f) return;
 
+            rect.yMin -= _bottomExtension;
             Vector2 half = GlassShape.HalfSizeMetres(rect.size, metresPerUnit, paddingMetres);
             BuildQuad(_mesh, half, metresPerUnit);
 
@@ -147,6 +209,18 @@ namespace PianoGlass.UI
 
             _renderer.GetPropertyBlock(_block);
             Apply(_block, tokens, style, half, _tintOverride);
+            if (_plain)
+            {
+                _block.SetColor(HairlineColorId, Color.clear);
+                _block.SetFloat(BevelLightId, 0f);
+                _block.SetFloat(BackLightId, 0f);
+                _block.SetFloat(SheenId, 0f);
+                _block.SetFloat(FresnelId, 0f);
+                _block.SetFloat(ChromaId, 0f);
+                _block.SetFloat(TopGlowId, 0f);
+                // Chart bars keep a small radius; a plain pill stays a pill.
+                if (style == GlassStyle.Row) _block.SetFloat(RadiusId, GlassShape.ClampRadius(0.002f, half));
+            }
             _renderer.SetPropertyBlock(_block);
         }
 

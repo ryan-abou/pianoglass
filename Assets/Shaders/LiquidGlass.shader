@@ -47,6 +47,7 @@ Shader "PianoGlass/LiquidGlass"
         _ChromaStrength ("Chroma fringe", Float) = 0.35
         _HalfSize ("Half size (m)", Vector) = (0.3, 0.3, 0, 0)
         _Radius ("Corner radius (m)", Float) = 0.028
+        _Fade ("Fade", Float) = 1.0
     }
 
     SubShader
@@ -83,6 +84,7 @@ Shader "PianoGlass/LiquidGlass"
                 half _ChromaStrength;
                 float4 _HalfSize;
                 float _Radius;
+                half _Fade;
             CBUFFER_END
 
             struct Attributes
@@ -185,7 +187,7 @@ Shader "PianoGlass/LiquidGlass"
                              + fringe;
                 half alpha = saturate(a + hair * _HairlineColor.a * 0.5 + bevel * 0.25);
 
-                return half4((body + light3) * coverage, alpha * coverage);
+                return half4((body + light3) * coverage, alpha * coverage) * _Fade;
             }
             ENDHLSL
         }

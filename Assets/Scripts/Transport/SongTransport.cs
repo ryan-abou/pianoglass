@@ -131,6 +131,21 @@ namespace PianoGlass.Transport
             clock.Play();
         }
 
+        /// <summary>Restart from the top at this tempo, saved like any tempo
+        /// change: the results card's "Try 90% tempo". It works while the
+        /// clock is still running past the last note, which StepTempo would
+        /// refuse, because restarting ends that anyway.</summary>
+        public void RestartAtTempo(int percent)
+        {
+            if (!CanAcceptInput || clock == null) return;
+            float tempo = TempoStep.Sanitize(percent / 100f);
+            clock.TempoMultiplier = tempo;
+            PlayerPrefs.SetInt(TempoPrefsKey, TempoStep.ToPercent(tempo));
+            PlayerPrefs.Save();
+            Debug.Log($"[Transport] restarting at {TempoStep.Label(tempo)}");
+            RestartAndPlay();
+        }
+
         /// <summary>One 5% tempo step (direction -1 or +1). Ignored while
         /// playing; while paused part-way the song stays where it is.</summary>
         public void StepTempo(int direction)

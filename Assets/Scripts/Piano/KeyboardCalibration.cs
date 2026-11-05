@@ -94,6 +94,12 @@ namespace PianoGlass.Piano
         /// A to confirm them. SongTransport leaves A alone meanwhile.</summary>
         public bool AwaitingConfirmation => _owner != null && _owner.AwaitingConfirmation;
 
+        /// <summary>Calibration has instructions for the player to read:
+        /// capturing, localizing, Verifying, or a Middle C fix. Nudging does
+        /// not count; it needs no instructions.</summary>
+        public bool NeedsPlayer => !IsPlacementValid || CurrentStage != Stage.Calibrated || AwaitingConfirmation ||
+                                   (_owner != null && _owner.IsCorrecting);
+
         private int _confirmedFrame = -1;
 
         /// <summary>A confirmed the placement this frame. Lets SongTransport

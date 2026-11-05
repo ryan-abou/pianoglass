@@ -91,6 +91,9 @@ namespace PianoGlass.Scoring
     /// loop, both hands, no metronome). The version stays in the existing
     /// "schema" field: v1 files store it explicitly, so it tells them apart,
     /// where a new field would take its v2 initializer when missing.
+    ///
+    /// v3 (2026-11-04) adds rank and bestStreak for the results card. Parse
+    /// works both out for older files, from what those files already hold.
     /// </summary>
     [Serializable]
     public sealed class AttemptRecord
@@ -98,7 +101,7 @@ namespace PianoGlass.Scoring
         public const string Completed = "completed";
         public const string Abandoned = "abandoned";
 
-        public const int CurrentSchema = 2;
+        public const int CurrentSchema = 3;
         public const string Continuous = "continuous";
         public const string Wait = "wait";
         public const string BothHands = "both";
@@ -132,6 +135,11 @@ namespace PianoGlass.Scoring
 
         public int score;
         public double accuracy;
+        /// <summary>The letter shown (ResultRank). Accuracy is the data; this
+        /// is only what the player saw.</summary>
+        public string rank;
+        /// <summary>Longest run of hit notes with no miss or wrong key.</summary>
+        public int bestStreak;
         public int perfect, great, good, miss;
         public int notesHit, notesMissed;
         public int wrongPitch, extra;
@@ -163,6 +171,8 @@ namespace PianoGlass.Scoring
             if (rec.notes == null) rec.notes = new List<JudgementResult>();
             if (rec.wrongNotes == null) rec.wrongNotes = new List<WrongNote>();
             if (rec.bars == null) rec.bars = new List<BarStats>();
+            if (string.IsNullOrEmpty(rec.rank)) rec.rank = ResultRank.For(rec.accuracy);
+            if (rec.schema < 3) rec.bestStreak = StreakCalculator.Best(rec.notes, rec.wrongNotes);
             return rec;
         }
     }

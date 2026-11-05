@@ -33,6 +33,19 @@ namespace PianoGlass.Piano
         [SerializeField] private Metronome metronome;
 
         private readonly StringBuilder _sb = new StringBuilder(256);
+        private PianoGlass.UI.GlassPanel _glass;
+
+        /// <summary>The panel's line count changes with what it is saying, and
+        /// its longest text runs past the Canvas rect. In steps of 10 mm, so
+        /// the glass only rebuilds when a line or so comes or goes.</summary>
+        private void LateUpdate()
+        {
+            if (_glass == null || text == null || text.textInfo == null || text.textInfo.characterCount == 0) return;
+            var canvasRect = (RectTransform)_glass.transform;
+            float bottom = canvasRect.InverseTransformPoint(text.transform.TransformPoint(text.textBounds.min)).y;
+            float over = canvasRect.rect.yMin - bottom;
+            _glass.SetBottomExtension(over > 0f ? Mathf.Ceil(over / 10f) * 10f : 0f);
+        }
 
         private void Reset()
         {
@@ -54,6 +67,7 @@ namespace PianoGlass.Piano
             if (flow == null) flow = FindAnyObjectByType<CalibrationFlowController>();
             if (score == null) score = FindAnyObjectByType<ScoreKeeper>();
             if (metronome == null) metronome = FindAnyObjectByType<Metronome>();
+            _glass = GetComponentInParent<PianoGlass.UI.GlassPanel>();
 
             // Development builds: the headset test checklist, beside this panel.
             if (Debug.isDebugBuild && flow != null && text != null)

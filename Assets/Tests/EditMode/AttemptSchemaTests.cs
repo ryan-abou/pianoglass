@@ -78,10 +78,10 @@ namespace PianoGlass.Tests.EditMode
         }
 
         [Test]
-        public void NewRecordIsV2WithDefaults()
+        public void NewRecordIsCurrentSchemaWithDefaults()
         {
             var rec = new AttemptRecord();
-            Assert.AreEqual(2, rec.schema);
+            Assert.AreEqual(3, rec.schema);
             Assert.AreEqual(AttemptRecord.CurrentSchema, rec.schema);
             Assert.AreEqual("continuous", rec.mode);
             Assert.AreEqual(-1, rec.loopFromBar);
@@ -100,7 +100,7 @@ namespace PianoGlass.Tests.EditMode
             };
             AttemptRecord back = AttemptRecord.Parse(JsonUtility.ToJson(rec, true));
 
-            Assert.AreEqual(2, back.schema);
+            Assert.AreEqual(3, back.schema);
             Assert.AreEqual("wait", back.mode);
             Assert.AreEqual(3, back.loopFromBar);
             Assert.AreEqual(5, back.loopToBar);
@@ -112,7 +112,7 @@ namespace PianoGlass.Tests.EditMode
         public void V2JsonNamesTheNewFields()
         {
             string json = JsonUtility.ToJson(new AttemptRecord());
-            StringAssert.Contains("\"schema\":2", json);
+            StringAssert.Contains("\"schema\":3", json);
             StringAssert.Contains("\"mode\":\"continuous\"", json);
             StringAssert.Contains("\"loopFromBar\":-1", json);
             StringAssert.Contains("\"loopToBar\":-1", json);

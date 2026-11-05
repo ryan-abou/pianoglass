@@ -122,11 +122,12 @@ A session is roughly one evening.
 | F12 + F24 | **One hand-tracked panel**: dock and in-song controls merged (songs, settings, stop, tempo, progress, toggles). Ryan: "make both the last panel and this panel into one thing", read as the F12 dock + F24 | Skip, Skip | Medium after F44. New Canvas registered on the keyboard via `CanvasCalibrationFollower`, wired in `SceneSetup` | None |
 | S1 | **Settings menu** (new; follows from F13 and F18): hand colours, due-key toggle, display mode, passthrough, wait mode, metronome, memory fade | — | Medium. A Meta-free `PianoSettings` component that saves to PlayerPrefs (as display mode does now), and its page on the F12/F24 panel | None |
 
-### Maybe later (15 items)
+### Maybe later (16 items)
 
 | # | Feature | Mine | When to revisit |
 |---|---|---|---|
 | C1 | **Free colour picker for hand colours** (new; follows from F13) | — | **Planned**: once the menus (S1 + the hand-tracked panel) exist and presets have shipped. Same guard rail as the presets: the outcome colours stay reserved |
+| A1 | **Better UI animations in general** (new; Ryan, 2026-11-04). First case: the results details panel's sections are meant to fade in one after another, but on the headset everything appears at once | — | After the MVP and the other important features |
 | F37 | Per-song history | Maybe later | **Queued**: build once F30, F38 and F7 are done (Ryan wants it) |
 | F39 | Exercises (scales, chords) | Maybe later | After asking experienced pianists which drills matter most |
 | F6 | Letter labels on every key | Maybe later | Paint on the key plane covers hands (no depth sensor) |
@@ -302,7 +303,9 @@ B0 (−5%) or C1 (+5%).
     - poke a world-space button;
     - switch from controllers to hands and back without breaking
       calibration;
-    - frame time stays at 72 Hz.
+    - frame time stays at 72 Hz;
+    - how accurate hand-based calibration is against the controller, for the
+      two ideas in `CLAUDE.md` ("Calibration ideas to measure").
 20. **Settings model (S1)**: a Meta-free `PianoSettings` saved to
     PlayerPrefs. It moves display mode, passthrough, wait mode, metronome and
     memory fade toggles into one place. **Hand-colour presets (F13)** and
