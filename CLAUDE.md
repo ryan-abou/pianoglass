@@ -498,6 +498,13 @@ recenters of up to 1.1 m / 180° kept the keys on the piano).
 - **`OVRInput.Button.PrimaryIndexTrigger` without a `Controller` argument**
   resolves against whichever controller is "active", and `Secondary...` may
   resolve to nothing. Always name `OVRInput.Controller.RTouch` / `LTouch`.
+- **The first `DateTime.Now` on the headset takes about 380 ms.** It froze the
+  first press of play for a visible moment until `ScoreKeeper` began doing it
+  on a background thread at launch (measured 2026-11-05: longest frame after
+  that press went from 390 ms to 28 ms). Any other first-use cost on the main
+  thread will look the same, and it looks like a graphics stall when it is not:
+  profile before guessing. A binary profiler capture from a development build
+  names the method on the longest frame.
 - **`FindFirstObjectByType` is deprecated in 6.6** — use `FindAnyObjectByType`.
 - **`git commit -am` ignores untracked files.** Any new Unity asset — script,
   material, prefab, scene — needs `git add -A`. Check `git status` first.
