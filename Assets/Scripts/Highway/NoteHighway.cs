@@ -137,14 +137,6 @@ namespace PianoGlass.Highway
         private float[] _judgedAt = new float[0];
         private MaterialPropertyBlock _block;
 
-        // How many frames the warm-up holds its specks, enough for the render
-        // thread to have drawn them, and how big they are: under a pixel.
-        private const int WarmUpFrames = 3;
-        private const float WarmUpDistance = 0.5f;
-        private const float WarmUpSize = 0.0003f;
-        private int _warmUpFramesLeft;
-        private float _warmUpStarted;
-
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         private static readonly int ColorId = Shader.PropertyToID("_Color");
 
@@ -231,7 +223,6 @@ namespace PianoGlass.Highway
         /// (it starts disabled).</summary>
         private void Build()
         {
-            _warmUpFramesLeft = 0;
             foreach (var (_, _, renderer) in _slabs)
                 if (renderer != null) Destroy(renderer.gameObject);
             _slabs.Clear();
@@ -287,18 +278,11 @@ namespace PianoGlass.Highway
             for (int i = 0; i < _applied.Length; i++) _applied[i] = noteColor;
 
             Debug.Log($"[NoteHighway] built {_slabs.Count} note slabs for '{_song.Title}'");
-            _warmUpFramesLeft = WarmUpFrames;
         }
 
         private void Update()
         {
             if (clock == null || calibration == null || !calibration.IsPlacementValid || _slabs.Count == 0) return;
-
-            if (_warmUpFramesLeft > 0)
-            {
-                WarmUp();
-                return;
-            }
 
             PianoKeyLayout layout = calibration.Layout;
             // Where the song will be when this frame reaches the display, not
@@ -370,47 +354,6 @@ namespace PianoGlass.Highway
                                                OutcomeTint.Hit, OutcomeTint.Missed);
                 if (color != _applied[i]) SetSlabColor(renderer, i, color);
             }
-        }
-
-        /// <summary>
-        /// Slabs and labels are hidden until a song starts, so their first
-        /// draw and first text setup would otherwise land on the first press
-        /// of play, as a visible freeze. Do it right after the build instead:
-        /// a speck of slab and every label, under a pixel, in front of the
-        /// camera because anything out of view is culled and never drawn.
-        /// The normal pass takes over the frame after.
-        /// </summary>
-        private void WarmUp()
-        {
-            Camera cam = Camera.main;
-            if (cam == null)
-            {
-                _warmUpFramesLeft = 0;
-                return;
-            }
-
-            if (_warmUpFramesLeft == WarmUpFrames) _warmUpStarted = Time.realtimeSinceStartup;
-            _warmUpFramesLeft--;
-            bool done = _warmUpFramesLeft == 0;
-
-            Transform eye = cam.transform;
-            Vector3 speck = eye.position + eye.forward * WarmUpDistance;
-            Renderer slab = _slabs[0].renderer;
-            slab.enabled = !done;
-            slab.transform.SetPositionAndRotation(speck, eye.rotation);
-            slab.transform.localScale = Vector3.one * WarmUpSize;
-
-            foreach (TextMeshPro label in _labels)
-            {
-                if (label == null) continue;
-                SetLabelVisible(label, !done);
-                label.transform.SetPositionAndRotation(speck, eye.rotation);
-                label.transform.localScale = done ? Vector3.one : Vector3.one * (WarmUpSize / labelHeight);
-            }
-
-            if (done)
-                Debug.Log($"[NoteHighway] warm-up took {(Time.realtimeSinceStartup - _warmUpStarted) * 1000f:0} ms " +
-                          $"over {WarmUpFrames} frames");
         }
 
         private void SetSlabColor(Renderer renderer, int slab, Color color)
