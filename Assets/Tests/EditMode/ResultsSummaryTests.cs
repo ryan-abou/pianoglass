@@ -232,10 +232,10 @@ namespace PianoGlass.Tests.EditMode
             Suggestion s = Pick(92, 85, bars: bars);
             Assert.AreEqual(SuggestionRule.WeakBars, s.Rule);
             Assert.AreEqual("Bar 3 needs work", s.Message);
-            Assert.AreEqual("Loop bar 3", s.ButtonText);
+            Assert.AreEqual("Loop bars 2–4", s.ButtonText);
             Assert.AreEqual(SuggestionAction.LoopBars, s.Action);
-            Assert.AreEqual(3, s.FromBar);
-            Assert.AreEqual(3, s.ToBar);
+            Assert.AreEqual(2, s.FromBar);
+            Assert.AreEqual(4, s.ToBar);
         }
 
         [Test]

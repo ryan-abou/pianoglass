@@ -77,8 +77,11 @@ namespace PianoGlass.Scoring
         /// confirmed while it was already playing): ScoreKeeper passes "now
         /// minus the GOOD window", so every note still hittable counts and
         /// none that went by unplayable is charged as a MISS.</param>
+        /// <param name="scoreNotesUntil">Song time at and after which notes
+        /// are not part of this attempt: the end of a practice loop.</param>
         public ScoringSession(SongData song, TimingWindows windows, Func<int, bool> isPlayable = null,
-                              double scoreNotesFrom = double.NegativeInfinity)
+                              double scoreNotesFrom = double.NegativeInfinity,
+                              double scoreNotesUntil = double.PositiveInfinity)
         {
             Song = song ?? throw new ArgumentNullException(nameof(song));
             Windows = windows;
@@ -86,7 +89,8 @@ namespace PianoGlass.Scoring
 
             for (int i = 0; i < song.Notes.Count; i++)
                 if ((isPlayable == null || isPlayable(song.Notes[i].Pitch)) &&
-                    song.Notes[i].StartTime >= scoreNotesFrom)
+                    song.Notes[i].StartTime >= scoreNotesFrom - 1e-9 &&
+                    song.Notes[i].StartTime < scoreNotesUntil - 1e-9)
                     _scorable.Add(i);
             _scorable.Sort((a, b) => song.Notes[a].StartTime.CompareTo(song.Notes[b].StartTime));
 

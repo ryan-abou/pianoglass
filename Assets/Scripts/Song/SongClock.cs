@@ -37,6 +37,16 @@ namespace PianoGlass.Song
 
         public bool IsPlaying { get; private set; }
 
+        /// <summary>The practice loop running, if any. While set, Advance
+        /// wraps the clock at its end. Restart() clears it: restarting from
+        /// the top is how a loop is left.</summary>
+        public LoopRange? Loop { get; private set; }
+
+        /// <summary>How many times a loop has wrapped since launch. Anything
+        /// that treats a backwards jump as a restart reads this to tell a
+        /// wrap apart.</summary>
+        public int Wraps { get; private set; }
+
         /// <summary>No real headset is this slow; anything larger is a bad
         /// reading, and drawing that far ahead would be worse than none.</summary>
         public const double MaxDisplayLatencySeconds = 0.1;
@@ -104,6 +114,25 @@ namespace PianoGlass.Song
         public void Advance(double deltaSeconds)
         {
             SongTime += deltaSeconds * tempoMultiplier;
+
+            // Subtracting the pass length, not setting WrapTo, keeps whatever
+            // the frame overshot by, so a loop drifts no more than the clock.
+            if (Loop is LoopRange loop && loop.PassLength > 0.0)
+            {
+                while (SongTime >= loop.NotesUntil)
+                {
+                    SongTime -= loop.PassLength;
+                    Wraps++;
+                }
+            }
+        }
+
+        /// <summary>Start looping and go to the count-in before the range.
+        /// Play state is left as it was.</summary>
+        public void StartLoop(LoopRange loop)
+        {
+            Loop = loop;
+            SongTime = loop.WrapTo;
         }
 
         public void Play() => IsPlaying = true;
@@ -113,8 +142,12 @@ namespace PianoGlass.Song
         public void Seek(double seconds) => SongTime = seconds;
 
         /// <summary>Back to the top -- which is -leadInSeconds, not 0, so a
-        /// restart gets the same silent countdown the first play did. Play
-        /// state is left as it was.</summary>
-        public void Restart() => SongTime = -leadInSeconds;
+        /// restart gets the same silent countdown the first play did. Ends
+        /// any practice loop. Play state is left as it was.</summary>
+        public void Restart()
+        {
+            Loop = null;
+            SongTime = -leadInSeconds;
+        }
     }
 }

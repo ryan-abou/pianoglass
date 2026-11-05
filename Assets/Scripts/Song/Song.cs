@@ -49,6 +49,16 @@ namespace PianoGlass.Song
         /// whole song: no time-signature changes yet.</summary>
         public int BeatsPerBar { get; }
 
+        /// <summary>Song seconds in one bar.</summary>
+        public double SecondsPerBar => Bpm > 0f ? 60.0 / Bpm * BeatsPerBar : 0.0;
+
+        /// <summary>Bars up to the one holding the last note's end. A note
+        /// ending exactly on a bar line does not start another bar.</summary>
+        public int BarCount => Duration <= 0.0 ? 0 : BarOf(Duration - 1e-6);
+
+        /// <summary>Song time at which a 1-based bar starts.</summary>
+        public double BarStartTime(int bar) => (bar - 1) * SecondsPerBar;
+
         public SongData(string title, float bpm, IReadOnlyList<SongNote> notes, int beatsPerBar = 4)
         {
             Title = title;

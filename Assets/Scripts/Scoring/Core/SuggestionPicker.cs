@@ -46,12 +46,19 @@ namespace PianoGlass.Scoring
                     if (g.IsWeakest) weakest = g;
             if (weakest != null && weakest.WorstAccuracy < WeakBarBelow)
             {
-                (int from, int to) = BarGrouping.LoopRange(weakest);
+                // One bar in the pill: that bar and one either side (F33), so
+                // it is practised going in and coming out. The message still
+                // names the bar that needs the work.
+                (int from, int to) = weakest.Size == 1
+                    ? PianoGlass.Song.LoopRange.AroundBar(weakest.FirstBar, groups[groups.Count - 1].LastBar)
+                    : BarGrouping.LoopRange(weakest);
                 bool single = from == to;
                 return new Suggestion
                 {
                     Rule = SuggestionRule.WeakBars,
-                    Message = single ? $"Bar {from} needs work" : $"Bars {from}–{to} need work",
+                    Message = weakest.Size == 1
+                        ? $"Bar {weakest.FirstBar} needs work"
+                        : $"Bars {from}–{to} need work",
                     Action = SuggestionAction.LoopBars,
                     ButtonText = single ? $"Loop bar {from}" : $"Loop bars {from}–{to}",
                     FromBar = from,

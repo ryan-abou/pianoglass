@@ -35,13 +35,17 @@ namespace PianoGlass.Song
         /// so PianoKeyHighlighter's per-frame call in ActiveKeysOnly/
         /// EdgeMarkers mode allocates nothing -- it reuses the same set every
         /// frame, the same reasoning as not spawning GameObjects every frame.
+        /// <paramref name="from"/> and <paramref name="until"/> limit it to the
+        /// notes starting in that span: a practice loop's bars.
         /// </summary>
         public static void CollectDueSoonPitches(
-            IEnumerable<SongNote> notes, double songTime, float lookaheadSeconds, HashSet<int> results)
+            IEnumerable<SongNote> notes, double songTime, float lookaheadSeconds, HashSet<int> results,
+            double from = double.NegativeInfinity, double until = double.PositiveInfinity)
         {
             results.Clear();
             foreach (SongNote note in notes)
-                if (IsDueSoon(note.StartTime, songTime, lookaheadSeconds))
+                if (note.StartTime >= from - 1e-9 && note.StartTime < until - 1e-9 &&
+                    IsDueSoon(note.StartTime, songTime, lookaheadSeconds))
                     results.Add(note.Pitch);
         }
     }
