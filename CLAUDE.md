@@ -868,8 +868,10 @@ rewrite history. New commits leave them out.
    attempts.
 4. **Memory fade (F36).** Pure tested opacity per loop pass (e.g. 100 / 60 /
    30 / hidden); needs a transparent slab material assigned in `SceneSetup`.
-   **Open question — ask Ryan when Batch C starts:** should a faded note
-   still turn mint/slate once judged?
+   **A faded note still turns mint/slate once judged, at the opacity it already
+   had (Ryan, 2026-11-05):** the outcome changes its colour only, never its
+   opacity. A half-faded note shows half-visible mint or slate; a fully hidden
+   note stays hidden.
 
 After Batch C, Phase 3 starts with MIDI file loading (F38).
 
