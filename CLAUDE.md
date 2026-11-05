@@ -672,9 +672,8 @@ Follow the four-phase build order in `docs/feature-evaluation.md` (Part 3):
 1. **Highway looks finished**: ~~grid~~ (done); ~~hit/miss/wrong colours~~
    (done); ~~note names (F14)~~ (done, Batch A).
 2. **Results, tempo, practice**: ~~tempo ±5%~~, ~~attempt schema v2~~ (both
-   done, Batch A), results card
-   with bar heat strip, metronome (measure headset audio output latency, then
-   `AudioSource.PlayScheduled`, on/off in the attempt), loop worst bar,
+   done, Batch A), ~~results card with bar heat strip~~, ~~metronome~~ (both
+   done, Batch B), loop worst bar,
    auto-tempo, wait mode (pitch-only judging), memory fade.
 3. **Real songs**: MIDI file loading, song picker, hand colours, one-hand
    practice, a free public-domain starter library, per-song history.
@@ -815,36 +814,38 @@ They are build-time leftovers: revert/delete them (keep the tracked
    the count-in coming back, by request). On/off toggle, recorded as
    `metronome` in the attempt. **Toggle: hold A0, press C♯1 (MIDI 25)**
    (Ryan, 2026-11-03), only while stopped or paused, saved in PlayerPrefs.
-   Output latency (`SceneSetup.MetronomeOutputLatencyMs`) ships as 0 ms in
-   the first round and is measured on video in that round: clicks against
-   bar lines reaching the hit line.
+   Output latency (`SceneSetup.MetronomeOutputLatencyMs`) is 140 ms, measured
+   on video: clicks against bar lines reaching the key line.
 
-### Batch B status (2026-11-05): not merged yet
+### Batch B status: merged into main 2026-11-05
 
-`first-play-hitch` holds all of Batch B plus the results redesign and the
-first-press freeze fix. Nothing from it is in main.
+All of Batch B, the results redesign and the first-press freeze fix passed on
+the headset and were merged, in order: `batchB-devbuild`, `batchB-installfix`,
+`batchB-glass`, `batchB-results`, `batchB-metronome`, `batchB-outfit`,
+`results-redesign`, `first-play-hitch`. `batchB-test` stays unmerged. 451
+EditMode tests pass.
 
-**Passed on the headset:** the results redesign (card, details panel, ray
-buttons, card and status panel taking turns) and the freeze fix (longest frame
-after the first press of play went from 390 ms to 28 ms).
+- **Results redesign:** card, details panel, ray buttons, card and status panel
+  taking turns all passed.
+- **First-press freeze:** the longest frame after the first press of play went
+  from 390 ms to 28 ms with the `ScoreKeeper` fix. The highway warm-up is gone
+  and stays gone: on two fresh launches the longest stall near that press was
+  4-5 frames (55-70 ms), about what a development build does mid-song, and Ryan
+  saw it as smooth.
+- **Release frame rate: 72 fps during songs** (two plays of Twinkle at 90% with
+  the metronome on, about 80 s: every second 72/72, where the development build
+  runs about 69). GPU about 45%, CPU and GPU both at level 2, 38 °C. A release
+  build has anchored calibration off, so measure again if that ever ships.
+- **Liquid Glass and Outfit:** Ryan's yes.
+- **Metronome:** the 140 ms output latency holds. A 60 fps video of 13 lines
+  reaching the key line had the click 17 ms early on average (sd 9; accented
+  bars 18 ms early). The phone's own audio/video offset is known only to within
+  about 33 ms, so no change. Clicks and lines drift about 13 ms apart over 7 s in
+  that video, whose audio and video tracks differ in length by 19 ms, so it may be
+  the recording; check it again on a long song once MIDI loading (F38) exists.
 
-**Still open, in this order:**
-1. ~~Measure the release frame rate.~~ **Done 2026-11-05: 72 fps during songs**
-   (release APK, two plays of Twinkle at 90% with the metronome on, about 80 s:
-   every second 72/72, where the development build ran about 69). GPU about 45%,
-   CPU and GPU both at level 2, 38 °C. The shortfall was the development build,
-   so no song profile is needed. That APK still had the warm-up, which only runs
-   for 3 frames at launch. Small thing to look at later: one stall of 55-85 ms
-   (4-6 stale frames) 1-2 s after each attempt ended, while the results card is up.
-2. **Retest without the warm-up.** The warm-up in `NoteHighway` was on in every
-   test until it was removed (first-play-hitch, last code commit), so it may have
-   been hiding a small hitch. Development build, fresh launch: if the first press
-   of play hitches, restore it (revert the removal commit).
-3. **Get Ryan's yes on Liquid Glass, Outfit and the metronome,** then merge into
-   main separately, in this order: `batchB-devbuild`, `batchB-installfix`,
-   `batchB-glass`, `batchB-results`, `batchB-metronome`, `batchB-outfit`,
-   `results-redesign`, `first-play-hitch`. `batchB-test` is never merged. Then
-   record the results here and in `docs/feature-evaluation.md`.
+Later, not urgent: one stall of 55-85 ms (4-6 stale frames) 1-2 s after each
+attempt ends, while the results card is up.
 
 Older commits keep their Co-Authored-By lines: Ryan decided on 2026-11-05 not to
 rewrite history. New commits leave them out.

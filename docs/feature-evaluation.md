@@ -274,9 +274,14 @@ B0 (−5%) or C1 (+5%).
    card (F30) + bar heat strip (F32)** built in that glass. The card is the
    first real menu, so the shared glass shader is made here and every later
    panel reuses it. The card needs step 5 to compare at the same tempo.
+   **Done, merged 2026-11-05** (Batch B). Liquid Glass and the Outfit typeface
+   approved by Ryan; card redesigned with a details panel and ray buttons.
 8. **Metronome (F27).** Independent; it is the first in-app audio, so the
    latency measurement here also serves F9 if it ever happens. Clicks during
    the lead-in too (Ryan, 2026-11-03).
+   **Done, merged 2026-11-05** (Batch B). Output latency 140 ms; a retest video
+   had clicks 17 ms ahead of the lines (sd 9), within the phone's own audio/video
+   uncertainty.
 9. **Loop worst bar ± 1 (F33).** Most useful with step 7 showing which bar.
 10. **Auto-tempo in the loop (F35).** Needs steps 5 and 9.
 11. **Wait mode (F22).** After the loop, so scoring and transport aren't
