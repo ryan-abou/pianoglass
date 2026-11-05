@@ -899,6 +899,47 @@ namespace PianoGlass.EditorTools
             Debug.Log($"[SceneSetup] Metronome configured, output latency {MetronomeOutputLatencyMs} ms.");
         }
 
+        /// <summary>
+        /// The practice loop (Batch C): the component the results card's Loop
+        /// button starts, and the references it and the status panel need.
+        /// </summary>
+        [MenuItem("PianoGlass/Scene/Configure Practice Loop")]
+        public static void ConfigurePracticeLoop()
+        {
+            Scene scene = OpenScene();
+
+            var clock = Object.FindAnyObjectByType<SongClock>();
+            var transport = Object.FindAnyObjectByType<SongTransport>();
+            var keeper = Object.FindAnyObjectByType<ScoreKeeper>();
+            var card = Object.FindAnyObjectByType<ResultsCard>(FindObjectsInactive.Include);
+            if (clock == null || transport == null || keeper == null || card == null)
+            {
+                Debug.LogError("[SceneSetup] SongClock, SongTransport, ScoreKeeper or ResultsCard missing -- " +
+                               "run Configure Scoring and Configure Results Card first.");
+                return;
+            }
+
+            PracticeLoop loop = GetOrAdd<PracticeLoop>("PracticeLoop");
+            var so = new SerializedObject(loop);
+            so.FindProperty("clock").objectReferenceValue = clock;
+            so.FindProperty("transport").objectReferenceValue = transport;
+            so.FindProperty("scoreKeeper").objectReferenceValue = keeper;
+            so.FindProperty("resultsCard").objectReferenceValue = card;
+            so.ApplyModifiedProperties();
+
+            var panel = Object.FindAnyObjectByType<CalibrationPanel>(FindObjectsInactive.Include);
+            if (panel != null)
+            {
+                var panelSo = new SerializedObject(panel);
+                panelSo.FindProperty("loop").objectReferenceValue = loop;
+                panelSo.ApplyModifiedProperties();
+            }
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            Debug.Log("[SceneSetup] Practice loop configured.");
+        }
+
         [MenuItem("PianoGlass/Scene/Remove Test Cube")]
         public static void RemoveTestCube()
         {
