@@ -80,7 +80,9 @@ namespace PianoGlass.Piano
             // capture a point, nor a stick knock nudge the keyboard.
             if (_tip != null && _tip.IsBusy) return;
 
-            if (OVRInput.GetDown(OVRInput.Button.PrimaryIndexTrigger, OVRInput.Controller.RTouch))
+            // A trigger pull with the ray on a menu button is for that button.
+            if (!PianoGlass.UI.OvrUiPointer.OwnsTrigger &&
+                OVRInput.GetDown(OVRInput.Button.PrimaryIndexTrigger, OVRInput.Controller.RTouch))
             {
                 if (logInput) Debug.Log("[Calibration] right trigger — capture");
                 _calibration.CapturePoint();
