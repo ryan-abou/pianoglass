@@ -162,6 +162,7 @@ namespace PianoGlass.Piano
         };
 
         public bool AwaitingConfirmation => Session.AwaitingConfirmation;
+        public bool IsCorrecting => Session.Flow.State == FlowState.Correcting;
 
         public void Confirm() => Session.Confirm();
 

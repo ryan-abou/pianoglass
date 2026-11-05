@@ -17,6 +17,9 @@ namespace PianoGlass.Piano
         /// Stage.Waiting (localizing, saving).</summary>
         string WaitingPrompt { get; }
 
+        /// <summary>A Middle C fix is under way: the player has instructions to read.</summary>
+        bool IsCorrecting { get; }
+
         /// <summary>Both keys touched. <paramref name="captured"/> is the raw
         /// layout -- no nudge, no yaw -- with facing from the head.</summary>
         void OnPointsCaptured(PianoKeyLayout captured);
