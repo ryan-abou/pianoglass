@@ -146,6 +146,17 @@ namespace PianoGlass.Transport
             RestartAndPlay();
         }
 
+        /// <summary>Loop these bars, starting from the count-in before them.
+        /// False if the keys are not ready. Restarting from the top leaves
+        /// the loop (SongClock.Restart).</summary>
+        public bool StartLoop(int fromBar, int toBar)
+        {
+            if (!CanAcceptInput || clock == null || _song == null) return false;
+            clock.StartLoop(LoopRange.Between(_song, fromBar, toBar));
+            clock.Play();
+            return true;
+        }
+
         /// <summary>One 5% tempo step (direction -1 or +1). Ignored while
         /// playing; while paused part-way the song stays where it is.</summary>
         public void StepTempo(int direction)

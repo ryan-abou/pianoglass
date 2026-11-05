@@ -31,6 +31,7 @@ namespace PianoGlass.Piano
         [SerializeField] private CalibrationFlowController flow;
         [SerializeField] private ScoreKeeper score;
         [SerializeField] private Metronome metronome;
+        [SerializeField] private PracticeLoop loop;
 
         private readonly StringBuilder _sb = new StringBuilder(256);
         private PianoGlass.UI.GlassPanel _glass;
@@ -67,6 +68,7 @@ namespace PianoGlass.Piano
             if (flow == null) flow = FindAnyObjectByType<CalibrationFlowController>();
             if (score == null) score = FindAnyObjectByType<ScoreKeeper>();
             if (metronome == null) metronome = FindAnyObjectByType<Metronome>();
+            if (loop == null) loop = FindAnyObjectByType<PracticeLoop>();
             _glass = GetComponentInParent<PianoGlass.UI.GlassPanel>();
 
             // Development builds: the headset test checklist, beside this panel.
@@ -138,6 +140,8 @@ namespace PianoGlass.Piano
                                (metronome != null ? $"   metronome {(metronome.IsOn ? "on" : "off")}" : ""));
             }
 
+            if (loop != null && loop.IsActive) AppendLoop(loop);
+
             if (score != null && score.Session != null) AppendScore(score);
 
             if (calibration.IsCalibrated)
@@ -171,6 +175,12 @@ namespace PianoGlass.Piano
             }
 
             text.text = _sb.ToString();
+        }
+
+        private void AppendLoop(PracticeLoop practice)
+        {
+            string last = practice.LastAccuracy >= 0.0 ? $"   last pass {practice.LastAccuracy:0}%" : "";
+            _sb.AppendLine($"<color=#E8D48A>loop:       {practice.Range.Value.Label}, pass {practice.Pass}{last}   Y = full song</color>");
         }
 
         private void AppendScore(ScoreKeeper keeper)

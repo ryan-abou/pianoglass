@@ -26,8 +26,8 @@ namespace PianoGlass.Scoring
     /// when calibration has instructions for the player the card steps aside
     /// and comes back afterwards. Nudging leaves the card up.
     ///
-    /// Not built yet, so these only raise an event and log: looping (Batch C,
-    /// F33), one-hand practice (F25), a song list (F7).
+    /// Not built yet, so these only raise an event and log: one-hand practice
+    /// (F25), a song list (F7).
     /// </summary>
     [RequireComponent(typeof(Canvas))]
     public class ResultsCard : MonoBehaviour
@@ -48,7 +48,7 @@ namespace PianoGlass.Scoring
         [Tooltip("Turn on when a song list exists: shows the Next song button.")]
         [SerializeField] private bool hasSongList;
 
-        /// <summary>First and last bar. TODO: start the practice loop (Batch C, F33).</summary>
+        /// <summary>First and last bar. PracticeLoop starts it.</summary>
         public event Action<int, int> LoopRequested;
         /// <summary>"left" or "right". TODO: restart with that hand (F25).</summary>
         public event Action<string> SwitchHandRequested;
@@ -181,6 +181,9 @@ namespace PianoGlass.Scoring
         {
             // An abandoned attempt is a restart: there is no result to show.
             if (rec.outcome != AttemptRecord.Completed) return;
+            // A loop pass: the next one is already coming, and the card would
+            // cover it. The status panel shows how it went.
+            if (rec.IsLoop) return;
             Show(ResultsSummary.From(rec, LoadPrevious(path), hasSongList));
         }
 
@@ -347,7 +350,6 @@ namespace PianoGlass.Scoring
             switch (_current.Action)
             {
                 case SuggestionAction.LoopBars:
-                    // TODO: wire to the practice loop when it exists (Batch C, F33).
                     Debug.Log($"[Results] loop requested: bars {_current.FromBar}-{_current.ToBar}");
                     LoopRequested?.Invoke(_current.FromBar, _current.ToBar);
                     break;
