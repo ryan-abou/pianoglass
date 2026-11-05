@@ -153,7 +153,7 @@ these off the controllers and into **Liquid Glass menus**. The design rule
 from there: the controllers are set down on the piano, and hands either
 play or poke.
 
-### Today (2026-11-03)
+### Today (2026-11-05)
 
 Controllers always name `OVRInput.Controller.LTouch` / `RTouch`. Piano
 chords are all built on the bottom key, A0, so that no song spends a note
@@ -171,10 +171,13 @@ on them and none can be played by accident.
 | "Looks right" in Verifying | A | — | `OvrCalibrationInput` | Anchored mode; that A does not reach play/pause |
 | Middle C fix: start / cancel | right grip | — | `OvrCalibrationInput` | Anchored mode; then touch Middle C and pull the right trigger |
 | Play / pause | A | — | `OvrSongTransport` | |
-| Restart from the top and play | left Y | A0 + A♯0 | `OvrSongTransport`, `SongTransport` | The chord works whenever calibrated, playing or not |
+| Restart from the top and play | left Y | A0 + A♯0 | `OvrSongTransport`, `SongTransport` | The chord works whenever calibrated, playing or not. Also how a practice loop is left |
+| Start a practice loop | right controller ray + right trigger on the results card's "Loop bars" button | — | `ResultsCard` → `PracticeLoop` | The button shows when a bar is under 75%: that bar and one either side |
 | Press a results card button (Retry, More/Less info, the suggestion's button) | right controller ray + right trigger | — | `OvrUiPointer`, `GlassButton` | Stopgap until hand poke (Phase 4). The ray shows only while a button is pressable; the trigger goes to calibration unless the ray is on a button |
 | Tempo −5% / +5% | — | hold A0, press B0 / C1 | `SongTransport` | 25–200%, only while stopped or paused, saved |
 | Metronome on/off | — | hold A0, press C♯1 | `SongTransport` → `Metronome` | Only while stopped or paused, saved |
+| Wait mode on/off | — | hold A0, press D1 | `SongTransport` | Only while stopped or paused, saved. While paused part-way it starts a new attempt from there |
+| Memory fade on/off | — | hold A0, press D♯1 | `SongTransport` | Only while stopped or paused, saved. Shows only inside a practice loop |
 | Display mode (cycle) | left X | — | `OvrKeyOverlayInput` | FullOverlay / Translucent / ActiveKeysOnly / EdgeMarkers, saved |
 | Passthrough on/off | left stick click | — | `OvrKeyOverlayInput` | A/B test tool |
 
@@ -674,7 +677,8 @@ Follow the four-phase build order in `docs/feature-evaluation.md` (Part 3):
 2. **Results, tempo, practice**: ~~tempo ±5%~~, ~~attempt schema v2~~ (both
    done, Batch A), ~~results card with bar heat strip~~, ~~metronome~~ (both
    done, Batch B), loop worst bar,
-   auto-tempo, wait mode (pitch-only judging), memory fade.
+   auto-tempo, wait mode (pitch-only judging), memory fade (all four built,
+   Batch C, awaiting a headset pass).
 3. **Real songs**: MIDI file loading, song picker, hand colours, one-hand
    practice, a free public-domain starter library, per-song history.
 4. **Hand-tracked UI**: hand-tracking spike, settings model, one panel
@@ -850,6 +854,34 @@ attempt ends, while the results card is up.
 Older commits keep their Co-Authored-By lines: Ryan decided on 2026-11-05 not to
 rewrite history. New commits leave them out.
 
+### Batch C status (2026-11-05): built, first headset round next
+
+Branches, each from the one before: `batchC-loop`, `batchC-autotempo`,
+`batchC-wait`, `batchC-fade`. `batchC-test` is the build and is never merged.
+527 EditMode tests pass. Decided while building, none of it yet seen by Ryan:
+
+- **Starting and leaving a loop.** The results card's button starts it; left Y
+  or the A0 + A♯0 chord leaves it, back to the full song. No results card
+  between passes (it would cover the next one); the status panel shows the pass
+  and how the last one went.
+- **The card's range is now the weak bar ±1** ("Bar 3 needs work", "Loop bars
+  2–4"), replacing "Loop bar 3" from the results redesign. Grouped pills on long
+  songs keep the 4-bar phrase rule.
+- **One bar of count-in** on every pass. A wrap keeps the frame's overshoot.
+  Notes, due keys, grid lines and clicks all stop at the loop's end.
+- **A pass nobody played in is not saved** and does not change the tempo.
+- **Auto-tempo is always on in a loop and is not saved:** leaving the loop goes
+  back to the tempo the player chose. It changes at the wrap, not at the last note.
+- **Wait mode:** hold A0, press D1. Only the next note or chord is accepted,
+  however early; a chord's keys may come in any order and need not be held
+  together. Any other key is wrong and names what is awaited. Accuracy is right
+  keys out of all keys. Schema 4 adds `correct`. The metronome pauses during a
+  hold. Auto-tempo does nothing on a wait-mode pass.
+- **Memory fade:** hold A0, press D♯1. Off by default and saved; every new loop
+  starts fully visible. The opacity is a ceiling on anything showing the note: slab, name and
+  due key fade together, and the panel stops naming a hidden note. The key's own
+  coral on a wrong press is not faded, nor is a key the player holds.
+
 ### Batch C — all build on the loop
 
 1. **Loop worst bar ± 1 (F33).** Pure tested range rule from the worst bar,
@@ -866,7 +898,7 @@ rewrite history. New commits leave them out.
    until every pitch of it (chords included) is pressed. Pitch-only judging,
    no PERFECT/GREAT; attempt `mode: "wait"`, never compared with continuous
    attempts.
-4. **Memory fade (F36).** Pure tested opacity per loop pass (e.g. 100 / 60 /
+4. **Memory fade (F36).** Pure tested opacity per loop pass (100 / 60 /
    30 / hidden); needs a transparent slab material assigned in `SceneSetup`.
    **A faded note still turns mint/slate once judged, at the opacity it already
    had (Ryan, 2026-11-05):** the outcome changes its colour only, never its
