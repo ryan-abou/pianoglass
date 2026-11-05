@@ -74,6 +74,8 @@ namespace PianoGlass.Scoring
         public int bar;
         public int notes;
         public int perfect, great, good, miss;
+        /// <summary>Wait mode's hits (F22).</summary>
+        public int correct;
         public int wrongNotes;
         /// <summary>Percent, 0-100, over the notes judged in this bar.</summary>
         public double accuracy;
@@ -94,6 +96,9 @@ namespace PianoGlass.Scoring
     ///
     /// v3 (2026-11-04) adds rank and bestStreak for the results card. Parse
     /// works both out for older files, from what those files already hold.
+    ///
+    /// v4 (2026-11-05) adds correct: wait mode's hits, which have no timing to
+    /// be rated PERFECT or GREAT (F22). Older files have none, and read as 0.
     /// </summary>
     [Serializable]
     public sealed class AttemptRecord
@@ -101,7 +106,7 @@ namespace PianoGlass.Scoring
         public const string Completed = "completed";
         public const string Abandoned = "abandoned";
 
-        public const int CurrentSchema = 3;
+        public const int CurrentSchema = 4;
         public const string Continuous = "continuous";
         public const string Wait = "wait";
         public const string BothHands = "both";
@@ -141,6 +146,8 @@ namespace PianoGlass.Scoring
         /// <summary>Longest run of hit notes with no miss or wrong key.</summary>
         public int bestStreak;
         public int perfect, great, good, miss;
+        /// <summary>Wait mode's hits; the four above stay 0 there.</summary>
+        public int correct;
         public int notesHit, notesMissed;
         public int wrongPitch, extra;
         /// <summary>Over pressed notes: a consistent non-zero mean is input

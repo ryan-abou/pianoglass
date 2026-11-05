@@ -37,6 +37,14 @@ namespace PianoGlass.Song
 
         public bool IsPlaying { get; private set; }
 
+        /// <summary>Wait mode (F22): the clock goes no further than this song
+        /// time, however long that takes. +inf otherwise. Set each frame by
+        /// ScoreKeeper to the next note not yet played.</summary>
+        public double HoldAt { get; set; } = double.PositiveInfinity;
+
+        /// <summary>Playing, and stopped at the hold.</summary>
+        public bool IsHolding => IsPlaying && SongTime >= HoldAt;
+
         /// <summary>The practice loop running, if any. While set, Advance
         /// wraps the clock at its end. Restart() clears it: restarting from
         /// the top is how a loop is left.</summary>
@@ -70,7 +78,9 @@ namespace PianoGlass.Song
         /// Equal to SongTime while paused, because a paused song does not
         /// move between render and display.</summary>
         public double DisplaySongTime =>
-            IsPlaying ? SongTime + _displayLatency * tempoMultiplier : SongTime;
+            IsPlaying
+                ? System.Math.Max(SongTime, System.Math.Min(SongTime + _displayLatency * tempoMultiplier, HoldAt))
+                : SongTime;
 
         public float TempoMultiplier
         {
@@ -113,7 +123,11 @@ namespace PianoGlass.Song
         /// </summary>
         public void Advance(double deltaSeconds)
         {
+            double before = SongTime;
             SongTime += deltaSeconds * tempoMultiplier;
+
+            // Stops on the hold, and never jumps back to one behind it.
+            if (SongTime > HoldAt) SongTime = System.Math.Max(before, HoldAt);
 
             // Subtracting the pass length, not setting WrapTo, keeps whatever
             // the frame overshot by, so a loop drifts no more than the clock.

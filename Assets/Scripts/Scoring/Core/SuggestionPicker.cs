@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace PianoGlass.Scoring
 {
-    public enum SuggestionRule { WeakBars, FasterTempo, NextRank, AwayFromPerfect, OtherHand, Mastered }
+    public enum SuggestionRule { WeakBars, PlayInTime, FasterTempo, NextRank, AwayFromPerfect, OtherHand, Mastered }
     public enum SuggestionAction { None, LoopBars, TryTempo, SwitchHand, NextSong }
 
     /// <summary>The one message of the suggestion row and its optional button.</summary>
@@ -36,8 +36,11 @@ namespace PianoGlass.Scoring
         /// other hand: its perfect run goes straight to "mastered".</param>
         /// <param name="hasNextSong">There is a next song to offer. False
         /// until a song list exists: "mastered" then has no button.</param>
+        /// <param name="mode">"wait" has no timing or tempo to improve, so a
+        /// good run points at playing it in time instead.</param>
         public static Suggestion Pick(double accuracy, int tempoPercent, string hand,
-                                      IReadOnlyList<BarGroup> groups, bool otherHandPerfect, bool hasNextSong)
+                                      IReadOnlyList<BarGroup> groups, bool otherHandPerfect, bool hasNextSong,
+                                      string mode = null)
         {
             // a. A weak bar. The weakest group, the one the strip outlines.
             BarGroup weakest = null;
@@ -65,6 +68,14 @@ namespace PianoGlass.Scoring
                     ToBar = to,
                 };
             }
+
+            // Wait mode, the notes learned: the next step is playing in time.
+            if (mode == AttemptRecord.Wait && accuracy >= FasterTempoFrom)
+                return new Suggestion
+                {
+                    Rule = SuggestionRule.PlayInTime,
+                    Message = "Ready to play in time? Hold A0, press D1",
+                };
 
             // b. Ready to go faster.
             if (accuracy >= FasterTempoFrom && tempoPercent < FullTempoPercent)

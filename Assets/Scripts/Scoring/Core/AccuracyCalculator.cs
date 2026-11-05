@@ -13,6 +13,7 @@ namespace PianoGlass.Scoring
             Judgement.Perfect => PerfectPoints,
             Judgement.Great   => GreatPoints,
             Judgement.Good    => GoodPoints,
+            Judgement.Correct => PerfectPoints,
             _                 => 0,
         };
 
@@ -26,6 +27,14 @@ namespace PianoGlass.Scoring
             int judged = perfect + great + good + miss;
             if (judged == 0) return 0.0;
             return 100.0 * Score(perfect, great, good) / (judged * (double)PerfectPoints);
+        }
+
+        /// <summary>Wait mode (F22): nothing can be late or missed there, so
+        /// accuracy is the right keys out of every key pressed.</summary>
+        public static double PitchAccuracy(int correct, int wrong)
+        {
+            int presses = correct + wrong;
+            return presses == 0 ? 0.0 : 100.0 * correct / presses;
         }
     }
 }

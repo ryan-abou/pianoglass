@@ -22,6 +22,12 @@ namespace PianoGlass.Scoring
     ///   * Chords need nothing special: each note is matched on its own.
     ///   * Windows are real milliseconds; the tempo converts them to song
     ///     time, so half-speed practice is judged on the player's real timing.
+    ///
+    /// Wait mode (F22, pitchOnly) has its own rules, since the clock holds at
+    /// each note until it is played: only the earliest unjudged note or chord
+    /// is accepted, whenever it is pressed; the right key is Correct, never
+    /// PERFECT or GREAT; any other key is wrong and names what is awaited.
+    /// Nothing can be missed. A chord's keys may come in any order.
     /// </summary>
     public sealed class ScoringSession
     {
@@ -34,11 +40,17 @@ namespace PianoGlass.Scoring
         public int Miss { get; private set; }
         public int WrongPitchCount { get; private set; }
         public int ExtraCount { get; private set; }
+        /// <summary>Wait mode's hits.</summary>
+        public int Correct { get; private set; }
+        /// <summary>Wait mode: judged on pitch alone, with the clock holding.</summary>
+        public bool PitchOnly { get; }
 
-        public int NotesHit => Perfect + Great + Good;
+        public int NotesHit => Perfect + Great + Good + Correct;
         public int NotesMissed => Miss;
-        public int Score => AccuracyCalculator.Score(Perfect, Great, Good);
-        public double Accuracy => AccuracyCalculator.Accuracy(Perfect, Great, Good, Miss);
+        public int Score => AccuracyCalculator.Score(Perfect, Great, Good) + Correct * AccuracyCalculator.PerfectPoints;
+        public double Accuracy => PitchOnly
+            ? AccuracyCalculator.PitchAccuracy(Correct, WrongPitchCount + ExtraCount)
+            : AccuracyCalculator.Accuracy(Perfect, Great, Good, Miss);
 
         /// <summary>Notes this keyboard can play; the ones it cannot are not scored.</summary>
         public int ScorableCount => _scorable.Count;
@@ -68,6 +80,9 @@ namespace PianoGlass.Scoring
         private readonly bool[] _judged;
         private readonly List<JudgementResult> _results = new List<JudgementResult>();
         private readonly List<WrongNote> _wrong = new List<WrongNote>();
+        // Wait mode only. Presses there can share a song time, the clock being
+        // held, so its streak is counted as they come rather than sorted after.
+        private int _run, _bestRun;
 
         /// <param name="isPlayable">Whether a pitch is on the player's
         /// keyboard; null means every pitch is.</param>
@@ -79,12 +94,15 @@ namespace PianoGlass.Scoring
         /// none that went by unplayable is charged as a MISS.</param>
         /// <param name="scoreNotesUntil">Song time at and after which notes
         /// are not part of this attempt: the end of a practice loop.</param>
+        /// <param name="pitchOnly">Wait mode's rules (see above).</param>
         public ScoringSession(SongData song, TimingWindows windows, Func<int, bool> isPlayable = null,
                               double scoreNotesFrom = double.NegativeInfinity,
-                              double scoreNotesUntil = double.PositiveInfinity)
+                              double scoreNotesUntil = double.PositiveInfinity,
+                              bool pitchOnly = false)
         {
             Song = song ?? throw new ArgumentNullException(nameof(song));
             Windows = windows;
+            PitchOnly = pitchOnly;
             _judged = new bool[song.Notes.Count];
 
             for (int i = 0; i < song.Notes.Count; i++)
@@ -103,6 +121,11 @@ namespace PianoGlass.Scoring
         public void OnNoteOn(int pitch, double pressSongTime, double tempo)
         {
             NoteTempo(tempo);
+            if (PitchOnly)
+            {
+                OnNoteOnWaiting(pitch, pressSongTime);
+                return;
+            }
             double window = NoteJudge.WindowSongSeconds(Windows.goodMs, tempo);
 
             int match = -1;
@@ -162,6 +185,62 @@ namespace PianoGlass.Scoring
             WrongNotePlayed?.Invoke(wrong);
         }
 
+        private void OnNoteOnWaiting(int pitch, double pressSongTime)
+        {
+            double due = NextDueTime;
+            if (double.IsPositiveInfinity(due)) return;
+
+            int first = -1;
+            foreach (int i in _scorable)
+            {
+                SongNote n = Song.Notes[i];
+                if (_judged[i] || Math.Abs(n.StartTime - due) > SameTimeSeconds) continue;
+                if (first < 0) first = i;
+                if (n.Pitch != pitch) continue;
+                Record(JudgementResult.Hit(i, n.Pitch, Song.BarOf(n.StartTime), n.StartTime,
+                                           pressSongTime, 0.0, Judgement.Correct));
+                return;
+            }
+
+            SongNote awaited = Song.Notes[first];
+            var wrong = new WrongNote
+            {
+                kind = WrongNote.WrongPitch, pressedPitch = pitch, pressTime = pressSongTime,
+                expectedPitch = awaited.Pitch, expectedNoteIndex = first, bar = Song.BarOf(awaited.StartTime),
+            };
+            WrongPitchCount++;
+            _run = 0;
+            _wrong.Add(wrong);
+            LastWrongNote = wrong;
+            WrongNotePlayed?.Invoke(wrong);
+        }
+
+        /// <summary>Notes this close together are one chord.</summary>
+        private const double SameTimeSeconds = 1e-6;
+
+        /// <summary>Song time of the earliest note not yet judged: where the
+        /// clock holds in wait mode. +inf when every note is done.</summary>
+        public double NextDueTime
+        {
+            get
+            {
+                foreach (int i in _scorable)
+                    if (!_judged[i]) return Song.Notes[i].StartTime; // sorted by start time
+                return double.PositiveInfinity;
+            }
+        }
+
+        /// <summary>The pitches of that note or chord still to be pressed.</summary>
+        public List<int> WaitingPitches()
+        {
+            var pitches = new List<int>();
+            double due = NextDueTime;
+            foreach (int i in _scorable)
+                if (!_judged[i] && Math.Abs(Song.Notes[i].StartTime - due) <= SameTimeSeconds)
+                    pitches.Add(Song.Notes[i].Pitch);
+            return pitches;
+        }
+
         /// <summary>Every frame while playing: any note now past its GOOD
         /// window without a press is a MISS.</summary>
         public void Advance(double songTime, double tempo)
@@ -191,8 +270,10 @@ namespace PianoGlass.Scoring
                 case Judgement.Perfect: Perfect++; break;
                 case Judgement.Great:   Great++;   break;
                 case Judgement.Good:    Good++;    break;
+                case Judgement.Correct: Correct++; break;
                 default:                Miss++;    break;
             }
+            if (PitchOnly && ++_run > _bestRun) _bestRun = _run;
             LastResult = r;
             Judged?.Invoke(r);
         }
@@ -239,11 +320,15 @@ namespace PianoGlass.Scoring
                     case Judgement.Perfect: s.perfect++; break;
                     case Judgement.Great:   s.great++;   break;
                     case Judgement.Good:    s.good++;    break;
+                    case Judgement.Correct: s.correct++; break;
                     default:                s.miss++;    break;
                 }
             }
             foreach (WrongNote w in _wrong) Get(w.bar).wrongNotes++;
-            foreach (BarStats s in byBar.Values) s.accuracy = AccuracyCalculator.Accuracy(s.perfect, s.great, s.good, s.miss);
+            foreach (BarStats s in byBar.Values)
+                s.accuracy = PitchOnly
+                    ? AccuracyCalculator.PitchAccuracy(s.correct, s.wrongNotes)
+                    : AccuracyCalculator.Accuracy(s.perfect, s.great, s.good, s.miss);
 
             return new List<BarStats>(byBar.Values);
         }
@@ -255,7 +340,7 @@ namespace PianoGlass.Scoring
             BarStats worst = null;
             foreach (BarStats s in Bars())
             {
-                if (s.perfect + s.great + s.good + s.miss == 0) continue;
+                if (s.perfect + s.great + s.good + s.miss + s.correct == 0) continue;
                 if (worst == null || s.accuracy < worst.accuracy ||
                     (s.accuracy == worst.accuracy && s.wrongNotes > worst.wrongNotes))
                     worst = s;
@@ -273,8 +358,9 @@ namespace PianoGlass.Scoring
                 startedUtc = startedUtc, endedUtc = endedUtc, outcome = outcome,
                 tempo = tempo, inputOffsetMs = inputOffsetMs, windows = Windows,
                 score = Score, accuracy = Accuracy, rank = ResultRank.For(Accuracy),
-                bestStreak = StreakCalculator.Best(_results, _wrong),
-                perfect = Perfect, great = Great, good = Good, miss = Miss,
+                mode = PitchOnly ? AttemptRecord.Wait : AttemptRecord.Continuous,
+                bestStreak = PitchOnly ? _bestRun : StreakCalculator.Best(_results, _wrong),
+                perfect = Perfect, great = Great, good = Good, miss = Miss, correct = Correct,
                 notesHit = NotesHit, notesMissed = NotesMissed,
                 wrongPitch = WrongPitchCount, extra = ExtraCount,
                 meanErrorMs = mean, errorSdMs = sd,

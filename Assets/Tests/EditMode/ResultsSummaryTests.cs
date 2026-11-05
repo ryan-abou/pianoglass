@@ -608,7 +608,7 @@ namespace PianoGlass.Tests.EditMode
             AttemptRecord rec = session.ToRecord(AttemptRecord.Abandoned, "s", "e", 1.0, 0);
             Assert.AreEqual(3, rec.bestStreak);
             Assert.AreEqual("SS", rec.rank);
-            Assert.AreEqual(3, rec.schema);
+            Assert.AreEqual(AttemptRecord.CurrentSchema, rec.schema);
         }
 
         [Test]

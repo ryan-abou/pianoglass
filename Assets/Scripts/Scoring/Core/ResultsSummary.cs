@@ -42,6 +42,9 @@ namespace PianoGlass.Scoring
         public int Great { get; private set; }
         public int Good { get; private set; }
         public int Miss { get; private set; }
+        /// <summary>Wait mode's hits; the four above stay 0 there.</summary>
+        public int Correct { get; private set; }
+        public bool IsWaitMode { get; private set; }
         public int[] Histogram { get; private set; }
         /// <summary>"avg 37 ms late", "avg on beat".</summary>
         public string AverageTimingText { get; private set; }
@@ -67,7 +70,9 @@ namespace PianoGlass.Scoring
 
             s.Title = current.song;
             s.AttemptNumber = earlier.Count + 1;
-            s.SubLine = $"{AttemptHands.Label(current.hand)} · {TempoStep.Label((float)current.tempo)} · Attempt {s.AttemptNumber}";
+            s.IsWaitMode = current.mode == AttemptRecord.Wait;
+            s.SubLine = (s.IsWaitMode ? "Wait mode · " : "") +
+                        $"{AttemptHands.Label(current.hand)} · {TempoStep.Label((float)current.tempo)} · Attempt {s.AttemptNumber}";
             s.IsNewBest = AttemptHistory.IsNewBest(current.accuracy, earlier);
 
             s.Accuracy = current.accuracy;
@@ -81,7 +86,8 @@ namespace PianoGlass.Scoring
                 s.ChangeText = arrow != null ? $"{arrow} vs last" : "same as last";
             }
 
-            s.TimingText = TimingSpread.Text(current.meanErrorMs, current.notesHit);
+            // Wait mode has no timing: a dash, like an attempt with no presses.
+            s.TimingText = TimingSpread.Text(current.meanErrorMs, s.IsWaitMode ? 0 : current.notesHit);
             s.WrongNotes = current.wrongPitch + current.extra;
             s.BestStreak = current.bestStreak;
             s.StreakText = current.bestStreak == 1 ? "1 note" : $"{current.bestStreak} notes";
@@ -90,17 +96,18 @@ namespace PianoGlass.Scoring
             string other = AttemptHands.Other(current.hand);
             s.Suggestion = SuggestionPicker.Pick(current.accuracy, tempoPercent, current.hand, s.Groups,
                                                  other != null && AttemptHistory.HasPerfectRun(previous, current.song, other),
-                                                 hasNextSong);
+                                                 hasNextSong, current.mode);
 
             s.Perfect = current.perfect;
             s.Great = current.great;
             s.Good = current.good;
             s.Miss = current.miss;
-            s.TotalNotes = current.perfect + current.great + current.good + current.miss;
+            s.Correct = current.correct;
+            s.TotalNotes = current.perfect + current.great + current.good + current.miss + current.correct;
 
-            s.Histogram = TimingSpread.Histogram(current.notes);
-            s.AverageTimingText = "avg " + s.TimingText;
-            s.TimingDirection = current.notesHit <= 0 || Math.Abs(current.meanErrorMs) <= TimingSpread.OnBeatMs
+            s.Histogram = TimingSpread.Histogram(s.IsWaitMode ? null : current.notes);
+            s.AverageTimingText = s.IsWaitMode ? "pitch only" : "avg " + s.TimingText;
+            s.TimingDirection = s.IsWaitMode || current.notesHit <= 0 || Math.Abs(current.meanErrorMs) <= TimingSpread.OnBeatMs
                 ? 0 : current.meanErrorMs > 0 ? 1 : -1;
 
             s.Recent = AttemptHistory.Recent(current, earlier);

@@ -2,7 +2,9 @@ using System;
 
 namespace PianoGlass.Scoring
 {
-    public enum Judgement { Perfect, Great, Good, Miss }
+    /// <summary>Correct is wait mode's only hit (F22): the right key, with no
+    /// timing to rate. Last, so older attempt files keep their numbers.</summary>
+    public enum Judgement { Perfect, Great, Good, Miss, Correct }
 
     /// <summary>
     /// How far from a note's time a press may be, in real milliseconds either
