@@ -498,6 +498,14 @@ recenters of up to 1.1 m / 180° kept the keys on the piano).
 - **`OVRInput.Button.PrimaryIndexTrigger` without a `Controller` argument**
   resolves against whichever controller is "active", and `Secondary...` may
   resolve to nothing. Always name `OVRInput.Controller.RTouch` / `LTouch`.
+- **The first `DateTime.Now` on the headset takes about 380 ms.** It froze the
+  first press of play for a visible moment until `ScoreKeeper` began doing it
+  on a background thread at launch (measured 2026-11-05: longest frame after
+  that press went from 390 ms to 28 ms). Any other first-use cost on the main
+  thread will look the same, and it looks like a graphics stall when it is not:
+  profile before guessing. In a development build, set `Profiler.logFile`,
+  `enableBinaryLog` and `enabled`, pull the `.raw`, and read the longest frame
+  with `ProfilerDriver.LoadProfile` and `RawFrameDataView`: it names the method.
 - **`FindFirstObjectByType` is deprecated in 6.6** — use `FindAnyObjectByType`.
 - **`git commit -am` ignores untracked files.** Any new Unity asset — script,
   material, prefab, scene — needs `git add -A`. Check `git status` first.
@@ -664,9 +672,8 @@ Follow the four-phase build order in `docs/feature-evaluation.md` (Part 3):
 1. **Highway looks finished**: ~~grid~~ (done); ~~hit/miss/wrong colours~~
    (done); ~~note names (F14)~~ (done, Batch A).
 2. **Results, tempo, practice**: ~~tempo ±5%~~, ~~attempt schema v2~~ (both
-   done, Batch A), results card
-   with bar heat strip, metronome (measure headset audio output latency, then
-   `AudioSource.PlayScheduled`, on/off in the attempt), loop worst bar,
+   done, Batch A), ~~results card with bar heat strip~~, ~~metronome~~ (both
+   done, Batch B), loop worst bar,
    auto-tempo, wait mode (pitch-only judging), memory fade.
 3. **Real songs**: MIDI file loading, song picker, hand colours, one-hand
    practice, a free public-domain starter library, per-song history.
@@ -807,9 +814,41 @@ They are build-time leftovers: revert/delete them (keep the tracked
    the count-in coming back, by request). On/off toggle, recorded as
    `metronome` in the attempt. **Toggle: hold A0, press C♯1 (MIDI 25)**
    (Ryan, 2026-11-03), only while stopped or paused, saved in PlayerPrefs.
-   Output latency (`SceneSetup.MetronomeOutputLatencyMs`) ships as 0 ms in
-   the first round and is measured on video in that round: clicks against
-   bar lines reaching the hit line.
+   Output latency (`SceneSetup.MetronomeOutputLatencyMs`) is 140 ms, measured
+   on video: clicks against bar lines reaching the key line.
+
+### Batch B status: merged into main 2026-11-05
+
+All of Batch B, the results redesign and the first-press freeze fix passed on
+the headset and were merged, in order: `batchB-devbuild`, `batchB-installfix`,
+`batchB-glass`, `batchB-results`, `batchB-metronome`, `batchB-outfit`,
+`results-redesign`, `first-play-hitch`. `batchB-test` stays unmerged. 451
+EditMode tests pass.
+
+- **Results redesign:** card, details panel, ray buttons, card and status panel
+  taking turns all passed.
+- **First-press freeze:** the longest frame after the first press of play went
+  from 390 ms to 28 ms with the `ScoreKeeper` fix. The highway warm-up is gone
+  and stays gone: on two fresh launches the longest stall near that press was
+  4-5 frames (55-70 ms), about what a development build does mid-song, and Ryan
+  saw it as smooth.
+- **Release frame rate: 72 fps during songs** (two plays of Twinkle at 90% with
+  the metronome on, about 80 s: every second 72/72, where the development build
+  runs about 69). GPU about 45%, CPU and GPU both at level 2, 38 °C. A release
+  build has anchored calibration off, so measure again if that ever ships.
+- **Liquid Glass and Outfit:** Ryan's yes.
+- **Metronome:** the 140 ms output latency holds. A 60 fps video of 13 lines
+  reaching the key line had the click 17 ms early on average (sd 9; accented
+  bars 18 ms early). The phone's own audio/video offset is known only to within
+  about 33 ms, so no change. Clicks and lines drift about 13 ms apart over 7 s in
+  that video, whose audio and video tracks differ in length by 19 ms, so it may be
+  the recording; check it again on a long song once MIDI loading (F38) exists.
+
+Later, not urgent: one stall of 55-85 ms (4-6 stale frames) 1-2 s after each
+attempt ends, while the results card is up.
+
+Older commits keep their Co-Authored-By lines: Ryan decided on 2026-11-05 not to
+rewrite history. New commits leave them out.
 
 ### Batch C — all build on the loop
 
