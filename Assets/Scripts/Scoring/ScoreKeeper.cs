@@ -41,6 +41,12 @@ namespace PianoGlass.Scoring
     /// keys it was judged against are being re-checked. After A, a new
     /// attempt starts from that moment and scores only the notes still
     /// ahead (ScoringSession's scoreNotesFrom).
+    ///
+    /// Practice loop (F33): each pass is its own attempt, scoring only the
+    /// bars in the loop and recording them as loopFromBar/loopToBar. A wrap is
+    /// told apart from a restart by SongClock.Wraps: it finishes the pass
+    /// rather than abandoning it. A pass nobody played a note in is not saved,
+    /// so a headset left looping does not fill the attempts folder.
     /// </summary>
     [DefaultExecutionOrder(100)]
     public class ScoreKeeper : MonoBehaviour
@@ -93,6 +99,7 @@ namespace PianoGlass.Scoring
         private SongData _song;
         private readonly List<(int pitch, double realtime)> _pending = new List<(int, double)>();
         private double _lastSongTime = double.NegativeInfinity;
+        private int _lastWraps;
         private string _startedUtc;
         private bool _metronomeUsed;
         private string _path;
@@ -149,6 +156,16 @@ namespace PianoGlass.Scoring
             double songTime = clock.SongTime;
             double tempo = clock.TempoMultiplier;
 
+            // The loop wrapped: this pass is over. Presses still waiting were
+            // made before the wrap, so they are timed from before it.
+            int wraps = clock.Wraps - _lastWraps;
+            _lastWraps = clock.Wraps;
+            if (wraps > 0 && clock.Loop is LoopRange wrapped)
+            {
+                FinishPass(songTime + wraps * wrapped.PassLength, tempo);
+                _lastSongTime = songTime;
+            }
+
             // Restart (or any seek backwards): the attempt so far is over.
             if (songTime < _lastSongTime - 1e-6)
             {
@@ -186,19 +203,53 @@ namespace PianoGlass.Scoring
 
             if (!AttemptSaved)
             {
-                double now = Time.realtimeSinceStartupAsDouble;
-                foreach ((int pitch, double realtime) in _pending)
-                {
-                    double press = songTime - (now - realtime) * tempo - inputOffsetMs / 1000.0 * tempo;
-                    // Lead-in noodling is not part of the attempt.
-                    if (press < Session.FirstNoteTime - NoteJudge.WindowSongSeconds(goodMs, tempo)) continue;
-                    Session.OnNoteOn(pitch, press, tempo);
-                }
+                JudgePending(songTime, tempo);
                 Session.Advance(songTime, tempo);
 
-                if (Session.IsComplete) Save(AttemptRecord.Completed);
+                if (Session.IsComplete) SaveFinished();
             }
             _pending.Clear();
+        }
+
+        private void JudgePending(double songTime, double tempo)
+        {
+            double now = Time.realtimeSinceStartupAsDouble;
+            foreach ((int pitch, double realtime) in _pending)
+            {
+                double press = songTime - (now - realtime) * tempo - inputOffsetMs / 1000.0 * tempo;
+                // Lead-in noodling is not part of the attempt.
+                if (press < Session.FirstNoteTime - NoteJudge.WindowSongSeconds(goodMs, tempo)) continue;
+                Session.OnNoteOn(pitch, press, tempo);
+            }
+        }
+
+        /// <summary>A finished attempt, unless it is a loop pass with nothing
+        /// played in it, which is dropped.</summary>
+        private void SaveFinished()
+        {
+            if (clock.Loop.HasValue && Session.NotesHit == 0 && Session.WrongNotes.Count == 0)
+            {
+                AttemptSaved = true;
+                Debug.Log("[Score] nothing played this pass: not saved");
+                return;
+            }
+            Save(AttemptRecord.Completed);
+        }
+
+        /// <summary>The clock has just wrapped. Normally the pass already
+        /// finished at its last note; if that note's window ran past the end
+        /// of the bar, it is judged now.</summary>
+        private void FinishPass(double songTimeBeforeWrap, double tempo)
+        {
+            if (Session != null && !AttemptSaved)
+            {
+                JudgePending(songTimeBeforeWrap, tempo);
+                Session.Advance(double.PositiveInfinity, tempo);
+                SaveFinished();
+            }
+            _pending.Clear();
+            Session = null;
+            AttemptReset?.Invoke();
         }
 
         /// <summary>Begins at the start of the song (the lead-in) after a
@@ -208,9 +259,15 @@ namespace PianoGlass.Scoring
         {
             PianoKeyLayout layout = calibration != null ? calibration.Layout : null;
             double scoreFrom = songTime - NoteJudge.WindowSongSeconds(goodMs, tempo);
+            double scoreUntil = double.PositiveInfinity;
+            if (clock.Loop is LoopRange loop)
+            {
+                scoreFrom = Math.Max(scoreFrom, loop.NotesFrom);
+                scoreUntil = loop.NotesUntil;
+            }
             Session = new ScoringSession(_song, new TimingWindows(perfectMs, greatMs, goodMs),
                                          layout != null ? (Func<int, bool>)layout.Contains : null,
-                                         scoreFrom);
+                                         scoreFrom, scoreUntil);
             AttemptReset?.Invoke();
             Session.Judged += r => NoteJudged?.Invoke(r);
             Session.WrongNotePlayed += w => WrongNotePlayed?.Invoke(w);
@@ -269,6 +326,11 @@ namespace PianoGlass.Scoring
                                                      tempo, inputOffsetMs);
                 rec.displayLatencyMs = clock.DisplayLatencySeconds * 1000.0;
                 rec.metronome = _metronomeUsed;
+                if (clock.Loop is LoopRange loop)
+                {
+                    rec.loopFromBar = loop.FromBar;
+                    rec.loopToBar = loop.ToBar;
+                }
                 Directory.CreateDirectory(Path.GetDirectoryName(_path));
                 File.WriteAllText(_path, JsonUtility.ToJson(rec, true));
                 LastSavedPath = _path;
