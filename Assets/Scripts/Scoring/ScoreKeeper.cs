@@ -106,6 +106,22 @@ namespace PianoGlass.Scoring
             // The same song SongTransport, NoteHighway and the highlighter each
             // build; one shared song source arrives with MIDI file loading.
             _song = SongData.TwinkleTwinkleLittleStar();
+            PrepareClockFormatting();
+        }
+
+        /// <summary>The first local time on the headset took about 380 ms
+        /// (measured 2026-11-05), which froze the first press of play when
+        /// the first attempt's file name asked for it. Done on another thread
+        /// at launch, nothing has to wait for it.</summary>
+        private static void PrepareClockFormatting()
+        {
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                var watch = System.Diagnostics.Stopwatch.StartNew();
+                DateTime.Now.ToString("yyyyMMdd-HHmmss");
+                DateTime.UtcNow.ToString("o");
+                Debug.Log($"[Score] clock formatting ready in {watch.ElapsedMilliseconds} ms");
+            });
         }
 
         private void OnEnable()
