@@ -187,7 +187,14 @@ namespace PianoGlass.Highway
 
             // Beat and bar lines, and the bar tags.
             double songTime = clock.DisplaySongTime;
-            BeatGrid.CollectVisible(song.Bpm, song.BeatsPerBar, -clock.LeadInSeconds, song.Duration,
+            // In a practice loop the lines stop at its end, like its notes.
+            double earliest = -clock.LeadInSeconds, latest = song.Duration;
+            if (clock.Loop is LoopRange loop)
+            {
+                earliest = System.Math.Min(earliest, loop.WrapTo);
+                latest = loop.NotesUntil;
+            }
+            BeatGrid.CollectVisible(song.Bpm, song.BeatsPerBar, earliest, latest,
                                     songTime, highway.LeadTimeSeconds, _beats);
 
             float lineLeft = leftEnd - lineOverhang;

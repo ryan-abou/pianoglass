@@ -313,7 +313,8 @@ namespace PianoGlass.Highway
                 // note's slab shrink into the key line as it plays rather
                 // than sliding underneath it. No other visibility check is
                 // needed on top of it.
-                bool visible = height > 0f;
+                // In a practice loop, only the loop's own notes are drawn.
+                bool visible = height > 0f && (!(clock.Loop is LoopRange loop) || loop.Holds(note.StartTime));
                 renderer.enabled = visible;
                 TextMeshPro label = _labels[i];
                 if (!visible)

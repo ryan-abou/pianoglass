@@ -230,7 +230,10 @@ namespace PianoGlass.Piano
 
         private void UpdateDueKeys()
         {
-            ActiveNoteSelector.CollectDueSoonPitches(_song.Notes, clock.DisplaySongTime, activeKeyLookaheadSeconds, _dueSoon);
+            double from = clock.Loop?.NotesFrom ?? double.NegativeInfinity;
+            double until = clock.Loop?.NotesUntil ?? double.PositiveInfinity;
+            ActiveNoteSelector.CollectDueSoonPitches(_song.Notes, clock.DisplaySongTime, activeKeyLookaheadSeconds,
+                                                     _dueSoon, from, until);
 
             foreach (var kv in _renderers)
             {

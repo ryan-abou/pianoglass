@@ -53,6 +53,7 @@ namespace PianoGlass.Transport
         private AudioClip _click, _accent;
         private bool _wasPlaying;
         private double _lastSongTime = double.NegativeInfinity;
+        private int _lastWraps;
 
         private void Awake()
         {
@@ -102,10 +103,19 @@ namespace PianoGlass.Transport
 
             // Paused, stopped, restarted or seeked: the clicks already handed
             // out belong to a timeline that no longer exists.
+            bool wrapped = clock.Wraps != _lastWraps;
+            _lastWraps = clock.Wraps;
             bool jumpedBack = songTime < _lastSongTime - 1e-6;
-            if ((_wasPlaying && !playing) || jumpedBack)
+            if ((_wasPlaying && !playing) || (jumpedBack && !wrapped))
             {
                 StopAll();
+                _schedule.Reset();
+            }
+            else if (wrapped)
+            {
+                // A loop's wrap. The click for its last bar line is scheduled
+                // and belongs to this timeline, the count-in's first beat: let
+                // it sound, and carry on from the song time wrapped to.
                 _schedule.Reset();
             }
             _wasPlaying = playing;
@@ -113,7 +123,14 @@ namespace PianoGlass.Transport
 
             if (!IsOn || !playing) return;
 
-            _schedule.Collect(_song.Bpm, _song.BeatsPerBar, -clock.LeadInSeconds, _song.Duration,
+            // In a loop, clicks stop at its end: nothing past the wrap will be played.
+            double earliest = -clock.LeadInSeconds, latest = _song.Duration;
+            if (clock.Loop is LoopRange loop)
+            {
+                earliest = System.Math.Min(earliest, loop.WrapTo);
+                latest = loop.NotesUntil;
+            }
+            _schedule.Collect(_song.Bpm, _song.BeatsPerBar, earliest, latest,
                               songTime, clock.TempoMultiplier, _dsp.Estimate(real), _clicks);
             foreach (MetronomeClick c in _clicks)
             {
