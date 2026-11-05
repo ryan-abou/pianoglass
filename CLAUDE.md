@@ -503,8 +503,9 @@ recenters of up to 1.1 m / 180° kept the keys on the piano).
   on a background thread at launch (measured 2026-11-05: longest frame after
   that press went from 390 ms to 28 ms). Any other first-use cost on the main
   thread will look the same, and it looks like a graphics stall when it is not:
-  profile before guessing. A binary profiler capture from a development build
-  names the method on the longest frame.
+  profile before guessing. In a development build, set `Profiler.logFile`,
+  `enableBinaryLog` and `enabled`, pull the `.raw`, and read the longest frame
+  with `ProfilerDriver.LoadProfile` and `RawFrameDataView`: it names the method.
 - **`FindFirstObjectByType` is deprecated in 6.6** — use `FindAnyObjectByType`.
 - **`git commit -am` ignores untracked files.** Any new Unity asset — script,
   material, prefab, scene — needs `git add -A`. Check `git status` first.
@@ -817,6 +818,34 @@ They are build-time leftovers: revert/delete them (keep the tracked
    Output latency (`SceneSetup.MetronomeOutputLatencyMs`) ships as 0 ms in
    the first round and is measured on video in that round: clicks against
    bar lines reaching the hit line.
+
+### Batch B status (2026-11-05): not merged yet
+
+`first-play-hitch` holds all of Batch B plus the results redesign and the
+first-press freeze fix. Nothing from it is in main.
+
+**Passed on the headset:** the results redesign (card, details panel, ray
+buttons, card and status panel taking turns) and the freeze fix (longest frame
+after the first press of play went from 390 ms to 28 ms).
+
+**Still open, in this order:**
+1. **Measure the release frame rate.** Development build, 2026-11-04: mean 69.6
+   fps; about 69 during songs, about 71-72 otherwise. The release APK was
+   installed 2026-11-05 00:18, but the headset's log and attempts folder show no
+   launch since, so there is no release number yet. Install it, play one song,
+   read the VrApi `FPS=` lines. Still under 72: profile a song.
+2. **Retest without the warm-up.** The warm-up in `NoteHighway` was on in every
+   test until it was removed (first-play-hitch, last code commit), so it may have
+   been hiding a small hitch. Development build, fresh launch: if the first press
+   of play hitches, restore it (revert the removal commit).
+3. **Get Ryan's yes on Liquid Glass, Outfit and the metronome,** then merge into
+   main separately, in this order: `batchB-devbuild`, `batchB-installfix`,
+   `batchB-glass`, `batchB-results`, `batchB-metronome`, `batchB-outfit`,
+   `results-redesign`, `first-play-hitch`. `batchB-test` is never merged. Then
+   record the results here and in `docs/feature-evaluation.md`.
+
+Older commits keep their Co-Authored-By lines: Ryan decided on 2026-11-05 not to
+rewrite history. New commits leave them out.
 
 ### Batch C — all build on the loop
 
