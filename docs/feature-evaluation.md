@@ -283,6 +283,7 @@ B0 (−5%) or C1 (+5%).
    had clicks 17 ms ahead of the lines (sd 9), within the phone's own audio/video
    uncertainty.
 9. **Loop worst bar ± 1 (F33).** Most useful with step 7 showing which bar.
+   Built (Batch C), awaiting a headset pass, as are steps 10-12.
 10. **Auto-tempo in the loop (F35).** Needs steps 5 and 9.
 11. **Wait mode (F22).** After the loop, so scoring and transport aren't
     changing at the same time.
