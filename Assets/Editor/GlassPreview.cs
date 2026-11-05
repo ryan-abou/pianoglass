@@ -32,7 +32,6 @@ namespace PianoGlass.EditorTools
         private const string TokensPath = "Assets/UI/GlassTokens.asset";
         private const string MaterialPath = "Assets/LiquidGlass.mat";
         private const string ShaderPath = "Assets/Shaders/LiquidGlass.shader";
-        private const string FontPath = "Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF.asset";
         private const int Width = 1920, Height = 1080;
         private const float Mm = 0.001f;
         private static Material _textMaterial;
@@ -64,7 +63,7 @@ namespace PianoGlass.EditorTools
             var tokens = AssetDatabase.LoadAssetAtPath<GlassTokens>(TokensPath);
             Material material = AssetDatabase.LoadAssetAtPath<Material>(MaterialPath);
             if (material == null) material = new Material(AssetDatabase.LoadAssetAtPath<Shader>(ShaderPath));
-            var font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+            TMP_FontAsset font = GlassFont.GetOrCreate();
             _textMaterial = GlassTextMaterial.GetOrCreate(font);
             Color primary = tokens != null ? tokens.textPrimary : GlassTokens.DefaultTextPrimary;
             Color secondary = tokens != null ? tokens.textSecondary : GlassTokens.DefaultTextSecondary;
@@ -116,7 +115,7 @@ namespace PianoGlass.EditorTools
                 Glass(root, material, tokens, GlassStyle.Pill, new Vector2(cx, -78), new Vector2(44, 24), 0.8f, c);
                 Text(root, font, (i + 1).ToString(), 12, secondary, new Vector2(cx - 22, -94), TextAlignmentOptions.Top, 44);
             }
-            Text(root, font, "weakest: bar 3 (62%)", 16, secondary, new Vector2(-208, -112), TextAlignmentOptions.TopLeft, 300);
+            Text(root, font, "weakest: bar 3 (62%)", 16, secondary, new Vector2(-208, -109), TextAlignmentOptions.TopLeft, 300);
 
             // A pill button off the card, as on the song panel.
             var button = new GameObject("Button").transform;

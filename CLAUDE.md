@@ -766,6 +766,7 @@ They are build-time leftovers: revert/delete them (keep the tracked
    `#E9EEF2` / `#8A96A3`, the outcome colours from `OutcomeTint`). Material
    created and assigned in `SceneSetup`. Try it first on the status panel.
    Headset: readable over a bright window and a dark wall; 72 Hz.
+   **Typeface: Outfit** (Ryan, 2026-11-04) on every glass surface; note names on the slabs keep LiberationSans. `Assets/Editor/GlassFont.cs` builds static Regular and Bold atlases from the TTFs in `Assets/UI/Fonts`, fixed instances of the variable font (its default is Thin, all Unity would draw). Outfit has no ♯ ▲ ▼, so those come from LiberationSans through the fallback table.
 2. **Results card (F30) + bar heat strip (F32)**, built in that glass. A pure
    tested summary from the attempt record: headline accuracy, verdict,
    change vs the last attempt **at the same tempo and mode** (read from the

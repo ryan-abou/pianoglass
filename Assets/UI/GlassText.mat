@@ -14,7 +14,7 @@ Material:
   m_ValidKeywords:
   - UNDERLAY_ON
   m_InvalidKeywords: []
-  m_LightmapFlags: 1
+  m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
   m_CustomRenderQueue: -1
@@ -25,7 +25,7 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _MainTex:
-        m_Texture: {fileID: 28684132378477856, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+        m_Texture: {fileID: -1797402522939299762, guid: 78fe0b7abd3366847af5e57f61dc3825, type: 2}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Ints: []
@@ -33,15 +33,15 @@ Material:
     - _ColorMask: 15
     - _CullMode: 0
     - _FaceDilate: 0
-    - _GradientScale: 10
+    - _GradientScale: 9
     - _MaskSoftnessX: 0
     - _MaskSoftnessY: 0
     - _OutlineSoftness: 0
     - _OutlineWidth: 0
     - _PerspectiveFilter: 0.875
-    - _ScaleRatioA: 0.9
+    - _ScaleRatioA: 0.8888889
     - _ScaleRatioB: 1
-    - _ScaleRatioC: 0.609375
+    - _ScaleRatioC: 0.6018518
     - _ScaleX: 1
     - _ScaleY: 1
     - _ShaderFlags: 0
