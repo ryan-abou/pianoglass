@@ -30,6 +30,7 @@ namespace PianoGlass.Piano
                  "player has no PC attached -- a logcat-only message is invisible.")]
         [SerializeField] private CalibrationFlowController flow;
         [SerializeField] private ScoreKeeper score;
+        [SerializeField] private Metronome metronome;
 
         private readonly StringBuilder _sb = new StringBuilder(256);
 
@@ -52,6 +53,7 @@ namespace PianoGlass.Piano
             if (tip == null) tip = FindAnyObjectByType<ControllerTipCalibration>();
             if (flow == null) flow = FindAnyObjectByType<CalibrationFlowController>();
             if (score == null) score = FindAnyObjectByType<ScoreKeeper>();
+            if (metronome == null) metronome = FindAnyObjectByType<Metronome>();
 
             // Development builds: the headset test checklist, beside this panel.
             if (Debug.isDebugBuild && flow != null && text != null)
@@ -118,7 +120,8 @@ namespace PianoGlass.Piano
             {
                 _sb.AppendLine();
                 _sb.AppendLine($"transport:  {StateLabel(transport.CurrentState)}   t = {clock.SongTime:0.0}s   " +
-                               $"{TempoStep.Label(clock.TempoMultiplier)}");
+                               $"{TempoStep.Label(clock.TempoMultiplier)}" +
+                               (metronome != null ? $"   metronome {(metronome.IsOn ? "on" : "off")}" : ""));
             }
 
             if (score != null && score.Session != null) AppendScore(score);

@@ -70,7 +70,7 @@ namespace PianoGlass.Tests.EditMode
         // TransportChord
         // ------------------------------------------------------------------
 
-        private const int A0 = 21, ASharp0 = 22, B0 = 23, C1 = 24;
+        private const int A0 = 21, ASharp0 = 22, B0 = 23, C1 = 24, CSharp1 = 25;
 
         private static Func<int, bool> Held(params int[] keys)
         {
@@ -115,6 +115,14 @@ namespace PianoGlass.Tests.EditMode
         {
             Assert.AreEqual(ChordAction.None, TransportChord.OnNoteOn(A0, Held(A0, B0)));
             Assert.AreEqual(ChordAction.None, TransportChord.OnNoteOn(A0, Held(A0, C1)));
+        }
+
+        [Test]
+        public void HoldAZeroPressCSharpOneTogglesTheMetronome()
+        {
+            Assert.AreEqual(ChordAction.ToggleMetronome, TransportChord.OnNoteOn(CSharp1, Held(A0, CSharp1)));
+            Assert.AreEqual(ChordAction.None, TransportChord.OnNoteOn(CSharp1, Held(CSharp1)));
+            Assert.AreEqual(ChordAction.None, TransportChord.OnNoteOn(A0, Held(A0, CSharp1)));
         }
 
         [Test]

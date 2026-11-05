@@ -48,6 +48,8 @@ namespace PianoGlass.Scoring
         [SerializeField] private SongClock clock;
         [SerializeField] private SongTransport transport;
         [SerializeField] private KeyboardCalibration calibration;
+        [Tooltip("Recorded as 'metronome' in each attempt: whether it clicked at any point.")]
+        [SerializeField] private Metronome metronome;
 
         [Header("Timing windows, real ms either side")]
         [SerializeField] private float perfectMs = 40f;
@@ -92,6 +94,7 @@ namespace PianoGlass.Scoring
         private readonly List<(int pitch, double realtime)> _pending = new List<(int, double)>();
         private double _lastSongTime = double.NegativeInfinity;
         private string _startedUtc;
+        private bool _metronomeUsed;
         private string _path;
 
         private void Awake()
@@ -99,6 +102,7 @@ namespace PianoGlass.Scoring
             if (clock == null) clock = FindAnyObjectByType<SongClock>();
             if (transport == null) transport = FindAnyObjectByType<SongTransport>();
             if (calibration == null) calibration = FindAnyObjectByType<KeyboardCalibration>();
+            if (metronome == null) metronome = FindAnyObjectByType<Metronome>();
             // The same song SongTransport, NoteHighway and the highlighter each
             // build; one shared song source arrives with MIDI file loading.
             _song = SongData.TwinkleTwinkleLittleStar();
@@ -162,6 +166,7 @@ namespace PianoGlass.Scoring
             }
 
             if (Session == null) Begin(songTime, tempo);
+            if (metronome != null && metronome.IsOn) _metronomeUsed = true;
 
             if (!AttemptSaved)
             {
@@ -204,6 +209,7 @@ namespace PianoGlass.Scoring
             }
 
             AttemptSaved = false;
+            _metronomeUsed = false;
             _startedUtc = DateTime.UtcNow.ToString("o");
             string stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
             _path = Path.Combine(AttemptsDirectory, $"{stamp}-{Slug(_song.Title)}.json");
@@ -246,6 +252,7 @@ namespace PianoGlass.Scoring
                 rec = Session.ToRecord(outcome, _startedUtc, DateTime.UtcNow.ToString("o"),
                                                      tempo, inputOffsetMs);
                 rec.displayLatencyMs = clock.DisplayLatencySeconds * 1000.0;
+                rec.metronome = _metronomeUsed;
                 Directory.CreateDirectory(Path.GetDirectoryName(_path));
                 File.WriteAllText(_path, JsonUtility.ToJson(rec, true));
                 LastSavedPath = _path;

@@ -738,6 +738,8 @@ MonoBehaviour:
   chordNoteB: 22
   slowerNote: 23
   fasterNote: 24
+  metronomeNote: 25
+  metronome: {fileID: 1115035986}
 --- !u!4 &644933873
 Transform:
   m_ObjectHideFlags: 0
@@ -768,6 +770,7 @@ MonoBehaviour:
   clock: {fileID: 1285217052}
   transport: {fileID: 644933872}
   calibration: {fileID: 2007997132}
+  metronome: {fileID: 1115035986}
   perfectMs: 40
   greatMs: 80
   goodMs: 150
@@ -930,6 +933,7 @@ MonoBehaviour:
   tip: {fileID: 2007997135}
   flow: {fileID: 2007997137}
   score: {fileID: 644933874}
+  metronome: {fileID: 1115035986}
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -1310,6 +1314,55 @@ MonoBehaviour:
   hitLineColor: {r: 0.02, g: 0.02, b: 0.03, a: 0.95}
   hitLineWidth: 0.012
   standoff: 0.004
+--- !u!1 &1115035985
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1115035987}
+  - component: {fileID: 1115035986}
+  m_Layer: 0
+  m_Name: Metronome
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1115035986
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1115035985}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d7965923503f3c84b98f866510d503d2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PianoGlass.Transport.Metronome
+  clock: {fileID: 1285217052}
+  outputLatencyMs: 140
+  lookaheadSeconds: 0.3
+  volume: 0.6
+  accentVolume: 0.9
+--- !u!4 &1115035987
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1115035985}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1156380841
 GameObject:
   m_ObjectHideFlags: 0
@@ -2491,3 +2544,4 @@ SceneRoots:
   - {fileID: 1034278084}
   - {fileID: 644933873}
   - {fileID: 257032940}
+  - {fileID: 1115035987}

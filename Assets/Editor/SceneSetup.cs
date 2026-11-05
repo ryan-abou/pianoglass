@@ -790,6 +790,54 @@ namespace PianoGlass.EditorTools
                       $"{ResultsHeightAboveKeys} m above the keys.");
         }
 
+        /// <summary>Headset audio output latency, ms: scheduled clip start to
+        /// sound out of the speaker. Measured 2026-11-03 from a 60 fps phone
+        /// video of the Batch B build: accented clicks landed 141 ms (median
+        /// 140, sd 11, 8 bars) after their bar line reached the key line. A
+        /// clap video put the phone's own audio/video offset within one
+        /// 30 fps frame, so it is not corrected for.</summary>
+        private const float MetronomeOutputLatencyMs = 140f;
+
+        /// <summary>
+        /// The metronome (Batch B3, F27): a Metronome on its own object, its
+        /// measured output latency, and the references SongTransport (A0 +
+        /// C#1 toggle), ScoreKeeper (records it per attempt) and the status
+        /// panel (shows on/off) hold to it.
+        /// </summary>
+        [MenuItem("PianoGlass/Scene/Configure Metronome")]
+        public static void ConfigureMetronome()
+        {
+            Scene scene = OpenScene();
+
+            var clock = Object.FindAnyObjectByType<SongClock>();
+            if (clock == null)
+            {
+                Debug.LogError("[SceneSetup] SongClock missing -- run Add Falling-Note Highway first.");
+                return;
+            }
+
+            Metronome metronome = GetOrAdd<Metronome>("Metronome");
+            var so = new SerializedObject(metronome);
+            so.FindProperty("clock").objectReferenceValue = clock;
+            so.FindProperty("outputLatencyMs").floatValue = MetronomeOutputLatencyMs;
+            so.ApplyModifiedProperties();
+
+            void Point(Component c)
+            {
+                if (c == null) return;
+                var cso = new SerializedObject(c);
+                cso.FindProperty("metronome").objectReferenceValue = metronome;
+                cso.ApplyModifiedProperties();
+            }
+            Point(Object.FindAnyObjectByType<SongTransport>());
+            Point(Object.FindAnyObjectByType<ScoreKeeper>());
+            Point(Object.FindAnyObjectByType<CalibrationPanel>());
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            Debug.Log($"[SceneSetup] Metronome configured, output latency {MetronomeOutputLatencyMs} ms.");
+        }
+
         [MenuItem("PianoGlass/Scene/Remove Test Cube")]
         public static void RemoveTestCube()
         {
