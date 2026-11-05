@@ -727,7 +727,7 @@ namespace PianoGlass.EditorTools
         /// keys, at the foot of the leaned-back wall, in front of the status
         /// panel rather than on top of it. Shown only between attempts, when
         /// the wall is empty.</summary>
-        private const float ResultsHeightAboveKeys = 0.24f;
+        private const float ResultsHeightAboveKeys = 0.27f;
         private const float ResultsDepthOffset = 0.0f;
 
         /// <summary>
@@ -771,12 +771,25 @@ namespace PianoGlass.EditorTools
             go.transform.localScale = Vector3.one * 0.001f;
 
             PianoGlass.UI.GlassPanel glass = AddGlass(go, material, tokens);
+            // The rect is the card's whole size: its layout is measured to the edge.
+            var glassSo = new SerializedObject(glass);
+            glassSo.FindProperty("paddingMetres").vector2Value = Vector2.zero;
+            glassSo.ApplyModifiedProperties();
+
+            // Editor mouse only; on the headset OvrUiPointer presses the buttons.
+            canvas.worldCamera = Camera.main;
+            if (go.GetComponent<UnityEngine.UI.GraphicRaycaster>() == null) go.AddComponent<UnityEngine.UI.GraphicRaycaster>();
+
             if (card == null) card = go.AddComponent<ResultsCard>();
             // GlassPanel was re-added after ResultsCard; component order
             // does not matter, ResultsCard looks it up in Awake.
 
             var cardSo = new SerializedObject(card);
             cardSo.FindProperty("scoreKeeper").objectReferenceValue = scoreKeeper;
+            cardSo.FindProperty("transport").objectReferenceValue = Object.FindAnyObjectByType<PianoGlass.Transport.SongTransport>();
+            cardSo.FindProperty("calibration").objectReferenceValue = calibration;
+            cardSo.FindProperty("tip").objectReferenceValue = Object.FindAnyObjectByType<ControllerTipCalibration>();
+            cardSo.FindProperty("statusCanvas").objectReferenceValue = StatusCanvas();
             cardSo.FindProperty("tokens").objectReferenceValue = tokens;
             cardSo.FindProperty("font").objectReferenceValue = font;
             cardSo.FindProperty("textMaterial").objectReferenceValue = GlassTextMaterial.GetOrCreate(font);
@@ -791,10 +804,51 @@ namespace PianoGlass.EditorTools
             so.FindProperty("heightAboveKeys").floatValue = ResultsHeightAboveKeys;
             so.ApplyModifiedProperties();
 
+            ConfigureUiPointer();
+
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
             Debug.Log($"[SceneSetup] Results card configured ({glass.name}), " +
                       $"{ResultsHeightAboveKeys} m above the keys.");
+        }
+
+        private const string PointerLineMaterialPath = "Assets/UI/UiPointerLine.mat";
+
+        /// <summary>The right-controller ray that presses glass buttons, on an
+        /// object of its own. Its material is made here, in the editor, and
+        /// assigned, so nothing looks a shader up at runtime.</summary>
+        private static void ConfigureUiPointer()
+        {
+            var pointer = Object.FindAnyObjectByType<PianoGlass.UI.OvrUiPointer>();
+            GameObject go = pointer != null ? pointer.gameObject : new GameObject("UiPointer");
+            if (pointer == null) pointer = go.AddComponent<PianoGlass.UI.OvrUiPointer>();
+
+            var material = AssetDatabase.LoadAssetAtPath<Material>(PointerLineMaterialPath);
+            if (material == null)
+            {
+                material = new Material(Shader.Find("Universal Render Pipeline/Unlit")) { name = "UiPointerLine" };
+                material.SetColor("_BaseColor", new Color(0.85f, 0.9f, 0.95f, 1f));
+                AssetDatabase.CreateAsset(material, PointerLineMaterialPath);
+                AssetDatabase.SaveAssets();
+            }
+
+            LineRenderer line = go.GetComponent<LineRenderer>();
+            if (line == null) line = go.AddComponent<LineRenderer>();
+            line.sharedMaterial = material;
+            line.useWorldSpace = true;
+            line.positionCount = 2;
+            line.startWidth = 0.003f;
+            line.endWidth = 0.0015f;
+            line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            line.receiveShadows = false;
+            line.enabled = false;
+
+            var so = new SerializedObject(pointer);
+            so.FindProperty("rig").objectReferenceValue = Object.FindAnyObjectByType<OVRCameraRig>();
+            so.FindProperty("line").objectReferenceValue = line;
+            so.ApplyModifiedProperties();
+            if (so.FindProperty("rig").objectReferenceValue == null)
+                Debug.LogError("[SceneSetup] No OVRCameraRig in the scene: the UI pointer has nothing to follow.");
         }
 
         /// <summary>Headset audio output latency, ms: scheduled clip start to
