@@ -111,6 +111,7 @@ namespace PianoGlass.Scoring
         private Vector2 _detailsOpenPosition, _detailsClosedPosition;
         private TextMeshProUGUI _noteTotal, _spreadAverage, _attemptsTrend, _attemptsMessage;
         private readonly TextMeshProUGUI[] _noteCounts = new TextMeshProUGUI[4];
+        private TextMeshProUGUI _firstNoteName;
         private readonly GlassPanel[] _noteFills = new GlassPanel[4];
         private readonly GlassPanel[] _histogramBars = new GlassPanel[TimingSpread.Bins];
         private RectTransform _chartRoot;
@@ -591,7 +592,9 @@ namespace PianoGlass.Scoring
             for (int i = 0; i < 4; i++)
             {
                 float rowY = top - 33f - i * 17f;
-                Text(parent, $"Name_{i}", 13f, _primary, TextAlignmentOptions.Left, new Vector2(left, rowY + 9f), 56f).text = names[i];
+                TextMeshProUGUI name = Text(parent, $"Name_{i}", 13f, _primary, TextAlignmentOptions.Left, new Vector2(left, rowY + 9f), 56f);
+                name.text = names[i];
+                if (i == 0) _firstNoteName = name;
                 GlassPanel track = Glass(parent, $"Track_{i}", GlassStyle.Pill, new Vector2(_noteBarLeft + _noteBarWidth * 0.5f, rowY),
                                          new Vector2(_noteBarWidth, 5f), PillDepth, BarTrack);
                 track.SetPlain(true);
@@ -665,7 +668,9 @@ namespace PianoGlass.Scoring
         {
             _noteTotal.text = s.TotalNotes == 1 ? "1 note" : $"{s.TotalNotes} notes";
 
-            int[] counts = { s.Perfect, s.Great, s.Good, s.Miss };
+            // Wait mode has one kind of hit, on the top row.
+            _firstNoteName.text = s.IsWaitMode ? "Correct" : "Perfect";
+            int[] counts = { s.IsWaitMode ? s.Correct : s.Perfect, s.Great, s.Good, s.Miss };
             for (int i = 0; i < 4; i++)
             {
                 _noteCounts[i].text = counts[i].ToString();
