@@ -179,8 +179,9 @@ namespace PianoGlass.Piano
 
         private void AppendLoop(PracticeLoop practice)
         {
-            string last = practice.LastAccuracy >= 0.0 ? $"   last pass {practice.LastAccuracy:0}%" : "";
-            _sb.AppendLine($"<color=#E8D48A>loop:       {practice.Range.Value.Label}, pass {practice.Pass}{last}   Y = full song</color>");
+            _sb.AppendLine($"<color=#E8D48A>loop:       {practice.Range.Value.Label}, pass {practice.Pass}   Y = full song</color>");
+            if (practice.LastPassLine != null)
+                _sb.AppendLine($"<color=#E8D48A>last pass:  {practice.LastPassLine}</color>");
         }
 
         private void AppendScore(ScoreKeeper keeper)

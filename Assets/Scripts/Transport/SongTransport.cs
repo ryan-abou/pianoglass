@@ -57,6 +57,9 @@ namespace PianoGlass.Transport
 
         private const string TempoPrefsKey = "PianoGlass.TempoPercent";
 
+        /// <summary>The tempo the player chose, which auto-tempo in a loop
+        /// leaves alone: leaving the loop goes back to it.</summary>
+        private float _chosenTempo = 1f;
         private bool _chordLatched;
         private SongData _song;
 
@@ -70,7 +73,7 @@ namespace PianoGlass.Transport
             if (clock != null)
             {
                 int stored = PlayerPrefs.GetInt(TempoPrefsKey, 100);
-                clock.TempoMultiplier = TempoStep.Sanitize(stored / 100f);
+                clock.TempoMultiplier = _chosenTempo = TempoStep.Sanitize(stored / 100f);
                 Debug.Log($"[Transport] {TempoStep.Label(clock.TempoMultiplier)} (saved {stored}%)");
             }
         }
@@ -127,6 +130,7 @@ namespace PianoGlass.Transport
         public void RestartAndPlay()
         {
             if (!CanAcceptInput || clock == null) return;
+            if (clock.Loop.HasValue) clock.TempoMultiplier = _chosenTempo;
             clock.Restart();
             clock.Play();
         }
@@ -139,7 +143,7 @@ namespace PianoGlass.Transport
         {
             if (!CanAcceptInput || clock == null) return;
             float tempo = TempoStep.Sanitize(percent / 100f);
-            clock.TempoMultiplier = tempo;
+            clock.TempoMultiplier = _chosenTempo = tempo;
             PlayerPrefs.SetInt(TempoPrefsKey, TempoStep.ToPercent(tempo));
             PlayerPrefs.Save();
             Debug.Log($"[Transport] restarting at {TempoStep.Label(tempo)}");
@@ -176,7 +180,7 @@ namespace PianoGlass.Transport
                 return;
             }
 
-            clock.TempoMultiplier = after;
+            clock.TempoMultiplier = _chosenTempo = after;
             PlayerPrefs.SetInt(TempoPrefsKey, TempoStep.ToPercent(after));
             PlayerPrefs.Save();
             Debug.Log($"[Transport] {TempoStep.Label(before)} -> {TempoStep.Label(after)} " +
