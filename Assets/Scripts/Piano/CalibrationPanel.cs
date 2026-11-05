@@ -137,7 +137,8 @@ namespace PianoGlass.Piano
                 _sb.AppendLine();
                 _sb.AppendLine($"transport:  {StateLabel(transport.CurrentState)}   t = {clock.SongTime:0.0}s   " +
                                $"{TempoStep.Label(clock.TempoMultiplier)}" +
-                               (metronome != null ? $"   metronome {(metronome.IsOn ? "on" : "off")}" : ""));
+                               (metronome != null ? $"   metronome {(metronome.IsOn ? "on" : "off")}" : "") +
+                               (transport.WaitMode ? "   wait mode" : ""));
             }
 
             if (loop != null && loop.IsActive) AppendLoop(loop);
@@ -187,8 +188,21 @@ namespace PianoGlass.Piano
         private void AppendScore(ScoreKeeper keeper)
         {
             ScoringSession s = keeper.Session;
-            _sb.AppendLine($"score:      {s.Score}   {s.Accuracy:0}%   perfect {s.Perfect} · great {s.Great} · " +
-                           $"good {s.Good} · miss {s.Miss} · wrong {s.WrongPitchCount + s.ExtraCount}");
+            if (s.PitchOnly)
+            {
+                _sb.AppendLine($"keys:       {s.Accuracy:0}%   correct {s.Correct} · wrong {s.WrongPitchCount + s.ExtraCount}");
+                if (clock != null && clock.IsHolding)
+                {
+                    _sb.Append("<b><color=#E8D48A>waiting:    ");
+                    foreach (int pitch in s.WaitingPitches()) _sb.Append(MidiInput.NoteName(pitch)).Append(' ');
+                    _sb.AppendLine("</color></b>");
+                }
+            }
+            else
+            {
+                _sb.AppendLine($"score:      {s.Score}   {s.Accuracy:0}%   perfect {s.Perfect} · great {s.Great} · " +
+                               $"good {s.Good} · miss {s.Miss} · wrong {s.WrongPitchCount + s.ExtraCount}");
+            }
 
             JudgementResult r = s.LastResult;
             if (r != null)

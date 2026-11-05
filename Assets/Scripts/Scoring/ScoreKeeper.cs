@@ -47,6 +47,11 @@ namespace PianoGlass.Scoring
     /// told apart from a restart by SongClock.Wraps: it finishes the pass
     /// rather than abandoning it. A pass nobody played a note in is not saved,
     /// so a headset left looping does not fill the attempts folder.
+    ///
+    /// Wait mode (F22): the session judges on pitch alone, and each frame this
+    /// holds the clock at the next note not yet played. Switching wait mode
+    /// while paused part-way drops the attempt like a restart and begins a new
+    /// one from there, since an attempt is one mode or the other.
     /// </summary>
     [DefaultExecutionOrder(100)]
     public class ScoreKeeper : MonoBehaviour
@@ -153,6 +158,16 @@ namespace PianoGlass.Scoring
         private void Update()
         {
             if (clock == null) return;
+            Tick();
+            // Read by the clock next frame. Always set, so nothing can leave
+            // the clock held after the session that held it has gone.
+            clock.HoldAt = Session != null && !AttemptSaved && Session.PitchOnly
+                ? Session.NextDueTime
+                : double.PositiveInfinity;
+        }
+
+        private void Tick()
+        {
             double songTime = clock.SongTime;
             double tempo = clock.TempoMultiplier;
 
@@ -196,6 +211,14 @@ namespace PianoGlass.Scoring
             {
                 _pending.Clear();
                 return;
+            }
+
+            if (Session != null && !AttemptSaved && transport != null && Session.PitchOnly != transport.WaitMode)
+            {
+                if (Session.JudgedCount + Session.WrongNotes.Count > 0) Save(AttemptRecord.Abandoned);
+                Debug.Log($"[Score] wait mode {(transport.WaitMode ? "on" : "off")}: new attempt from here");
+                Session = null;
+                _pending.Clear();
             }
 
             if (Session == null) Begin(songTime, tempo);
@@ -267,7 +290,8 @@ namespace PianoGlass.Scoring
             }
             Session = new ScoringSession(_song, new TimingWindows(perfectMs, greatMs, goodMs),
                                          layout != null ? (Func<int, bool>)layout.Contains : null,
-                                         scoreFrom, scoreUntil);
+                                         scoreFrom, scoreUntil,
+                                         transport != null && transport.WaitMode);
             AttemptReset?.Invoke();
             Session.Judged += r => NoteJudged?.Invoke(r);
             Session.WrongNotePlayed += w => WrongNotePlayed?.Invoke(w);

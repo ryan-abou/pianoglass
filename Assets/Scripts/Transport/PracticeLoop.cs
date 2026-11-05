@@ -76,8 +76,10 @@ namespace PianoGlass.Transport
         {
             if (!rec.IsLoop || rec.outcome != AttemptRecord.Completed) return;
             float tempo = clock.TempoMultiplier;
-            _nextTempo = AutoTempo.Next(tempo, rec.accuracy);
-            LastPassLine = AutoTempo.Describe(tempo, _nextTempo, rec.accuracy);
+            // Wait mode has no timing, so its accuracy says nothing about tempo.
+            bool wait = rec.mode == AttemptRecord.Wait;
+            _nextTempo = wait ? tempo : AutoTempo.Next(tempo, rec.accuracy);
+            LastPassLine = wait ? $"{rec.accuracy:0}% of keys right" : AutoTempo.Describe(tempo, _nextTempo, rec.accuracy);
             Debug.Log($"[Loop] pass {Pass}: {rec.accuracy:0.0}% -> {LastPassLine}");
         }
 

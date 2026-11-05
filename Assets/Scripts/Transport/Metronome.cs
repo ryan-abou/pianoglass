@@ -54,6 +54,7 @@ namespace PianoGlass.Transport
         private bool _wasPlaying;
         private double _lastSongTime = double.NegativeInfinity;
         private int _lastWraps;
+        private bool _wasHolding;
 
         private void Awake()
         {
@@ -121,7 +122,17 @@ namespace PianoGlass.Transport
             _wasPlaying = playing;
             _lastSongTime = songTime;
 
-            if (!IsOn || !playing) return;
+            // Wait mode: no beat while the song is held. A click past the hold
+            // is taken back, and the beats pick up again when it lifts.
+            bool holding = clock.IsHolding;
+            if (holding && !_wasHolding)
+            {
+                StopAll();
+                _schedule.Reset();
+            }
+            _wasHolding = holding;
+
+            if (!IsOn || !playing || holding) return;
 
             // In a loop, clicks stop at its end: nothing past the wrap will be played.
             double earliest = -clock.LeadInSeconds, latest = _song.Duration;
@@ -130,6 +141,7 @@ namespace PianoGlass.Transport
                 earliest = System.Math.Min(earliest, loop.WrapTo);
                 latest = loop.NotesUntil;
             }
+            latest = System.Math.Min(latest, clock.HoldAt);
             _schedule.Collect(_song.Bpm, _song.BeatsPerBar, earliest, latest,
                               songTime, clock.TempoMultiplier, _dsp.Estimate(real), _clicks);
             foreach (MetronomeClick c in _clicks)

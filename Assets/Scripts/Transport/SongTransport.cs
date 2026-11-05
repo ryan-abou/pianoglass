@@ -28,6 +28,9 @@ namespace PianoGlass.Transport
     ///
     /// Metronome (F27): hold A0 and press C#1 to turn it on or off, also
     /// only while stopped or paused.
+    ///
+    /// Wait mode (F22): hold A0 and press D1, likewise, and saved. Turning it
+    /// on or off while paused part-way starts a new attempt from there.
     /// </summary>
     public class SongTransport : MonoBehaviour
     {
@@ -51,11 +54,16 @@ namespace PianoGlass.Transport
         [SerializeField] private int slowerNote = TransportChord.B0;
         [SerializeField] private int fasterNote = TransportChord.C1;
         [SerializeField] private int metronomeNote = TransportChord.CSharp1;
+        [SerializeField] private int waitNote = TransportChord.D1;
 
         [Header("Metronome")]
         [SerializeField] private Metronome metronome;
 
         private const string TempoPrefsKey = "PianoGlass.TempoPercent";
+        private const string WaitPrefsKey = "PianoGlass.WaitMode";
+
+        /// <summary>The clock holds at each note until it is played (F22).</summary>
+        public bool WaitMode { get; private set; }
 
         /// <summary>The tempo the player chose, which auto-tempo in a loop
         /// leaves alone: leaving the loop goes back to it.</summary>
@@ -69,6 +77,7 @@ namespace PianoGlass.Transport
             if (calibration == null) calibration = FindAnyObjectByType<KeyboardCalibration>();
             if (metronome == null) metronome = FindAnyObjectByType<Metronome>();
             _song = SongData.TwinkleTwinkleLittleStar();
+            WaitMode = PlayerPrefs.GetInt(WaitPrefsKey, 0) == 1;
 
             if (clock != null)
             {
@@ -200,6 +209,22 @@ namespace PianoGlass.Transport
             metronome.Toggle();
         }
 
+        /// <summary>Wait mode on/off. Ignored while playing, so what the
+        /// clock is doing never changes under the player's hands.</summary>
+        public void ToggleWaitMode()
+        {
+            if (!CanAcceptInput) return;
+            if (clock != null && clock.IsPlaying)
+            {
+                Debug.Log("[Transport] wait mode toggle ignored while playing");
+                return;
+            }
+            WaitMode = !WaitMode;
+            PlayerPrefs.SetInt(WaitPrefsKey, WaitMode ? 1 : 0);
+            PlayerPrefs.Save();
+            Debug.Log($"[Transport] wait mode {(WaitMode ? "on" : "off")}");
+        }
+
         // ------------------------------------------------------------------
 
         private void OnNoteOn(int note, int velocity, double time)
@@ -212,7 +237,7 @@ namespace PianoGlass.Transport
             if (!CanAcceptInput) return;
 
             ChordAction action = TransportChord.OnNoteOn(note, MidiInput.Instance.IsHeld,
-                                                         chordNoteA, chordNoteB, slowerNote, fasterNote, metronomeNote);
+                                                         chordNoteA, chordNoteB, slowerNote, fasterNote, metronomeNote, waitNote);
             switch (action)
             {
                 case ChordAction.Restart:
@@ -228,6 +253,9 @@ namespace PianoGlass.Transport
                     break;
                 case ChordAction.ToggleMetronome:
                     ToggleMetronome();
+                    break;
+                case ChordAction.ToggleWait:
+                    ToggleWaitMode();
                     break;
             }
         }
