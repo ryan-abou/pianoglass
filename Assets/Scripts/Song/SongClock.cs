@@ -55,6 +55,19 @@ namespace PianoGlass.Song
         /// wrap apart.</summary>
         public int Wraps { get; private set; }
 
+        /// <summary>Which time through the loop this is, from 1; 0 with no loop.</summary>
+        public int LoopPass => Loop.HasValue ? Wraps - _wrapsAtLoopStart + 1 : 0;
+
+        /// <summary>Memory fade (F36) wanted. It only acts inside a loop.</summary>
+        public bool MemoryFadeOn { get; set; }
+
+        /// <summary>How visible a note is right now, 0-1: below 1 only on later
+        /// passes of a loop with memory fade on. The ceiling for everything
+        /// that shows a note: its slab, its name, its due key.</summary>
+        public float NoteOpacity => Loop.HasValue && MemoryFadeOn ? MemoryFade.Opacity(LoopPass) : 1f;
+
+        private int _wrapsAtLoopStart;
+
         /// <summary>No real headset is this slow; anything larger is a bad
         /// reading, and drawing that far ahead would be worse than none.</summary>
         public const double MaxDisplayLatencySeconds = 0.1;
@@ -146,6 +159,7 @@ namespace PianoGlass.Song
         public void StartLoop(LoopRange loop)
         {
             Loop = loop;
+            _wrapsAtLoopStart = Wraps;
             SongTime = loop.WrapTo;
         }
 
