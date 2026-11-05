@@ -172,6 +172,7 @@ on them and none can be played by accident.
 | Middle C fix: start / cancel | right grip | — | `OvrCalibrationInput` | Anchored mode; then touch Middle C and pull the right trigger |
 | Play / pause | A | — | `OvrSongTransport` | |
 | Restart from the top and play | left Y | A0 + A♯0 | `OvrSongTransport`, `SongTransport` | The chord works whenever calibrated, playing or not |
+| Press a results card button (Retry, More/Less info, the suggestion's button) | right controller ray + right trigger | — | `OvrUiPointer`, `GlassButton` | Stopgap until hand poke (Phase 4). The ray shows only while a button is pressable; the trigger goes to calibration unless the ray is on a button |
 | Tempo −5% / +5% | — | hold A0, press B0 / C1 | `SongTransport` | 25–200%, only while stopped or paused, saved |
 | Metronome on/off | — | hold A0, press C♯1 | `SongTransport` → `Metronome` | Only while stopped or paused, saved |
 | Display mode (cycle) | left X | — | `OvrKeyOverlayInput` | FullOverlay / Translucent / ActiveKeysOnly / EdgeMarkers, saved |
@@ -195,7 +196,7 @@ values from `Assets/UI/GlassTokens.asset`):
 | Menu | Holds | Shown when |
 |---|---|---|
 | **Song panel** (F12 + F24 merged), left end of the keyboard, angled toward the player | play/pause, restart, tempo −/+ with its value, metronome toggle, wait-mode toggle, loop worst bar, song picker button, settings button | Always, collapsible to a slim strip |
-| **Results card** (F30/F32) | accuracy, verdict, change vs last, timing, wrong notes, bar heat strip; buttons: retry, loop worst bar, back to songs | When an attempt completes |
+| **Results card** (F30/F32) | rank, accuracy, change vs last, timing, wrong notes, best streak, bar pills, one suggestion; buttons: retry, next song (hidden until a song list exists), more info (details panel) | When an attempt completes |
 | **Settings** (S1, `PianoSettings`) | display mode, passthrough, hand colours (F13), due-key toggle (F18), metronome, memory fade, wait mode | From the song panel |
 | **Calibration panel** (today's status panel, restyled) | start calibration, "looks right", Middle C fix, nudge pad (6 arrows plus yaw ⟲/⟳, held to repeat), clear nudge, measure controller tip | During setup, and from Settings → Keyboard |
 | **Song picker** (F38/F39) | song list with per-song history | From the song panel |
@@ -204,12 +205,35 @@ What stays off the menus, and why:
 - **The piano chords stay.** While playing, hands are on the keys, and a
   chord is faster than reaching for a panel. Each chord gets a matching
   button, so nothing is chord-only.
-- **Calibration touches keep the controller.** The two-point capture and
-  the Middle C touch need the controller's tip, and that is the measurement
-  itself. A hand-tracked fingertip is not accurate enough on a Quest 2.
-  Hands do everything else in calibration.
+- **Calibration touches keep the controller for now.** The two-point
+  capture and the Middle C touch need the controller's tip, and that is the
+  measurement itself. A hand-tracked fingertip is not assumed to be accurate
+  enough on a Quest 2 (tip calibration measured 1.58 mm; a white key is
+  23.5 mm wide). Hands do everything else in calibration, and the two ideas
+  below get measured in the hand-tracking spike.
 - **Development tools stay on controllers:** passthrough on/off and the
   device checklist.
+
+### Calibration ideas to measure in the hand-tracking spike (Phase 4)
+
+Both replace the controller's two touches, and neither is built. Judge each
+against controller calibration on the same piano: key width against 23.5 mm,
+span against 119.9 cm, and the error at Middle C.
+
+1. **A key on your finger (Ryan, 2026-11-04).** The app tracks your pointer
+   finger and draws a virtual key in front of it. Move your hand until that
+   key lines up with the real one, and confirm with a button on the other
+   controller. Do this for A0, then C8. The eye does the aligning, so nothing
+   has to touch the key, and only the moment of confirming needs steady
+   tracking. To check first: whether a Quest 2 can track a hand and a
+   controller at once. If it cannot, confirm with a pinch from the other
+   hand, or with a press on the piano.
+2. **Learn from key presses (Claude, 2026-11-04).** MIDI says exactly which
+   key went down and when, so each press pairs a known key with a fingertip
+   position. One press is noisy; many averaged may place the keyboard well,
+   and could even correct small drift during play. To check first: how large
+   the error is with the hand right against the keys, and whether it has a
+   steady bias that averaging cannot remove.
 
 ---
 
