@@ -31,14 +31,13 @@ namespace PianoGlass.Transport
         [SerializeField] private ResultsCard resultsCard;
 
         /// <summary>1 for the first time through; counts up at every wrap.</summary>
-        public int Pass => IsActive && clock != null ? clock.Wraps - _wrapsAtStart + 1 : 0;
+        public int Pass => clock != null ? clock.LoopPass : 0;
         public bool IsActive => clock != null && clock.Loop.HasValue;
         public LoopRange? Range => clock != null ? clock.Loop : null;
         /// <summary>How the last saved pass went and what it did to the tempo
         /// (AutoTempo.Describe); null before one.</summary>
         public string LastPassLine { get; private set; }
 
-        private int _wrapsAtStart;
         private int _lastWraps;
         private float _nextTempo = -1f;
 
@@ -66,7 +65,7 @@ namespace PianoGlass.Transport
         {
             if (clock == null || transport == null) return;
             if (!transport.StartLoop(fromBar, toBar)) return;
-            _wrapsAtStart = _lastWraps = clock.Wraps;
+            _lastWraps = clock.Wraps;
             LastPassLine = null;
             _nextTempo = -1f;
             Debug.Log($"[Loop] looping {clock.Loop.Value.Label}");

@@ -31,6 +31,9 @@ namespace PianoGlass.Transport
     ///
     /// Wait mode (F22): hold A0 and press D1, likewise, and saved. Turning it
     /// on or off while paused part-way starts a new attempt from there.
+    ///
+    /// Memory fade (F36): hold A0 and press D#1, likewise, and saved. It only
+    /// shows inside a practice loop.
     /// </summary>
     public class SongTransport : MonoBehaviour
     {
@@ -55,12 +58,14 @@ namespace PianoGlass.Transport
         [SerializeField] private int fasterNote = TransportChord.C1;
         [SerializeField] private int metronomeNote = TransportChord.CSharp1;
         [SerializeField] private int waitNote = TransportChord.D1;
+        [SerializeField] private int memoryFadeNote = TransportChord.DSharp1;
 
         [Header("Metronome")]
         [SerializeField] private Metronome metronome;
 
         private const string TempoPrefsKey = "PianoGlass.TempoPercent";
         private const string WaitPrefsKey = "PianoGlass.WaitMode";
+        private const string MemoryFadePrefsKey = "PianoGlass.MemoryFade";
 
         /// <summary>The clock holds at each note until it is played (F22).</summary>
         public bool WaitMode { get; private set; }
@@ -84,6 +89,7 @@ namespace PianoGlass.Transport
                 int stored = PlayerPrefs.GetInt(TempoPrefsKey, 100);
                 clock.TempoMultiplier = _chosenTempo = TempoStep.Sanitize(stored / 100f);
                 Debug.Log($"[Transport] {TempoStep.Label(clock.TempoMultiplier)} (saved {stored}%)");
+                clock.MemoryFadeOn = PlayerPrefs.GetInt(MemoryFadePrefsKey, 0) == 1;
             }
         }
 
@@ -225,6 +231,21 @@ namespace PianoGlass.Transport
             Debug.Log($"[Transport] wait mode {(WaitMode ? "on" : "off")}");
         }
 
+        /// <summary>Memory fade on/off, only while stopped or paused.</summary>
+        public void ToggleMemoryFade()
+        {
+            if (!CanAcceptInput || clock == null) return;
+            if (clock.IsPlaying)
+            {
+                Debug.Log("[Transport] memory fade toggle ignored while playing");
+                return;
+            }
+            clock.MemoryFadeOn = !clock.MemoryFadeOn;
+            PlayerPrefs.SetInt(MemoryFadePrefsKey, clock.MemoryFadeOn ? 1 : 0);
+            PlayerPrefs.Save();
+            Debug.Log($"[Transport] memory fade {(clock.MemoryFadeOn ? "on" : "off")}");
+        }
+
         // ------------------------------------------------------------------
 
         private void OnNoteOn(int note, int velocity, double time)
@@ -237,7 +258,7 @@ namespace PianoGlass.Transport
             if (!CanAcceptInput) return;
 
             ChordAction action = TransportChord.OnNoteOn(note, MidiInput.Instance.IsHeld,
-                                                         chordNoteA, chordNoteB, slowerNote, fasterNote, metronomeNote, waitNote);
+                                                         chordNoteA, chordNoteB, slowerNote, fasterNote, metronomeNote, waitNote, memoryFadeNote);
             switch (action)
             {
                 case ChordAction.Restart:
@@ -256,6 +277,9 @@ namespace PianoGlass.Transport
                     break;
                 case ChordAction.ToggleWait:
                     ToggleWaitMode();
+                    break;
+                case ChordAction.ToggleMemoryFade:
+                    ToggleMemoryFade();
                     break;
             }
         }
