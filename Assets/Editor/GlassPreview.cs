@@ -128,6 +128,13 @@ namespace PianoGlass.EditorTools
             foreach (TMP_Text t in UnityEngine.Object.FindObjectsByType<TMP_Text>(FindObjectsSortMode.None))
                 t.ForceMeshUpdate();
 
+            CaptureOver(cam, backdropPath, output);
+        }
+
+        /// <summary>Renders the camera with a transparent background and
+        /// composites it over the backdrop as the Quest does.</summary>
+        internal static void CaptureOver(Camera cam, string backdropPath, string output)
+        {
             // Render, transparent.
             var rt = new RenderTexture(Width, Height, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB)
             {
@@ -234,7 +241,7 @@ namespace PianoGlass.EditorTools
             return accuracy <= 70f ? Color.Lerp(coral, amber, accuracy / 70f) : Color.Lerp(amber, mint, (accuracy - 70f) / 30f);
         }
 
-        private static string Arg(string name)
+        internal static string Arg(string name)
         {
             string[] args = Environment.GetCommandLineArgs();
             for (int i = 0; i < args.Length - 1; i++)
