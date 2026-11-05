@@ -829,11 +829,13 @@ buttons, card and status panel taking turns) and the freeze fix (longest frame
 after the first press of play went from 390 ms to 28 ms).
 
 **Still open, in this order:**
-1. **Measure the release frame rate.** Development build, 2026-11-04: mean 69.6
-   fps; about 69 during songs, about 71-72 otherwise. The release APK was
-   installed 2026-11-05 00:18, but the headset's log and attempts folder show no
-   launch since, so there is no release number yet. Install it, play one song,
-   read the VrApi `FPS=` lines. Still under 72: profile a song.
+1. ~~Measure the release frame rate.~~ **Done 2026-11-05: 72 fps during songs**
+   (release APK, two plays of Twinkle at 90% with the metronome on, about 80 s:
+   every second 72/72, where the development build ran about 69). GPU about 45%,
+   CPU and GPU both at level 2, 38 °C. The shortfall was the development build,
+   so no song profile is needed. That APK still had the warm-up, which only runs
+   for 3 frames at launch. Small thing to look at later: one stall of 55-85 ms
+   (4-6 stale frames) 1-2 s after each attempt ended, while the results card is up.
 2. **Retest without the warm-up.** The warm-up in `NoteHighway` was on in every
    test until it was removed (first-play-hitch, last code commit), so it may have
    been hiding a small hitch. Development build, fresh launch: if the first press
