@@ -121,6 +121,12 @@ namespace PianoGlass.Scoring
         private readonly List<GameObject> _spawned = new List<GameObject>();
         private readonly List<GameObject> _chartSpawned = new List<GameObject>();
         private Suggestion _current;
+        private Suggestion _suggested;
+        private IReadOnlyList<BarGroup> _groups;
+        private readonly BarSelection _selection = new BarSelection();
+        /// <summary>One per pill: shown for the chosen ones, or for the weakest
+        /// when nothing is chosen.</summary>
+        private readonly List<GameObject> _rings = new List<GameObject>();
         private bool _hasResult;
         private bool _statusApplied;
 
@@ -198,7 +204,9 @@ namespace PianoGlass.Scoring
         {
             EnsureBuilt();
             Last = s;
-            _current = s.Suggestion;
+            _suggested = s.Suggestion;
+            _groups = s.Groups;
+            _selection.Clear();
 
             // Header and hero
             _title.text = s.Title;
@@ -217,15 +225,8 @@ namespace PianoGlass.Scoring
 
             FillPills(s.Groups);
 
-            // Suggestion row
-            bool hasButton = s.Suggestion.Action != SuggestionAction.None;
-            _suggestion.text = s.Suggestion.Message;
-            _suggestionButton.gameObject.SetActive(hasButton);
-            if (hasButton)
-            {
-                _suggestionButtonText.text = s.Suggestion.ButtonText;
-                _suggestionButton.SetFill(s.Suggestion.Action == SuggestionAction.LoopBars ? LoopOrange : ButtonFill);
-            }
+            ApplySuggestion(s.Suggestion);
+            ApplyRings();
 
             // Next song stays hidden until a song list exists.
             if (_nextSong != null)
@@ -239,6 +240,34 @@ namespace PianoGlass.Scoring
             ApplyVisibility();
             Debug.Log($"[Results] {s.AccuracyText} {s.Rank} | {s.ChangeText ?? "first"} | {s.TimingText} | " +
                       $"{s.WrongNotes} wrong | streak {s.BestStreak} | {s.Suggestion.Message}");
+        }
+
+        private void ApplySuggestion(Suggestion suggestion)
+        {
+            _current = suggestion;
+            bool hasButton = suggestion.Action != SuggestionAction.None;
+            _suggestion.text = suggestion.Message;
+            _suggestionButton.gameObject.SetActive(hasButton);
+            if (hasButton)
+            {
+                _suggestionButtonText.text = suggestion.ButtonText;
+                _suggestionButton.SetFill(suggestion.Action == SuggestionAction.LoopBars ? LoopOrange : ButtonFill);
+            }
+        }
+
+        private void ApplyRings()
+        {
+            for (int i = 0; i < _rings.Count; i++)
+                _rings[i].SetActive(_selection.IsEmpty ? _groups[i].IsWeakest : _selection.Contains(i));
+        }
+
+        /// <summary>A bar pill pressed: choose it, or put the suggestion back
+        /// if that cleared the choice.</summary>
+        private void OnPill(int index)
+        {
+            _selection.Tap(index);
+            ApplySuggestion(_selection.ToSuggestion(_groups, _suggested.Rule) ?? _suggested);
+            ApplyRings();
         }
 
         public void Hide()
@@ -442,6 +471,7 @@ namespace PianoGlass.Scoring
         {
             foreach (GameObject g in _spawned) DestroySafely(g);
             _spawned.Clear();
+            _rings.Clear();
             if (groups.Count == 0) return;
 
             float pitch = Inner / groups.Count;
@@ -454,16 +484,30 @@ namespace PianoGlass.Scoring
                 BarGroup b = groups[i];
                 float cx = Left + pitch * (i + 0.5f);
 
-                // The weakest group: a bright ring, a larger white pill behind it.
-                if (b.IsWeakest)
-                    _spawned.Add(Glass(_pillRoot, $"Ring_{b.FirstBar}", GlassStyle.Pill, new Vector2(cx, PillY),
-                                       new Vector2(cell + 6f, PillHeight + 6f), RingDepth,
-                                       new Color(1f, 1f, 1f, 0.85f)).gameObject);
+                // The weakest group, or a chosen one: a bright ring, a larger
+                // white pill behind it.
+                GameObject ring = Glass(_pillRoot, $"Ring_{b.FirstBar}", GlassStyle.Pill, new Vector2(cx, PillY),
+                                        new Vector2(cell + 6f, PillHeight + 6f), RingDepth,
+                                        new Color(1f, 1f, 1f, 0.85f)).gameObject;
+                _rings.Add(ring);
+                _spawned.Add(ring);
 
                 Color tint = b.HasNotes ? BarGrouping.ColourFor(b.WorstAccuracy) : new Color(0.5f, 0.55f, 0.6f, 1f);
                 tint.a = b.HasNotes ? 1f : 0.3f;
-                _spawned.Add(Glass(_pillRoot, $"Pill_{b.FirstBar}", GlassStyle.Pill, new Vector2(cx, PillY),
-                                   new Vector2(cell, PillHeight), PillDepth, tint).gameObject);
+                if (b.HasNotes)
+                {
+                    int index = i;
+                    GlassButton pill = Button(_pillRoot, $"Pill_{b.FirstBar}", new Vector2(cx, PillY),
+                                              new Vector2(cell, PillHeight), PillDepth, 11f, false,
+                                              out TextMeshProUGUI _, () => OnPill(index));
+                    pill.SetFill(tint);
+                    _spawned.Add(pill.gameObject);
+                }
+                else
+                {
+                    _spawned.Add(Glass(_pillRoot, $"Pill_{b.FirstBar}", GlassStyle.Pill, new Vector2(cx, PillY),
+                                       new Vector2(cell, PillHeight), PillDepth, tint).gameObject);
+                }
 
                 float labelTop = PillY - PillHeight * 0.5f - 4f;
                 TextMeshProUGUI n = Text(_pillRoot, $"BarNo_{b.FirstBar}", 13f, b.IsWeakest ? _primary : _secondary,
