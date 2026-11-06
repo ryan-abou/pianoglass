@@ -88,7 +88,7 @@ namespace PianoGlass.Song
             double passStart = Loop.HasValue ? Loop.Value.WrapTo : -leadInSeconds;
             double appeared = System.Math.Max(noteStartTime - leadTimeSeconds, passStart);
             double seconds = tempoMultiplier > 0f ? (DisplaySongTime - appeared) / tempoMultiplier : 0.0;
-            return Fade.Opacity(seconds);
+            return System.Math.Max(Fade.Opacity(seconds), Fade.FlashOpacity(noteStartTime, Time.unscaledTimeAsDouble));
         }
 
         private int _wrapsAtLoopStart;

@@ -52,6 +52,7 @@ namespace PianoGlass.Transport
         private float _heldFor;
         private string _songFadeKey;
         private string _cardLine;
+        private readonly WaitRecall _recall = new WaitRecall();
 
         private const string SongFadePrefsPrefix = "PianoGlass.SongFade.";
 
@@ -78,6 +79,7 @@ namespace PianoGlass.Transport
                 scoreKeeper.AttemptEnded += OnAttemptEnded;
                 scoreKeeper.NoteJudged += OnNoteJudged;
                 scoreKeeper.WrongNotePlayed += OnWrongNote;
+                scoreKeeper.AttemptReset += _recall.Reset;
             }
         }
 
@@ -89,6 +91,7 @@ namespace PianoGlass.Transport
                 scoreKeeper.AttemptEnded -= OnAttemptEnded;
                 scoreKeeper.NoteJudged -= OnNoteJudged;
                 scoreKeeper.WrongNotePlayed -= OnWrongNote;
+                scoreKeeper.AttemptReset -= _recall.Reset;
             }
         }
 
@@ -104,19 +107,32 @@ namespace PianoGlass.Transport
             Debug.Log($"[Loop] looping {clock.Loop.Value.Label}");
         }
 
+        /// <summary>What moves the ladder for this attempt, and how to say it. Wait
+        /// mode has no clock, so right keys alone can be had by trying them all;
+        /// it counts what was played from memory.</summary>
+        private (double percent, string words) FadeScore(AttemptRecord rec)
+        {
+            if (rec.mode == AttemptRecord.Wait)
+            {
+                _recall.Finish();
+                if (_recall.Total > 0) return (_recall.Percent, $"{_recall.Clean} of {_recall.Total} from memory");
+            }
+            return (rec.KeysRightPercent, $"{rec.KeysRightPercent:0}% keys right");
+        }
+
         /// <summary>A whole play-through moves the song's ladder. An abandoned
         /// one does not: it never reached the end to be judged.</summary>
         private void MoveSongFade(AttemptRecord rec)
         {
             MemoryFade fade = clock.SongFade;
             bool played = rec.notesHit + rec.wrongPitch + rec.extra > 0;
-            double keysRight = rec.KeysRightPercent;
-            string after = fade.Describe(fade.StepAfter(keysRight, played));
-            LastSongFadeLine = played ? $"{keysRight:0}% keys right: {after}" : $"nothing played: {after}";
-            fade.EndPass(keysRight, played);
+            (double score, string words) = FadeScore(rec);
+            string after = fade.Describe(fade.StepAfter(score, played));
+            LastSongFadeLine = played ? $"{words}: {after}" : $"nothing played: {after}";
+            fade.EndPass(score, played);
             PlayerPrefs.SetInt(_songFadeKey, fade.Step);
             PlayerPrefs.Save();
-            _cardLine = after;
+            _cardLine = played ? LastSongFadeLine : after;
             Debug.Log($"[Fade] song: {LastSongFadeLine}");
         }
 
@@ -133,6 +149,8 @@ namespace PianoGlass.Transport
             bool wait = rec.mode == AttemptRecord.Wait;
             _passPlayed = true;
             _passKeysRight = rec.KeysRightPercent;
+            string fadeWords = "";
+            if (clock.IsFading) (_passKeysRight, fadeWords) = FadeScore(rec);
 
             if (clock.IsFading)
             {
@@ -140,7 +158,7 @@ namespace PianoGlass.Transport
                 _nextTempo = wait ? tempo : AutoTempo.NextWithFade(tempo, rec.accuracy, fade);
                 LastPassLine = TempoStep.ToPercent(_nextTempo) != TempoStep.ToPercent(tempo)
                     ? AutoTempo.Describe(tempo, _nextTempo, rec.accuracy)
-                    : $"{_passKeysRight:0}% keys right: {fade.Describe(fade.StepAfter(_passKeysRight, true))}";
+                    : $"{fadeWords}: {fade.Describe(fade.StepAfter(_passKeysRight, true))}";
             }
             else
             {
@@ -159,7 +177,17 @@ namespace PianoGlass.Transport
 
         private void OnWrongNote(WrongNote wrong)
         {
-            if (clock != null && clock.IsFading) clock.Fade.OnMistake();
+            if (clock == null || !clock.IsFading) return;
+            if (transport != null && transport.WaitMode)
+            {
+                _recall.NeededHelp();
+                if (clock.Fade.ShownStep == MemoryFade.Glimpse)
+                {
+                    clock.Fade.Flash(clock.HoldAt, Time.unscaledTimeAsDouble);
+                    return;
+                }
+            }
+            clock.Fade.OnMistake();
         }
 
         /// <summary>The pass that just wrapped moves the ladder. A pass nobody
@@ -184,14 +212,22 @@ namespace PianoGlass.Transport
                 _cardLine = null;
             }
 
+            // The hold moved on: a new stop to judge, and a new wait.
+            if (clock.IsFading && transport != null && transport.WaitMode &&
+                !double.IsPositiveInfinity(clock.HoldAt) && _recall.AtStop(clock.HoldAt))
+                _heldFor = 0f;
+
             // Wait mode: nothing to press, nothing to see. Do not leave them there.
             if (clock.IsFading && clock.IsHolding)
             {
+                bool glimpse = clock.Fade.ShownStep == MemoryFade.Glimpse;
                 _heldFor += Time.unscaledDeltaTime;
-                if (_heldFor >= MemoryFade.StuckSeconds)
+                if (_heldFor >= (glimpse ? MemoryFade.GlimpseStuckSeconds : MemoryFade.StuckSeconds))
                 {
                     _heldFor = 0f;
-                    clock.Fade.AskForHelp();
+                    _recall.NeededHelp();
+                    if (glimpse) clock.Fade.Flash(clock.HoldAt, Time.unscaledTimeAsDouble);
+                    else clock.Fade.AskForHelp();
                 }
             }
             else _heldFor = 0f;
