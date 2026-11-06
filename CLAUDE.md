@@ -177,7 +177,7 @@ on them and none can be played by accident.
 | Tempo −5% / +5% | — | hold A0, press B0 / C1 | `SongTransport` | 25–200%, only while stopped or paused, saved |
 | Metronome on/off | — | hold A0, press C♯1 | `SongTransport` → `Metronome` | Only while stopped or paused, saved |
 | Wait mode on/off | — | hold A0, press D1 | `SongTransport` | Only while stopped or paused, saved. While paused part-way it starts a new attempt from there |
-| Memory fade on/off (branch `batchC-fade`, not in main yet) | — | hold A0, press D♯1 | `SongTransport` | Only while stopped or paused, saved. Shows only inside a practice loop |
+| Memory fade on/off | — | hold A0, press D♯1 | `SongTransport` | Only while stopped or paused, saved. Shows only inside a practice loop |
 | Display mode (cycle) | left X | — | `OvrKeyOverlayInput` | FullOverlay / Translucent / ActiveKeysOnly / EdgeMarkers, saved |
 | Passthrough on/off | left stick click | — | `OvrKeyOverlayInput` | A/B test tool |
 
@@ -889,8 +889,16 @@ Decided while building, all confirmed by Ryan unless a branch above changes it:
   hold. Auto-tempo does nothing on a wait-mode pass.
 - **Memory fade:** hold A0, press D♯1. Off by default and saved; every new loop
   starts fully visible. The opacity is a ceiling on anything showing the note: slab, name and
-  due key fade together, and the panel stops naming a hidden note. The key's own
+  due key fade together, and the panel stops naming a note at a glimpse. The key's own
   coral on a wrong press is not faded, nor is a key the player holds.
+- **The fade ladder (Ryan's steps and request, Claude's system, 2026-11-05):**
+  100, 60, 30, 15, then a glimpse (15% for 0.6 s when a note appears, gone 0.5 s
+  later), so notes always show at least briefly. It moves by keys right, not
+  timing: 90%+ one step fainter, 70-89% stays, 40-69% one step back, under 40% or
+  nothing played two steps back. Three mistakes in a row, or 5 s held at a note in
+  wait mode, shows notes one step clearer for the rest of the pass, and a pass
+  that needed help cannot go fainter. Tempo and fade never change together: tempo
+  rises only at a glimpse and falls only at 100%. Values are in `MemoryFade`.
 
 ### Batch C — all build on the loop
 
@@ -908,12 +916,12 @@ Decided while building, all confirmed by Ryan unless a branch above changes it:
    until every pitch of it (chords included) is pressed. Pitch-only judging,
    no PERFECT/GREAT; attempt `mode: "wait"`, never compared with continuous
    attempts.
-4. **Memory fade (F36).** Pure tested opacity per loop pass (100 / 60 /
-   30 / hidden); needs a transparent slab material assigned in `SceneSetup`.
+4. **Memory fade (F36).** Pure tested opacity (a ladder, see the status above);
+   needs a transparent slab material assigned in `SceneSetup`.
    **A faded note still turns mint/slate once judged, at the opacity it already
    had (Ryan, 2026-11-05):** the outcome changes its colour only, never its
-   opacity. A half-faded note shows half-visible mint or slate; a fully hidden
-   note stays hidden.
+   opacity. A half-faded note shows half-visible mint or slate; a note whose
+   glimpse has ended stays hidden.
 
 After Batch C, Phase 3 starts with MIDI file loading (F38).
 
