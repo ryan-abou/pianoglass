@@ -2,7 +2,7 @@ using System;
 
 namespace PianoGlass.Song
 {
-    public enum ChordAction { None, Restart, Slower, Faster, ToggleMetronome, ToggleWait }
+    public enum ChordAction { None, Restart, Slower, Faster, ToggleMetronome, ToggleWait, ToggleMemoryFade }
 
     /// <summary>
     /// The piano-key transport chords, all built on the bottom key (A0) so
@@ -13,6 +13,7 @@ namespace PianoGlass.Song
     ///   hold A0, press C1   tempo +5%
     ///   hold A0, press C#1  metronome on/off (Ryan, 2026-11-03)
     ///   hold A0, press D1   wait mode on/off
+    ///   hold A0, press D#1  memory fade on/off
     ///
     /// A0 alone does nothing. For tempo the step key must be the one pressed
     /// while A0 is already down, so every press of B0 or C1 is one step.
@@ -21,14 +22,14 @@ namespace PianoGlass.Song
     /// </summary>
     public static class TransportChord
     {
-        public const int A0 = 21, ASharp0 = 22, B0 = 23, C1 = 24, CSharp1 = 25, D1 = 26;
+        public const int A0 = 21, ASharp0 = 22, B0 = 23, C1 = 24, CSharp1 = 25, D1 = 26, DSharp1 = 27;
 
         /// <param name="pressed">The key that just went down.</param>
         /// <param name="isHeld">Whether a key is down now. Only ever asked
         /// about the other key of the chord, never the pressed one.</param>
         public static ChordAction OnNoteOn(int pressed, Func<int, bool> isHeld,
                                            int hold = A0, int restart = ASharp0, int slower = B0, int faster = C1,
-                                           int metronome = CSharp1, int wait = D1)
+                                           int metronome = CSharp1, int wait = D1, int fade = DSharp1)
         {
             if (isHeld == null) return ChordAction.None;
             if (pressed == hold) return isHeld(restart) ? ChordAction.Restart : ChordAction.None;
@@ -37,6 +38,7 @@ namespace PianoGlass.Song
             if (pressed == faster) return isHeld(hold) ? ChordAction.Faster : ChordAction.None;
             if (pressed == metronome) return isHeld(hold) ? ChordAction.ToggleMetronome : ChordAction.None;
             if (pressed == wait) return isHeld(hold) ? ChordAction.ToggleWait : ChordAction.None;
+            if (pressed == fade) return isHeld(hold) ? ChordAction.ToggleMemoryFade : ChordAction.None;
             return ChordAction.None;
         }
     }

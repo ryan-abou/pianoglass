@@ -27,6 +27,21 @@ namespace PianoGlass.Scoring
             return tempo;
         }
 
+        /// <summary>
+        /// The tempo with memory fade on: one thing gets harder or easier at a
+        /// time, so a bad pass says what caused it. A good pass fades the notes
+        /// first, and only speeds up once they are at their faintest, which
+        /// means learning it slowly and then bringing it up to speed. A bad pass
+        /// brings the notes back first, and only slows down once they are full.
+        /// </summary>
+        public static float NextWithFade(float tempo, double accuracy, MemoryFade fade)
+        {
+            float next = Next(tempo, accuracy);
+            if (next > tempo && !fade.AtFaintest) return tempo;
+            if (next < tempo && !fade.AtFullest) return tempo;
+            return next;
+        }
+
         /// <summary>One line for the panel: how the pass went, what it did to
         /// the tempo and what it would take to change that.</summary>
         public static string Describe(float before, float after, double accuracy)

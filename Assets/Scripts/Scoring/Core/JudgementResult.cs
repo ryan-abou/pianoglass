@@ -150,6 +150,11 @@ namespace PianoGlass.Scoring
         public int correct;
         public int notesHit, notesMissed;
         public int wrongPitch, extra;
+
+        /// <summary>Right keys out of everything that went wrong or right,
+        /// ignoring timing: whether the player knew the notes.</summary>
+        public double KeysRightPercent =>
+            AccuracyCalculator.PitchAccuracy(notesHit, notesMissed + wrongPitch + extra);
         /// <summary>Over pressed notes: a consistent non-zero mean is input
         /// latency to subtract, not the player.</summary>
         public double meanErrorMs;

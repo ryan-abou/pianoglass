@@ -41,6 +41,12 @@ namespace PianoGlass.Highway
     /// (pure, tested) decides the text and whether the slab is tall enough
     /// to hold it. One label per slab, built with the slabs; fine for an
     /// 8-bar song, to be pooled when MIDI file loading (F38) arrives.
+    ///
+    /// Memory fade (F36): as a loop's ladder moves, SongClock.NoteOpacityAt is
+    /// below 1. Slabs then draw on the transparent material at that alpha and
+    /// their names fade with them; outcome colours keep it (OutcomeTint.FadedSlab).
+    /// The opaque material is used whenever nothing is fading, so an ordinary
+    /// song costs what it always did. At 0 the note is simply not drawn.
     /// </summary>
     public class NoteHighway : MonoBehaviour
     {
@@ -55,6 +61,8 @@ namespace PianoGlass.Highway
         [Tooltip("Assign a material made in the editor -- a runtime Shader.Find " +
                  "can be stripped from a device build.")]
         [SerializeField] private Material noteMaterial;
+        [Tooltip("Transparent, for memory fade. Assigned by SceneSetup.")]
+        [SerializeField] private Material fadedNoteMaterial;
         [SerializeField] private Color noteColor = new Color(0.40f, 0.68f, 0.95f, 1f);
         [Tooltip("Thickness of the wall, front to back. It's meant to read as a " +
                  "flat plane, so keep this small.")]
@@ -136,6 +144,11 @@ namespace PianoGlass.Highway
         private NoteOutcome[] _outcome = new NoteOutcome[0];
         private float[] _judgedAt = new float[0];
         private MaterialPropertyBlock _block;
+        private bool _fadedMaterial;
+        // Parallel to _slabs. What each note last showed while pending, which a
+        // judged note may not rise above; and each name's current opacity.
+        private float[] _noteCeiling = new float[0];
+        private float[] _labelOpacity = new float[0];
 
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         private static readonly int ColorId = Shader.PropertyToID("_Color");
@@ -276,6 +289,10 @@ namespace PianoGlass.Highway
             }
             _applied = new Color[_slabs.Count];
             for (int i = 0; i < _applied.Length; i++) _applied[i] = noteColor;
+            _noteCeiling = new float[_slabs.Count];
+            _labelOpacity = new float[_slabs.Count];
+            for (int i = 0; i < _slabs.Count; i++) _noteCeiling[i] = _labelOpacity[i] = 1f;
+            _fadedMaterial = false;
 
             Debug.Log($"[NoteHighway] built {_slabs.Count} note slabs for '{_song.Title}'");
         }
@@ -299,6 +316,9 @@ namespace PianoGlass.Highway
 
             float now = Time.realtimeSinceStartup;
 
+            bool fading = clock.IsFading && clock.Fade.ShownStep > 0;
+            if (fading != _fadedMaterial) UseFadedMaterial(fading);
+
             for (int i = 0; i < _slabs.Count; i++)
             {
                 var (note, index, renderer) = _slabs[i];
@@ -313,8 +333,15 @@ namespace PianoGlass.Highway
                 // note's slab shrink into the key line as it plays rather
                 // than sliding underneath it. No other visibility check is
                 // needed on top of it.
-                // In a practice loop, only the loop's own notes are drawn.
-                bool visible = height > 0f && (!(clock.Loop is LoopRange loop) || loop.Holds(note.StartTime));
+                // In a practice loop, only the loop's own notes are drawn, and
+                // a fully faded note not at all: being judged does not bring it
+                // back, nor does help that arrives after it was judged.
+                float opacity = clock.NoteOpacityAt(note.StartTime, leadTimeSeconds);
+                if (_outcome[index] == NoteOutcome.Pending) _noteCeiling[i] = opacity;
+                else opacity = Mathf.Min(opacity, _noteCeiling[i]);
+
+                bool visible = height > 0f && opacity > 0f &&
+                               (!(clock.Loop is LoopRange loop) || loop.Holds(note.StartTime));
                 renderer.enabled = visible;
                 TextMeshPro label = _labels[i];
                 if (!visible)
@@ -340,6 +367,8 @@ namespace PianoGlass.Highway
                     SetLabelVisible(label, fits);
                     if (fits)
                     {
+                        if (!Mathf.Approximately(opacity, _labelOpacity[i])) SetLabelOpacity(i, opacity);
+
                         // Just proud of the slab's front face, so it never
                         // z-fights it. TMP reads correctly with its +z
                         // pointing away from the viewer: -normal, as
@@ -351,10 +380,30 @@ namespace PianoGlass.Highway
                     }
                 }
 
-                Color color = OutcomeTint.Slab(noteColor, _outcome[index], now - _judgedAt[index],
-                                               OutcomeTint.Hit, OutcomeTint.Missed);
+                Color color = OutcomeTint.FadedSlab(noteColor, _outcome[index], now - _judgedAt[index],
+                                                    OutcomeTint.Hit, OutcomeTint.Missed, opacity);
                 if (color != _applied[i]) SetSlabColor(renderer, i, color);
             }
+        }
+
+        /// <summary>Notes began or stopped fading. Colours follow in Update.</summary>
+        private void UseFadedMaterial(bool faded)
+        {
+            _fadedMaterial = faded;
+            Material mat = faded && fadedNoteMaterial != null ? fadedNoteMaterial : noteMaterial;
+            if (faded && fadedNoteMaterial == null)
+                Debug.LogError("[NoteHighway] No faded note material -- run PianoGlass/Scene/Configure Memory Fade.");
+
+            for (int i = 0; i < _slabs.Count; i++)
+                if (mat != null && _slabs[i].renderer != null) _slabs[i].renderer.sharedMaterial = mat;
+        }
+
+        private void SetLabelOpacity(int slab, float opacity)
+        {
+            _labelOpacity[slab] = opacity;
+            Color nameColor = labelColor;
+            nameColor.a *= opacity;
+            _labels[slab].color = nameColor;
         }
 
         private void SetSlabColor(Renderer renderer, int slab, Color color)
@@ -380,6 +429,8 @@ namespace PianoGlass.Highway
             tmp.fontStyle = FontStyles.Bold;
             tmp.textWrappingMode = TextWrappingModes.NoWrap;
             tmp.color = labelColor;
+            // After its slab, which is in the same queue while it is fading.
+            tmp.sortingOrder = 1;
             float width = layout.TryGetKey(pitch, out PianoKey key) ? key.Width * widthFraction : labelHeight * 2f;
             tmp.rectTransform.sizeDelta = new Vector2(width, labelHeight);
             tmp.enableAutoSizing = true;
