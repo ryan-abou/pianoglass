@@ -192,7 +192,13 @@ namespace PianoGlass.Piano
         private readonly IPianoAnchorService _service;
         private readonly PianoProfileSerializer _serializer;
         private readonly double _localizeTimeoutSeconds;
+        /// <summary>See UpdateTracking.</summary>
+        public const double AwaySeconds = 3.0;
+
         private readonly Func<DateTime> _utcNow;
+        private DateTime _lastTrackingUpdate;
+        private DateTime _suspendedAt;
+        private bool _wasAway;
         private readonly Func<string> _newId;
 
         private PianoProfile _savedProfile;
@@ -378,14 +384,41 @@ namespace PianoGlass.Piano
         /// flow thinks, if it is drawing and the anchor is not tracked it
         /// suspends, and if it is suspended and the anchor is back it
         /// resumes. No missed edge can leave keys drawn on a lost anchor.
+        ///
+        /// A gap between calls of AwaySeconds or more means the app was not
+        /// running, which is what taking the headset off does. The anchor can
+        /// come back somewhere else after that (14-25 mm, 2026-11-05), so Ready
+        /// goes back to Verifying and the player looks at the keys again.
         /// </summary>
         public void UpdateTracking()
         {
+            DateTime now = _utcNow();
+            if (_lastTrackingUpdate != default && (now - _lastTrackingUpdate).TotalSeconds >= AwaySeconds) _wasAway = true;
+            _lastTrackingUpdate = now;
+
             bool tracked = Anchor != null && Anchor.IsAlive && Anchor.IsTracked;
-            if (Flow.State == FlowState.Suspended && tracked)
-                _ = Fire(FlowEvent.TrackingRegained);
+            if (Flow.State == FlowState.Suspended)
+            {
+                if (tracked)
+                {
+                    if ((now - _suspendedAt).TotalSeconds >= AwaySeconds) _wasAway = true;
+                    _ = Fire(FlowEvent.TrackingRegained);
+                }
+            }
             else if (Flow.IsOverlayVisible && !tracked)
+            {
+                _suspendedAt = now;
                 _ = Fire(FlowEvent.TrackingLost);
+            }
+            else if (_wasAway)
+            {
+                _wasAway = false;
+                if (Flow.State == FlowState.Ready)
+                {
+                    Log("back after time away: check the keys again");
+                    _ = Fire(FlowEvent.PlayerReturned);
+                }
+            }
         }
 
         // ------------------------------------------------------------------
@@ -633,6 +666,17 @@ namespace PianoGlass.Piano
 
             if (newCalibration)
             {
+                // A nudge made up for the controller's tip, which survives a
+                // recalibration. Once the tip is measured, all a nudge can hold
+                // is where the anchor had drifted to, and that does not apply
+                // to keys that were just touched (16 mm off, 2026-11-05).
+                if (store.hasTipOffset && NudgeMm != Vector3.zero)
+                {
+                    Log($"tip is measured: fresh calibration clears the nudge, was {Mm(NudgeMm)}");
+                    NudgeMm = Vector3.zero;
+                    PlacementChanged?.Invoke();
+                }
+
                 string utc = _utcNow().ToString("yyyy-MM-dd'T'HH:mm:ss'Z'");
                 PianoProfileEdits.ApplyCalibration(store, Anchor.Id, LocalGeometry, LowestNote, HighestNote,
                                                    WhiteKeyDepth, NudgeMm, utc, _newId());
