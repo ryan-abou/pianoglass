@@ -198,6 +198,24 @@ namespace PianoGlass.Piano
 
         private readonly Func<DateTime> _utcNow;
         private DateTime _lastTrackingUpdate;
+
+        /// <summary>After time away the anchor is watched for this long. It either
+        /// stays put, and the keys are fine, or it moves as the headset finds
+        /// itself again, and those were the returns that needed fixing (2026-11-05:
+        /// under 6 mm in the first 15 s on the three that needed nothing, 12 and 33
+        /// mm on the two that did).</summary>
+        public const double SettleSeconds = 15.0;
+        /// <summary>Moved this far while settling: ask the player to check.</summary>
+        public const float SettleCheckMm = 8f;
+        /// <summary>A jump this big in one frame is tracking space being re-based,
+        /// which moves the anchor's world pose and not the keys on the piano.</summary>
+        private const float RebasedMetres = 0.05f;
+        private const float SettleStepMm = 5f;
+
+        private bool _settling;
+        private DateTime _settleUntil;
+        private Vector3 _settleLast, _settleFrom;
+        private float _settleMovedMm;
         private DateTime _suspendedAt;
         private bool _wasAway;
         private readonly Func<string> _newId;
@@ -229,8 +247,9 @@ namespace PianoGlass.Piano
         private const float WitnessLogStepMm = 5f;
 
         private bool _writeIsNewCalibration;
-        /// <summary>A fresh calibration has not been confirmed yet, so the
-        /// nudge now is its bias.</summary>
+        /// <summary>A fresh calibration, and the headset has not come off since,
+        /// so the anchor has had no reason to shift and any nudge is its bias.
+        /// (2026-11-05: Ryan nudged 10 mm of height a minute after confirming.)</summary>
         private bool _learningBias;
         /// <summary>A bigger nudge than this is not a steady offset from the
         /// touches; something else was wrong, and it is not kept.</summary>
@@ -446,13 +465,14 @@ namespace PianoGlass.Piano
             else if (_wasAway)
             {
                 _wasAway = false;
+                _learningBias = false;
                 if (Flow.State == FlowState.Ready)
                 {
-                    Log("back after time away: check the keys again");
                     LogWitnessAgreement();
-                    _ = Fire(FlowEvent.PlayerReturned);
+                    BeginSettling(now);
                 }
             }
+            else if (_settling && tracked) UpdateSettling(now);
 
             if (_witnesses.Count > 0 && now >= _nextWitnessCheck)
             {
@@ -526,6 +546,7 @@ namespace PianoGlass.Piano
             if (store == null) { Log("adjustment not saved: " + error); return false; }
 
             store.tipNudgeKeyboardMm = NudgeMm;
+            if (_learningBias && NudgeMm.magnitude <= MaxBiasMm) store.calibrationBiasMm = NudgeMm;
             bool geometry = Anchor != null && Anchor.Id == SavedAnchorUuid &&
                             PianoProfileEdits.ApplyGeometry(store, Anchor.Id, LocalGeometry);
 
@@ -639,6 +660,43 @@ namespace PianoGlass.Piano
                     LastProblem = $"Localizing failed: {r.Detail}";
                     await Fire(FlowEvent.LocalizeFailed);
                     break;
+            }
+        }
+
+        private void BeginSettling(DateTime now)
+        {
+            _settling = true;
+            _settleUntil = now.AddSeconds(SettleSeconds);
+            _settleLast = _settleFrom = Anchor.Pose.position;
+            _settleMovedMm = 0f;
+            Log("back after time away: watching the anchor");
+        }
+
+        private void UpdateSettling(DateTime now)
+        {
+            // Added up in steps of 5 mm, as `anchor refined` logs it, so sensor
+            // noise does not add up and the numbers above stay comparable.
+            Vector3 position = Anchor.Pose.position;
+            if ((position - _settleLast).magnitude > RebasedMetres) _settleFrom = position;
+            _settleLast = position;
+            float step = (position - _settleFrom).magnitude * 1000f;
+            if (step >= SettleStepMm)
+            {
+                _settleMovedMm += step;
+                _settleFrom = position;
+            }
+            float moved = _settleMovedMm;
+
+            if (moved >= SettleCheckMm)
+            {
+                _settling = false;
+                Log($"anchor moved {moved:0.0} mm settling: check the keys");
+                if (Flow.State == FlowState.Ready) _ = Fire(FlowEvent.PlayerReturned);
+            }
+            else if (now >= _settleUntil)
+            {
+                _settling = false;
+                Log($"anchor settled, moved {moved:0.0} mm: no check needed");
             }
         }
 
@@ -927,7 +985,6 @@ namespace PianoGlass.Piano
             if (store.ActiveProfile != null && _witnesses.Count > 0) store.ActiveProfile.witnessAnchors = SavedWitnesses(_witnesses);
             if (_learningBias)
             {
-                _learningBias = false;
                 if (NudgeMm.magnitude <= MaxBiasMm)
                 {
                     store.calibrationBiasMm = NudgeMm;
