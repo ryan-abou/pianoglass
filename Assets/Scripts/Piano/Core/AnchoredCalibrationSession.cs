@@ -368,6 +368,14 @@ namespace PianoGlass.Piano
                 return Fire(FlowEvent.CorrectionRejectedMoved);
             }
 
+            if (c.AlreadyRight)
+            {
+                Log($"{error} -- within what a touch can measure: keys left alone");
+                LastProblem = null;
+                CorrectionNote = $"Middle C checked: {new Vector2(rawMm.x, rawMm.z).magnitude:0} mm off, keys left alone";
+                return Fire(FlowEvent.CorrectionApplied);
+            }
+
             // The anchor is yaw-only, so its local y is world up and the
             // capped vertical stays capped.
             Vector3 local = AnchoredKeyboard.DirectionToLocal(Anchor.Pose, c.Delta);
