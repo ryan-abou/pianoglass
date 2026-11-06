@@ -11,7 +11,7 @@ namespace PianoGlass.Tests.EditMode
     /// Phase 5 end to end against the editor fake: A confirms (Ready +
     /// lastVerifiedUtc), right grip starts / cancels a Middle C fix, and the
     /// Middle C touch -- offset recovered as a rigid anchor-local shift,
-    /// vertical capped at 10 mm, over 50 mm refused with nothing written.
+    /// vertical capped at 10 mm, over 150 mm refused with nothing written.
     ///
     /// The calibration is deliberately wrong by a known offset (the
     /// controller-tip error a two-touch capture inherits), and the touch is
@@ -276,14 +276,89 @@ namespace PianoGlass.Tests.EditMode
             Near(RealMiddleC(), s.BuildLayout().FrontEdgeCenter(60), 1e-4f, "applied");
         }
 
-        [Test]
-        public void MiddleCFixOverFiftyMillimetresIsRefusedAndWritesNothing()
+        private void MarkTipMeasured()
         {
-            AnchoredCalibrationSession s = StartCorrecting(CalibratedWithError(new Vector3(-0.036f, 0f, -0.036f)));
+            var serializer = new PianoProfileSerializer(_path);
+            PianoProfileStore store = serializer.Load().Store;
+            store.hasTipOffset = true;
+            Assert.IsTrue(serializer.Save(store, out string error), error);
+        }
+
+        [Test]
+        public void WithAMeasuredTipAFreshCalibrationClearsTheNudge()
+        {
+            AnchoredCalibrationSession s = CalibratedWithError(Vector3.zero);
+            MarkTipMeasured();
+            s.Nudge(new Vector3(-0.016f, 0.005f, 0.006f));
+            s.Confirm();
+
+            Run(s.RecalibrateAsync());
+            Run(s.OnCapturedAsync(Low, High, Toward, Lowest, Highest, Depth));
+
+            Assert.AreEqual(Vector3.zero, s.NudgeMm);
+            Assert.AreEqual(Vector3.zero, new PianoProfileSerializer(_path).Load().Store.tipNudgeKeyboardMm);
+            Near(PianoKeyLayout.WithFacing(Low, High, Lowest, Highest, Toward, Depth).FrontEdgeCenter(60),
+                 s.BuildLayout().FrontEdgeCenter(60), 1e-3f, "the keys are where they were touched");
+        }
+
+        // ------------------------------------------------------------------
+        // Back from time away: the keys get looked at again
+        // ------------------------------------------------------------------
+
+        private DateTime _time = Now;
+
+        private AnchoredCalibrationSession ReadySession()
+        {
+            var s = new AnchoredCalibrationSession(_fake, new PianoProfileSerializer(_path), 10, 3, () => _time);
+            Run(s.StartAsync());
+            Run(s.OnCapturedAsync(Low, High, Toward, Lowest, Highest, Depth));
+            s.Confirm();
+            Assert.AreEqual(FlowState.Ready, s.Flow.State);
+            s.UpdateTracking();
+            return s;
+        }
+
+        [Test]
+        public void AFrameGapOfSecondsMeansCheckTheKeysAgain()
+        {
+            AnchoredCalibrationSession s = ReadySession();
+            _time = _time.AddSeconds(AnchoredCalibrationSession.AwaySeconds + 1);
+            s.UpdateTracking();
+            Assert.AreEqual(FlowState.Verifying, s.Flow.State);
+
+            s.Confirm();
+            s.UpdateTracking();
+            Assert.AreEqual(FlowState.Ready, s.Flow.State, "once");
+        }
+
+        [Test]
+        public void AnOrdinaryStallDoesNotInterrupt()
+        {
+            AnchoredCalibrationSession s = ReadySession();
+            _time = _time.AddSeconds(AnchoredCalibrationSession.AwaySeconds - 1);
+            s.UpdateTracking();
+            Assert.AreEqual(FlowState.Ready, s.Flow.State);
+        }
+
+        [Test]
+        public void AnAnchorEightyFiveMillimetresOffIsFixedWithOneTouch()
+        {
+            // What the headset did on 2026-11-05, after a day away.
+            AnchoredCalibrationSession s = StartCorrecting(CalibratedWithError(new Vector3(-0.078f, 0f, -0.024f)));
+            Run(s.OnMiddleCTouchedAsync(RealMiddleC()));
+            Assert.AreEqual(FlowState.Verifying, s.Flow.State);
+            Assert.IsFalse(s.Flow.RecalibrateOffered);
+            Near(RealMiddleC(), s.BuildLayout().FrontEdgeCenter(60), 1e-3f, "keys back on the piano");
+        }
+
+        [Test]
+        public void MiddleCFixOverTheLimitIsRefusedAndWritesNothing()
+        {
+            AnchoredCalibrationSession s = StartCorrecting(CalibratedWithError(new Vector3(-0.11f, 0f, -0.11f)));
             string before = File.ReadAllText(_path);
             Vector3 drawnBefore = s.BuildLayout().FrontEdgeCenter(60);
 
-            Run(s.OnMiddleCTouchedAsync(RealMiddleC())); // ~50.9 mm away
+            Run(s.OnMiddleCTouchedAsync(RealMiddleC())); // ~155.6 mm away
 
             Assert.AreEqual(FlowState.Verifying, s.Flow.State);
             Assert.IsTrue(s.Flow.RecalibrateOffered);
@@ -291,7 +366,7 @@ namespace PianoGlass.Tests.EditMode
             Assert.IsNull(s.CorrectionNote);
             Assert.AreEqual(before, File.ReadAllText(_path), "profile untouched");
             Near(drawnBefore, s.BuildLayout().FrontEdgeCenter(60), 1e-6f, "placement untouched");
-            Assert.Greater(s.LastVerifyErrorMm.magnitude, 50f, "still measured, for the log");
+            Assert.Greater(s.LastVerifyErrorMm.magnitude, 150f, "still measured, for the log");
 
             Run(s.RecalibrateAsync());
             Assert.AreEqual(AnchorPanelStatus.Recalibrating, s.Status);
@@ -303,7 +378,7 @@ namespace PianoGlass.Tests.EditMode
 
         private AnchoredCalibrationSession Refused()
         {
-            AnchoredCalibrationSession s = StartCorrecting(CalibratedWithError(new Vector3(-0.036f, 0f, -0.036f)));
+            AnchoredCalibrationSession s = StartCorrecting(CalibratedWithError(new Vector3(-0.11f, 0f, -0.11f)));
             Run(s.OnMiddleCTouchedAsync(RealMiddleC()));
             StringAssert.Contains("mm off", s.LastProblem);
             return s;

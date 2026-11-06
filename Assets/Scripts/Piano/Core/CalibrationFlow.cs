@@ -44,6 +44,9 @@ namespace PianoGlass.Piano
         NewAnchorSaveFailed,
         TrackingLost,
         TrackingRegained,
+        /// <summary>The app did not run for a while (headset off, say): the
+        /// runtime may have placed the anchor somewhere new.</summary>
+        PlayerReturned,
     }
 
     /// <summary>Side effects for the MonoBehaviour driver to carry out, in
@@ -284,6 +287,7 @@ namespace PianoGlass.Piano
                 case FlowState.Ready:
                     if (e == FlowEvent.TrackingLost) { Suspend(); return true; }
                     if (e == FlowEvent.CorrectionStarted) { StartCorrecting(); return true; }
+                    if (e == FlowEvent.PlayerReturned) { Go(FlowState.Verifying); return true; }
                     return false;
 
                 case FlowState.Suspended:
