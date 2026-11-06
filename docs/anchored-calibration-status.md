@@ -158,20 +158,25 @@ moved, and about one key off after taking the headset off for a minute.
 failed. Middle C measured +78 / -25 / -24 mm off (86 mm). After the headset came
 back, Ryan nudged 14 mm along the keys and 4 mm in depth.
 
-**Why this is the headset's map and not our geometry:** the stored geometry and
-nudge were the same numbers that lined up the session before, and the anchor sits
-at the middle of the keyboard, so a turn cannot produce a shift that large at
-Middle C. It also dropped 25 mm, which a piano on a floor does not do. The earlier
-"all passed" results never tested more than a reboot or ten minutes away. Not
-proven: nothing measured the room independently, and a second anchor would shift
-with the same map, so more anchors are not the obvious cure.
+**Why this looks like the headset's map and not our geometry:** the stored
+geometry and nudge were the same numbers as the session before, which Ryan played
+on without complaint, and the anchor sits at the middle of the keyboard, so a turn
+cannot produce a shift that large at Middle C. The earlier "all passed" results
+never tested more than a reboot or ten minutes away. Not proven: nothing measured
+the room independently, and a second anchor would shift with the same map, so more
+anchors are not the obvious cure.
+
+**The nudge was hurting a fresh calibration.** Straight after recalibrating, Middle
+C read +7.5 / -15.6 / -5.5 mm with a nudge of (-11, +5, +6) mm on. Without the nudge
+that is about -3.5 / -10.6 / +0.5 mm: the touches were right to a few millimetres
+along the keys and in depth, and the nudge was the error. The steady 10 mm or so
+low is the height question from Phase 4, still open.
 
 **What changed (branch `calib-recover`).** None of it stops the drift; it makes
 recovering cheap:
 - A Middle C fix now reaches 150 mm, so that 86 mm is one touch, not a full
   recalibration. The 10 mm vertical cap stays.
-- Once the controller tip is measured, a fresh calibration clears the nudge. That
-  day's recalibration carried a -16 mm nudge onto keys that had just been touched.
+- Once the controller tip is measured, a fresh calibration clears the nudge.
 - A frame gap, or lost tracking, of 3 s or more sends Ready back to Verifying, so
   the keys get looked at after the headset comes back.
 - `[AnchorFlow] anchor refined` logs slow movement, to show whether the anchor
