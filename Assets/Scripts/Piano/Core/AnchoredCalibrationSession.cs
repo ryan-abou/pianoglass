@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
 
@@ -203,7 +204,37 @@ namespace PianoGlass.Piano
 
         private PianoProfile _savedProfile;
         private Capture? _pending;
+        /// <summary>Also keep two measuring anchors. See AnchorWitnesses.</summary>
+        public bool UseWitnessAnchors { get; set; }
+
+        /// <summary>How many witnesses are live.</summary>
+        public int WitnessCount => _witnesses.Count;
+
+        /// <summary>From the last Middle C touch, millimetres from the real key:
+        /// the primary, each witness, then all of them averaged.</summary>
+        public float[] LastWitnessErrorsMm { get; private set; } = new float[0];
+
+        private sealed class LiveWitness
+        {
+            public IPianoAnchorHandle Handle;
+            public WitnessAnchor Saved;
+            public float LastLoggedMm;
+        }
+
+        private List<LiveWitness> _witnesses = new List<LiveWitness>();
+        private List<LiveWitness> _newWitnesses;
+        private readonly List<string> _oldWitnessUuids = new List<string>();
+        private DateTime _nextWitnessCheck;
+        private const double WitnessCheckSeconds = 2.0;
+        private const float WitnessLogStepMm = 5f;
+
         private bool _writeIsNewCalibration;
+        /// <summary>A fresh calibration has not been confirmed yet, so the
+        /// nudge now is its bias.</summary>
+        private bool _learningBias;
+        /// <summary>A bigger nudge than this is not a steady offset from the
+        /// touches; something else was wrong, and it is not kept.</summary>
+        public const float MaxBiasMm = 25f;
         /// <summary>Set by an accepted Middle C touch for the WriteProfile
         /// that follows: the applied shift, anchor-local mm.</summary>
         private Vector3? _writeCorrectionMm;
@@ -351,6 +382,7 @@ namespace PianoGlass.Piano
 
             Vector3 rawMm = AnchoredKeyboard.NudgeToKeyboardMm(tipWorld - expected, layout.Right, layout.Up, layout.Forward);
             LastVerifyErrorMm = rawMm;
+            CompareWitnesses(tipWorld);
             string error = $"verify error x/y/z mm = {rawMm.x:+0.0;-0.0;0} / {rawMm.y:+0.0;-0.0;0} / {rawMm.z:+0.0;-0.0;0} " +
                            $"(total {rawMm.magnitude:0.0} mm)";
 
@@ -367,6 +399,7 @@ namespace PianoGlass.Piano
             Vector3 local = AnchoredKeyboard.DirectionToLocal(Anchor.Pose, c.Delta);
             LocalGeometry = AnchoredKeyboard.Translate(LocalGeometry, local);
             _writeCorrectionMm = local * 1000f;
+            BaselineWitnesses();
 
             Vector3 appliedMm = AnchoredKeyboard.NudgeToKeyboardMm(c.Delta, layout.Right, layout.Up, layout.Forward);
             bool capped = Mathf.Abs(rawMm.y - appliedMm.y) > 0.05f;
@@ -416,8 +449,20 @@ namespace PianoGlass.Piano
                 if (Flow.State == FlowState.Ready)
                 {
                     Log("back after time away: check the keys again");
+                    LogWitnessAgreement();
                     _ = Fire(FlowEvent.PlayerReturned);
                 }
+            }
+
+            if (_witnesses.Count > 0 && now >= _nextWitnessCheck)
+            {
+                _nextWitnessCheck = now.AddSeconds(WitnessCheckSeconds);
+                foreach (LiveWitness w in _witnesses)
+                    if (Math.Abs(WitnessGapMm(w) - w.LastLoggedMm) >= WitnessLogStepMm)
+                    {
+                        LogWitnessAgreement();
+                        break;
+                    }
             }
         }
 
@@ -575,6 +620,7 @@ namespace PianoGlass.Piano
                     Attach(r.Handle, _savedProfile.LocalGeometry, _savedProfile.lowestNote,
                            _savedProfile.highestNote, ConfiguredWhiteKeyDepth ?? _savedProfile.whiteKeyDepth);
                     await Fire(FlowEvent.LocalizeSucceeded);
+                    await LoadWitnesses();
                     break;
 
                 case AnchorStatus.NotFound:
@@ -594,6 +640,122 @@ namespace PianoGlass.Piano
                     await Fire(FlowEvent.LocalizeFailed);
                     break;
             }
+        }
+
+        /// <summary>How far this witness now puts the primary from where the
+        /// primary says it is. Tracking space being re-based moves both alike,
+        /// so this is the map itself shifting. 0 when it cannot be told.</summary>
+        private float WitnessGapMm(LiveWitness w)
+        {
+            if (Anchor == null || !Anchor.IsAlive || !w.Handle.IsAlive || !w.Handle.IsTracked) return w.LastLoggedMm;
+            Pose predicted = AnchorWitnesses.PredictPrimary(w.Saved, w.Handle.Pose);
+            return (predicted.position - Anchor.Pose.position).magnitude * 1000f;
+        }
+
+        private void LogWitnessAgreement()
+        {
+            if (_witnesses.Count == 0 || Anchor == null) return;
+            var line = new System.Text.StringBuilder("witnesses vs primary:");
+            foreach (LiveWitness w in _witnesses)
+            {
+                w.LastLoggedMm = WitnessGapMm(w);
+                line.Append($" {w.Saved.label} {w.LastLoggedMm:0.0} mm{(w.Handle.IsTracked ? "" : " (untracked)")}");
+            }
+            Log(line.ToString());
+        }
+
+        private Vector3 MiddleCFrom(Pose primary) =>
+            AnchoredKeyboard.BuildLayout(primary, LocalGeometry, LowestNote, HighestNote, WhiteKeyDepth, NudgeMm)
+                            .FrontEdgeCenter(AnchoredKeyboard.MiddleC);
+
+        /// <summary>At a Middle C touch: how far each anchor, and all of them
+        /// averaged, put the key from where the tip says it really is.</summary>
+        private void CompareWitnesses(Vector3 tipWorld)
+        {
+            if (_witnesses.Count == 0) { LastWitnessErrorsMm = new float[0]; return; }
+
+            var errors = new List<float>();
+            Vector3 primary = MiddleCFrom(Anchor.Pose);
+            Vector3 sum = primary;
+            int count = 1;
+            errors.Add((primary - tipWorld).magnitude * 1000f);
+            var line = new System.Text.StringBuilder($"witness check at Middle C: primary {errors[0]:0.0} mm");
+
+            foreach (LiveWitness w in _witnesses)
+            {
+                if (!w.Handle.IsAlive || !w.Handle.IsTracked)
+                {
+                    errors.Add(-1f);
+                    line.Append($", {w.Saved.label} untracked");
+                    continue;
+                }
+                Vector3 predicted = MiddleCFrom(AnchorWitnesses.PredictPrimary(w.Saved, w.Handle.Pose));
+                sum += predicted;
+                count++;
+                errors.Add((predicted - tipWorld).magnitude * 1000f);
+                line.Append($", {w.Saved.label} {errors[errors.Count - 1]:0.0} mm");
+            }
+
+            errors.Add((sum / count - tipWorld).magnitude * 1000f);
+            line.Append($", averaged {errors[errors.Count - 1]:0.0} mm");
+            LastWitnessErrorsMm = errors.ToArray();
+            Log(line.ToString());
+        }
+
+        /// <summary>The keys were just confirmed right on the primary, so that is
+        /// where the witnesses should now say it is.</summary>
+        private void BaselineWitnesses()
+        {
+            if (Anchor == null) return;
+            foreach (LiveWitness w in _witnesses)
+            {
+                if (!w.Handle.IsAlive || !w.Handle.IsTracked) continue;
+                AnchorWitnesses.Baseline(w.Saved, Anchor.Pose, w.Handle.Pose);
+                w.LastLoggedMm = 0f;
+            }
+        }
+
+        private List<WitnessAnchor> SavedWitnesses(List<LiveWitness> live)
+        {
+            var saved = new List<WitnessAnchor>();
+            foreach (LiveWitness w in live) saved.Add(w.Saved);
+            return saved;
+        }
+
+        /// <summary>Best effort: a witness that fails is logged and the
+        /// calibration carries on without it.</summary>
+        private async Task<List<LiveWitness>> CreateWitnesses(KeyboardGeometry world, Quaternion rotation, Pose primary)
+        {
+            var made = new List<LiveWitness>();
+            if (!UseWitnessAnchors) return made;
+            foreach ((string label, Vector3 position) in new[] { ("low", world.LowFront), ("high", world.HighFront) })
+            {
+                AnchorResult created = await _service.CreateAsync(position, rotation);
+                Log($"witness {label} create {created}");
+                if (!created.Ok) continue;
+                AnchorResult saved = await _service.SaveAsync(created.Handle);
+                Log($"witness {label} save {saved}");
+                if (!saved.Ok) continue;
+                var witness = new WitnessAnchor { uuid = created.Handle.Id, label = label };
+                AnchorWitnesses.Baseline(witness, primary, created.Handle.Pose);
+                made.Add(new LiveWitness { Handle = created.Handle, Saved = witness });
+            }
+            return made;
+        }
+
+        /// <summary>One at a time, after the primary: the runtime's load buffer
+        /// is shared. The keys never wait for these.</summary>
+        private async Task LoadWitnesses()
+        {
+            _witnesses = new List<LiveWitness>();
+            if (!UseWitnessAnchors || _savedProfile?.witnessAnchors == null) return;
+            foreach (WitnessAnchor saved in _savedProfile.witnessAnchors)
+            {
+                AnchorResult r = await _service.LoadAsync(saved.uuid, _localizeTimeoutSeconds);
+                Log($"witness {saved.label} load {r}");
+                if (r.Ok) _witnesses.Add(new LiveWitness { Handle = r.Handle, Saved = saved });
+            }
+            LogWitnessAgreement();
         }
 
         private async Task CreateAndSave()
@@ -645,6 +807,7 @@ namespace PianoGlass.Piano
             LastProblem = null;
             AnchorWasNotFound = false;
             Attach(created.Handle, local, cap.Lowest, cap.Highest, cap.Depth);
+            _newWitnesses = await CreateWitnesses(cap.World, frame.rotation, actual);
             _writeIsNewCalibration = true;
             await Fire(FlowEvent.NewAnchorSaved);
         }
@@ -666,20 +829,31 @@ namespace PianoGlass.Piano
 
             if (newCalibration)
             {
-                // A nudge made up for the controller's tip, which survives a
-                // recalibration. Once the tip is measured, all a nudge can hold
-                // is where the anchor had drifted to, and that does not apply
-                // to keys that were just touched (16 mm off, 2026-11-05).
-                if (store.hasTipOffset && NudgeMm != Vector3.zero)
+                // A nudge made later may hold where the anchor had drifted to,
+                // which does not apply to keys that were just touched (16 mm
+                // off, 2026-11-05). The steady offset from the touches does:
+                // start from that, and let this calibration's own nudge replace it.
+                if (store.hasTipOffset)
                 {
-                    Log($"tip is measured: fresh calibration clears the nudge, was {Mm(NudgeMm)}");
-                    NudgeMm = Vector3.zero;
-                    PlacementChanged?.Invoke();
+                    _learningBias = true;
+                    if (NudgeMm != store.calibrationBiasMm)
+                    {
+                        Log($"fresh calibration: nudge {Mm(NudgeMm)} -> calibration bias {Mm(store.calibrationBiasMm)}");
+                        NudgeMm = store.calibrationBiasMm;
+                        PlacementChanged?.Invoke();
+                    }
                 }
+
+                _oldWitnessUuids.Clear();
+                if (store.ActiveProfile?.witnessAnchors != null)
+                    foreach (WitnessAnchor old in store.ActiveProfile.witnessAnchors) _oldWitnessUuids.Add(old.uuid);
 
                 string utc = _utcNow().ToString("yyyy-MM-dd'T'HH:mm:ss'Z'");
                 PianoProfileEdits.ApplyCalibration(store, Anchor.Id, LocalGeometry, LowestNote, HighestNote,
                                                    WhiteKeyDepth, NudgeMm, utc, _newId());
+                _witnesses = _newWitnesses ?? new List<LiveWitness>();
+                _newWitnesses = null;
+                store.ActiveProfile.witnessAnchors = SavedWitnesses(_witnesses);
             }
             else if (Anchor != null)
             {
@@ -693,6 +867,7 @@ namespace PianoGlass.Piano
                     Log("correction not written: the profile on disk names a different anchor");
                 }
                 store.tipNudgeKeyboardMm = NudgeMm;
+                if (applied && store.ActiveProfile != null) store.ActiveProfile.witnessAnchors = SavedWitnesses(_witnesses);
             }
 
             if (!_serializer.Save(store, out error))
@@ -717,6 +892,12 @@ namespace PianoGlass.Piano
                 Log($"old anchor {oldUuid ?? "-"} kept: the new profile was not written");
                 return;
             }
+            foreach (string uuid in _oldWitnessUuids)
+            {
+                AnchorResult erased = await _service.EraseByUuidAsync(uuid);
+                Log($"erase old witness {erased}");
+            }
+            _oldWitnessUuids.Clear();
             if (string.IsNullOrEmpty(oldUuid) || oldUuid == SavedAnchorUuid)
             {
                 Log("no old anchor to erase");
@@ -742,6 +923,18 @@ namespace PianoGlass.Piano
             if (store == null) { Log("verified not recorded: " + error); return; }
             string utc = _utcNow().ToString("yyyy-MM-dd'T'HH:mm:ss'Z'");
             PianoProfileEdits.MarkVerified(store, utc);
+            BaselineWitnesses();
+            if (store.ActiveProfile != null && _witnesses.Count > 0) store.ActiveProfile.witnessAnchors = SavedWitnesses(_witnesses);
+            if (_learningBias)
+            {
+                _learningBias = false;
+                if (NudgeMm.magnitude <= MaxBiasMm)
+                {
+                    store.calibrationBiasMm = NudgeMm;
+                    Log($"calibration bias now {Mm(NudgeMm)}");
+                }
+                else Log($"nudge {Mm(NudgeMm)} is too big to be a steady offset: calibration bias stays {Mm(store.calibrationBiasMm)}");
+            }
             if (!_serializer.Save(store, out error)) { Log("verified not recorded: " + error); return; }
             Log($"verified by the player: lastVerifiedUtc={utc}");
         }

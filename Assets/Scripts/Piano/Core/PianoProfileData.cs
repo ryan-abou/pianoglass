@@ -29,6 +29,14 @@ namespace PianoGlass.Piano
         /// changes.</summary>
         public Vector3 tipNudgeKeyboardMm;
 
+        /// <summary>What a fresh calibration starts with once the tip is
+        /// measured: the nudge the player settled on straight after the last
+        /// one, before confirming. Touches land a steady few millimetres off
+        /// (2026-11-05), so this is hardware, unlike a nudge made later, which
+        /// may only be following a drifted anchor. Absent in older files, which
+        /// JsonUtility reads as zero.</summary>
+        public Vector3 calibrationBiasMm;
+
         /// <summary>Set by pivot calibration. When false, tipOffsetController
         /// is meaningless and PointerTip stays where the scene put it.</summary>
         public bool hasTipOffset;
@@ -52,6 +60,17 @@ namespace PianoGlass.Piano
 
     /// <summary>One physical piano, as seen from its anchor.</summary>
     [Serializable]
+    public class WitnessAnchor
+    {
+        public string uuid = "";
+        /// <summary>"low" or "high", for the log.</summary>
+        public string label = "";
+        /// <summary>The primary anchor's pose in this anchor's frame.</summary>
+        public Vector3 primaryInWitness;
+        public Quaternion primaryRotationInWitness = Quaternion.identity;
+    }
+
+    [Serializable]
     public class PianoProfile
     {
         public string profileId = "";
@@ -60,6 +79,10 @@ namespace PianoGlass.Piano
         /// <summary>A list so a two-anchor mode (one near each end) can be
         /// added without a schema change. Today exactly one.</summary>
         public List<string> anchorUuids = new List<string>();
+
+        /// <summary>Anchors that only measure (AnchorWitnesses). Absent in older
+        /// files, which simply have none until the next calibration.</summary>
+        public List<WitnessAnchor> witnessAnchors = new List<WitnessAnchor>();
 
         public int lowestNote;
         public int highestNote;
