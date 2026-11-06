@@ -172,7 +172,7 @@ on them and none can be played by accident.
 | Middle C fix: start / cancel | right grip | — | `OvrCalibrationInput` | Anchored mode; then touch Middle C and pull the right trigger |
 | Play / pause | A | — | `OvrSongTransport` | |
 | Restart from the top and play | left Y | A0 + A♯0 | `OvrSongTransport`, `SongTransport` | The chord works whenever calibrated, playing or not. Also how a practice loop is left |
-| Start a practice loop | right controller ray + right trigger on the results card's "Loop bars" button | — | `ResultsCard` → `PracticeLoop` | The button shows when a bar is under 75%: that bar and one either side |
+| Start a practice loop | right controller ray + right trigger on the results card's "Loop bars" button | — | `ResultsCard` → `PracticeLoop` | The button shows when a bar is under 75%: that bar, and a neighbour under 90% |
 | Press a results card button (Retry, More/Less info, the suggestion's button) | right controller ray + right trigger | — | `OvrUiPointer`, `GlassButton` | Stopgap until hand poke (Phase 4). The ray shows only while a button is pressable; the trigger goes to calibration unless the ray is on a button |
 | Tempo −5% / +5% | — | hold A0, press B0 / C1 | `SongTransport` | 25–200%, only while stopped or paused, saved |
 | Metronome on/off | — | hold A0, press C♯1 | `SongTransport` → `Metronome` | Only while stopped or paused, saved |
@@ -874,9 +874,11 @@ Decided while building, all confirmed by Ryan unless a branch above changes it:
   or the A0 + A♯0 chord leaves it, back to the full song. No results card
   between passes (it would cover the next one); the status panel shows the pass
   and how the last one went.
-- **The card's range is now the weak bar ±1** ("Bar 3 needs work", "Loop bars
-  2–4"), replacing "Loop bar 3" from the results redesign. Grouped pills on long
-  songs keep the 4-bar phrase rule.
+- **The card's range is the weak bar, plus a neighbour only if it was under 90%**
+  (Ryan, 2026-11-05: why practise a bar already played well?). Bar 3 weak with
+  good bars around it gives "Loop bar 3"; at most one bar either side. This
+  replaces the plan's plain ±1. The count-in leads into the bar. Grouped pills on
+  long songs keep the 4-bar phrase rule.
 - **One bar of count-in** on every pass. A wrap keeps the frame's overshoot.
   Notes, due keys, grid lines and clicks all stop at the loop's end.
 - **A pass nobody played in is not saved** and does not change the tempo.
