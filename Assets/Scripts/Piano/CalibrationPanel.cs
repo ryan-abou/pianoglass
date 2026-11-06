@@ -234,7 +234,10 @@ namespace PianoGlass.Piano
             WrongNote w = s.LastWrongNote;
             if (w != null)
                 _sb.AppendLine($"<color=#E5948A>wrong:      {MidiInput.NoteName(w.pressedPitch)}" +
-                               (w.expectedPitch >= 0 ? $" instead of {MidiInput.NoteName(w.expectedPitch)}" : " (nothing due)") +
+                               // Not the answer once notes are hidden: the flash is the only hint.
+                               (w.expectedPitch < 0 ? " (nothing due)"
+                                   : clock != null && clock.NoteOpacity <= 0f ? ""
+                                   : $" instead of {MidiInput.NoteName(w.expectedPitch)}") +
                                $", bar {w.bar}</color>");
 
             if (keeper.AttemptSaved)

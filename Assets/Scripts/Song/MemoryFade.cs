@@ -26,6 +26,11 @@ namespace PianoGlass.Song
     /// StuckSeconds held at one note, shows the notes one step clearer for the
     /// rest of that pass.
     ///
+    /// Wait mode at a glimpse is different, because nothing moves until the right
+    /// key is found: a wrong key, or GlimpseStuckSeconds held at a note, flashes
+    /// just that note the way a glimpse shows it, and the rest stay hidden. Its
+    /// passes are judged by WaitRecall rather than by right keys.
+    ///
     /// The opacity is a ceiling on everything that shows the note: it still
     /// turns mint or slate once judged, at the opacity it already had. See
     /// OutcomeTint.FadedSlab.
@@ -40,6 +45,8 @@ namespace PianoGlass.Song
         public const double FainterFrom = 90.0, BackBelow = 70.0, FarBackBelow = 40.0;
         public const int MistakesForHelp = 3;
         public const float StuckSeconds = 5f;
+        /// <summary>Wait mode at a glimpse: until the flash (Ryan, 2026-11-05).</summary>
+        public const float GlimpseStuckSeconds = 2.5f;
 
         private static readonly float[] Steps = { 1f, 0.6f, 0.3f, GlimpseOpacity };
 
@@ -50,6 +57,8 @@ namespace PianoGlass.Song
         public int Help { get; private set; }
 
         private int _mistakesInARow;
+        private double _flashNote;
+        private double _flashAt = -1.0;
 
         /// <param name="step">Where to start: a saved song's step. Clamped.</param>
         public MemoryFade(int step = 0)
@@ -67,10 +76,28 @@ namespace PianoGlass.Song
         /// real seconds. Only a glimpse changes over a note's life.</summary>
         public float Opacity(double secondsVisible)
         {
-            if (ShownStep < Glimpse) return Steps[ShownStep];
-            double fading = (secondsVisible - GlimpseHoldSeconds) / GlimpseFadeSeconds;
+            return ShownStep < Glimpse ? Steps[ShownStep] : GlimpseCurve(secondsVisible);
+        }
+
+        private static float GlimpseCurve(double seconds)
+        {
+            double fading = (seconds - GlimpseHoldSeconds) / GlimpseFadeSeconds;
             if (fading <= 0.0) return GlimpseOpacity;
             return fading >= 1.0 ? 0f : GlimpseOpacity * (float)(1.0 - fading);
+        }
+
+        /// <summary>Show this note again, as a glimpse does. Times in seconds.</summary>
+        public void Flash(double noteTime, double now)
+        {
+            _flashNote = noteTime;
+            _flashAt = now;
+        }
+
+        /// <summary>How visible a flash makes this note now; 0 for any other.</summary>
+        public float FlashOpacity(double noteTime, double now)
+        {
+            if (_flashAt < 0.0 || System.Math.Abs(noteTime - _flashNote) > 1e-6) return 0f;
+            return GlimpseCurve(now - _flashAt);
         }
 
         /// <summary>What anything that does not fall can show: a lit key, or the
@@ -98,6 +125,7 @@ namespace PianoGlass.Song
         {
             Help = 0;
             _mistakesInARow = 0;
+            _flashAt = -1.0;
         }
 
         /// <summary>The step the next pass would use, changing nothing.</summary>
@@ -113,8 +141,7 @@ namespace PianoGlass.Song
         public void EndPass(double keysRightPercent, bool played)
         {
             Step = StepAfter(keysRightPercent, played);
-            Help = 0;
-            _mistakesInARow = 0;
+            ClearHelp();
         }
 
         /// <summary>"notes 60%", or "notes glimpse".</summary>
