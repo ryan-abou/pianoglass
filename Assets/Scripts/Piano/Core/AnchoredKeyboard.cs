@@ -155,9 +155,13 @@ namespace PianoGlass.Piano
 
         public const int MiddleC = 60;
         /// <summary>One-point correction limits: the vertical part is capped
-        /// at this, and anything further than MovedMetres is refused.</summary>
+        /// at this, and anything further than MovedMetres is refused. 150 mm,
+        /// up from 50, because the headset itself can place an anchor 86 mm off
+        /// after a day away from a piano that never moved (2026-11-05), and one
+        /// touch is a fair price for that where a full recalibration is not.
+        /// A touch on the wrong key shows at once, and Verifying follows.</summary>
         public const float VerticalCapMetres = 0.01f;
-        public const float MovedMetres = 0.05f;
+        public const float MovedMetres = 0.15f;
 
         /// <summary>
         /// One-point (Middle C) correction. <paramref name="expected"/> is the
