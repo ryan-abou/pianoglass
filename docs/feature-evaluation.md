@@ -120,7 +120,7 @@ A session is roughly one evening.
 | F18 | **Due-key highlight in the hand's colour**, with **an on/off toggle** in the settings menu | Skip (already have) | Small for colour after F13. The toggle comes with S1 | None |
 | F44 | **Hand-tracking UI** for menus | Skip | Large. Meta Interaction SDK poke on world-space canvases, controller ↔ hands switching | Interaction SDK is in `com.meta.xr.sdk.all` (already installed); hand tracking already enabled in `OculusProjectConfig.asset` |
 | F12 + F24 | **One hand-tracked panel**: dock and in-song controls merged (songs, settings, stop, tempo, progress, toggles). Ryan: "make both the last panel and this panel into one thing", read as the F12 dock + F24 | Skip, Skip | Medium after F44. New Canvas registered on the keyboard via `CanvasCalibrationFollower`, wired in `SceneSetup` | None |
-| S1 | **Settings menu** (new; follows from F13 and F18): hand colours, due-key toggle, display mode, passthrough, wait mode, metronome, memory fade | — | Medium. A Meta-free `PianoSettings` component that saves to PlayerPrefs (as display mode does now), and its page on the F12/F24 panel | None |
+| S1 | **Settings menu** (new; follows from F13 and F18): hand colours, due-key toggle, display mode, passthrough, wait mode, metronome, memory fade, auto-tempo on/off | — | Medium. A Meta-free `PianoSettings` component that saves to PlayerPrefs (as display mode does now), and its page on the F12/F24 panel | None |
 
 ### Maybe later (16 items)
 
@@ -283,7 +283,8 @@ B0 (−5%) or C1 (+5%).
    had clicks 17 ms ahead of the lines (sd 9), within the phone's own audio/video
    uncertainty.
 9. **Loop worst bar ± 1 (F33).** Most useful with step 7 showing which bar.
-   Built (Batch C), awaiting a headset pass, as are steps 10-12.
+   Steps 9-11 passed on the headset and merged 2026-11-05 (Batch C). Step 12 is
+   in its second round.
 10. **Auto-tempo in the loop (F35).** Needs steps 5 and 9.
 11. **Wait mode (F22).** After the loop, so scoring and transport aren't
     changing at the same time.
