@@ -250,6 +250,14 @@ namespace PianoGlass.Scoring
         /// played in it, which is dropped.</summary>
         private void SaveFinished()
         {
+            // No notes were left to score, as when the keys are confirmed after
+            // the song has ended (a 0% card, 2026-11-05). Not an attempt.
+            if (Session.ScorableCount == 0)
+            {
+                AttemptSaved = true;
+                Debug.Log("[Score] no notes left to score: not an attempt");
+                return;
+            }
             if (clock.Loop.HasValue && Session.NotesHit == 0 && Session.WrongNotes.Count == 0)
             {
                 AttemptSaved = true;
