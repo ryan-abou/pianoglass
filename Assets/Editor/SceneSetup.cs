@@ -940,6 +940,33 @@ namespace PianoGlass.EditorTools
             Debug.Log("[SceneSetup] Practice loop configured.");
         }
 
+        /// <summary>
+        /// Memory fade (F36): the transparent material slabs draw with while
+        /// they fade. The key overlay's translucent material is the same
+        /// thing, URP Unlit with alpha blending and the colour set per
+        /// renderer, so it is reused rather than duplicated.
+        /// </summary>
+        [MenuItem("PianoGlass/Scene/Configure Memory Fade")]
+        public static void ConfigureMemoryFade()
+        {
+            Scene scene = OpenScene();
+
+            var highway = Object.FindAnyObjectByType<NoteHighway>();
+            if (highway == null)
+            {
+                Debug.LogError("[SceneSetup] NoteHighway missing -- run Add Falling-Note Highway first.");
+                return;
+            }
+
+            var so = new SerializedObject(highway);
+            so.FindProperty("fadedNoteMaterial").objectReferenceValue = GetOrCreateTranslucentMaterial();
+            so.ApplyModifiedProperties();
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            Debug.Log("[SceneSetup] Memory fade configured.");
+        }
+
         [MenuItem("PianoGlass/Scene/Remove Test Cube")]
         public static void RemoveTestCube()
         {

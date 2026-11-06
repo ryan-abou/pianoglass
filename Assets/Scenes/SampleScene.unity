@@ -928,6 +928,8 @@ MonoBehaviour:
   slowerNote: 23
   fasterNote: 24
   metronomeNote: 25
+  waitNote: 26
+  memoryFadeNote: 27
   metronome: {fileID: 1115035986}
 --- !u!4 &644933873
 Transform:
@@ -1443,6 +1445,7 @@ MonoBehaviour:
   clock: {fileID: 1285217052}
   scoreKeeper: {fileID: 644933874}
   noteMaterial: {fileID: 2100000, guid: dff0fda6605ad8e499fbcb1b54937d0b, type: 2}
+  fadedNoteMaterial: {fileID: 2100000, guid: 046695c57c8958e4d927a627540455e0, type: 2}
   noteColor: {r: 0.4, g: 0.68, b: 0.95, a: 1}
   slabThickness: 0.006
   widthFraction: 0.9

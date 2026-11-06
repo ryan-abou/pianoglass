@@ -55,6 +55,44 @@ namespace PianoGlass.Song
         /// wrap apart.</summary>
         public int Wraps { get; private set; }
 
+        /// <summary>Which time through the loop this is, from 1; 0 with no loop.</summary>
+        public int LoopPass => Loop.HasValue ? Wraps - _wrapsAtLoopStart + 1 : 0;
+
+        /// <summary>Memory fade (F36) wanted.</summary>
+        public bool MemoryFadeOn { get; set; }
+
+        /// <summary>The song's own ladder, across play-throughs. PracticeLoop
+        /// loads and saves it.</summary>
+        public MemoryFade SongFade { get; set; }
+
+        private MemoryFade _loopFade;
+
+        /// <summary>The ladder in use: this loop's, which a new loop starts at
+        /// 100%, or with no loop the song's.</summary>
+        public MemoryFade Fade => Loop.HasValue ? _loopFade : SongFade;
+
+        /// <summary>Whether notes can fade right now.</summary>
+        public bool IsFading => MemoryFadeOn && Fade != null;
+
+        /// <summary>The ceiling for what does not fall with the note: its due
+        /// key, the panel naming it. 1 unless fading.</summary>
+        public float NoteOpacity => IsFading ? Fade.SteadyOpacity : 1f;
+
+        /// <summary>How visible this note's slab and name are now, 1 unless
+        /// fading. A note counts as appearing at the top of the highway, or at
+        /// the start of the pass for one already part way down by then, so that
+        /// the first notes get their glimpse too.</summary>
+        public float NoteOpacityAt(double noteStartTime, double leadTimeSeconds)
+        {
+            if (!IsFading) return 1f;
+            double passStart = Loop.HasValue ? Loop.Value.WrapTo : -leadInSeconds;
+            double appeared = System.Math.Max(noteStartTime - leadTimeSeconds, passStart);
+            double seconds = tempoMultiplier > 0f ? (DisplaySongTime - appeared) / tempoMultiplier : 0.0;
+            return Fade.Opacity(seconds);
+        }
+
+        private int _wrapsAtLoopStart;
+
         /// <summary>No real headset is this slow; anything larger is a bad
         /// reading, and drawing that far ahead would be worse than none.</summary>
         public const double MaxDisplayLatencySeconds = 0.1;
@@ -146,6 +184,8 @@ namespace PianoGlass.Song
         public void StartLoop(LoopRange loop)
         {
             Loop = loop;
+            _loopFade = new MemoryFade();
+            _wrapsAtLoopStart = Wraps;
             SongTime = loop.WrapTo;
         }
 
@@ -161,6 +201,8 @@ namespace PianoGlass.Song
         public void Restart()
         {
             Loop = null;
+            _loopFade = null;
+            SongFade?.ClearHelp();
             SongTime = -leadInSeconds;
         }
     }
