@@ -187,8 +187,8 @@ namespace PianoGlass.Tests.EditMode
         [Test]
         public void MiddleCFixRecoversTheOffsetAndPersistsIt()
         {
-            // The touches landed 6 mm left, 4 mm toward the player and 3 mm low of the real keys.
-            Vector3 error = new Vector3(-0.006f, -0.003f, -0.004f);
+            // The touches landed 6 mm left, 4 mm toward the player of the real keys.
+            Vector3 error = new Vector3(-0.006f, 0f, -0.004f);
             AnchoredCalibrationSession s = StartCorrecting(CalibratedWithError(error));
             float spacingBefore = s.BuildLayout().WhiteKeySpacing;
             Vector3 rightBefore = s.BuildLayout().Right;
@@ -196,7 +196,7 @@ namespace PianoGlass.Tests.EditMode
             Run(s.OnMiddleCTouchedAsync(RealMiddleC()));
 
             // Measured in the keyboard frame: x along the keys, y up, z toward the player.
-            Near(new Vector3(6f, 3f, -4f), s.LastVerifyErrorMm, 0.01f, "verify error, keyboard mm");
+            Near(new Vector3(6f, 0f, -4f), s.LastVerifyErrorMm, 0.01f, "verify error, keyboard mm");
             Assert.AreEqual(FlowState.Verifying, s.Flow.State, "corrected -> check again");
             Assert.IsNull(s.LastProblem);
             StringAssert.Contains("Middle C fix", s.CorrectionNote);
@@ -211,7 +211,7 @@ namespace PianoGlass.Tests.EditMode
             Assert.AreEqual("middle-c", p.lastCorrection);
             // The anchor was created facing world +z before the recenter, so
             // its local frame is that world frame: the shift is -error.
-            Near(new Vector3(6f, 3f, 4f), p.lastCorrectionMm, 0.01f, "recorded shift, anchor-local mm");
+            Near(new Vector3(6f, 0f, 4f), p.lastCorrectionMm, 0.01f, "recorded shift, anchor-local mm");
             Near(s.LocalGeometry.LowFront, p.lowFrontLocal, 1e-6f, "the corrected geometry is what was saved");
         }
 
@@ -238,12 +238,27 @@ namespace PianoGlass.Tests.EditMode
         public void MiddleCFixLandsOnTheTouchWithANudgeApplied()
         {
             AnchoredCalibrationSession s = CalibratedWithError(new Vector3(0.003f, 0f, 0f));
-            s.Nudge(new Vector3(0.004f, 0.002f, -0.006f));
+            s.Nudge(new Vector3(0.012f, 0f, -0.006f));
             StartCorrecting(s);
 
             Run(s.OnMiddleCTouchedAsync(RealMiddleC()));
 
             Near(RealMiddleC(), s.BuildLayout().FrontEdgeCenter(60), 1e-4f, "what is drawn is what was touched");
+        }
+
+        [Test]
+        public void ATouchOnKeysAlreadyRightLeavesThemAlone()
+        {
+            // The keys are right, and the touch reads as it does: a little low.
+            AnchoredCalibrationSession s = StartCorrecting(CalibratedWithError(Vector3.zero));
+            Vector3 before = s.BuildLayout().FrontEdgeCenter(60);
+
+            Run(s.OnMiddleCTouchedAsync(RealMiddleC() + new Vector3(0f, -0.0068f, 0f)));
+
+            Assert.AreEqual(FlowState.Verifying, s.Flow.State);
+            Near(before, s.BuildLayout().FrontEdgeCenter(60), 1e-5f, "not moved");
+            StringAssert.Contains("left alone", s.CorrectionNote);
+            Assert.AreEqual("none", OnDisk().ActiveProfile.lastCorrection);
         }
 
         [Test]
@@ -520,7 +535,7 @@ namespace PianoGlass.Tests.EditMode
         [Test]
         public void ANewCalibrationClearsTheRecordedCorrection()
         {
-            AnchoredCalibrationSession s = StartCorrecting(CalibratedWithError(new Vector3(0.006f, 0f, 0f)));
+            AnchoredCalibrationSession s = StartCorrecting(CalibratedWithError(new Vector3(0.012f, 0f, 0f)));
             Run(s.OnMiddleCTouchedAsync(RealMiddleC()));
             Assert.AreEqual("middle-c", OnDisk().ActiveProfile.lastCorrection);
 
