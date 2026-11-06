@@ -177,7 +177,7 @@ on them and none can be played by accident.
 | Tempo −5% / +5% | — | hold A0, press B0 / C1 | `SongTransport` | 25–200%, only while stopped or paused, saved |
 | Metronome on/off | — | hold A0, press C♯1 | `SongTransport` → `Metronome` | Only while stopped or paused, saved |
 | Wait mode on/off | — | hold A0, press D1 | `SongTransport` | Only while stopped or paused, saved. While paused part-way it starts a new attempt from there |
-| Memory fade on/off | — | hold A0, press D♯1 | `SongTransport` | Only while stopped or paused, saved. Shows only inside a practice loop |
+| Memory fade on/off (branch `batchC-fade`, not in main yet) | — | hold A0, press D♯1 | `SongTransport` | Only while stopped or paused, saved. Shows only inside a practice loop |
 | Display mode (cycle) | left X | — | `OvrKeyOverlayInput` | FullOverlay / Translucent / ActiveKeysOnly / EdgeMarkers, saved |
 | Passthrough on/off | left stick click | — | `OvrKeyOverlayInput` | A/B test tool |
 
@@ -200,11 +200,13 @@ values from `Assets/UI/GlassTokens.asset`):
 |---|---|---|
 | **Song panel** (F12 + F24 merged), left end of the keyboard, angled toward the player | play/pause, restart, tempo −/+ with its value, metronome toggle, wait-mode toggle, loop worst bar, song picker button, settings button | Always, collapsible to a slim strip |
 | **Results card** (F30/F32) | rank, accuracy, change vs last, timing, wrong notes, best streak, bar pills, one suggestion; buttons: retry, next song (hidden until a song list exists), more info (details panel) | When an attempt completes |
-| **Settings** (S1, `PianoSettings`) | display mode, passthrough, hand colours (F13), due-key toggle (F18), metronome, memory fade, wait mode | From the song panel |
+| **Settings** (S1, `PianoSettings`) | display mode, passthrough, hand colours (F13), due-key toggle (F18), metronome, memory fade, wait mode, auto-tempo on/off (Ryan, 2026-11-05: always on until these menus exist) | From the song panel |
 | **Calibration panel** (today's status panel, restyled) | start calibration, "looks right", Middle C fix, nudge pad (6 arrows plus yaw ⟲/⟳, held to repeat), clear nudge, measure controller tip | During setup, and from Settings → Keyboard |
 | **Song picker** (F38/F39) | song list with per-song history | From the song panel |
 
 What stays off the menus, and why:
+- **The status panel goes or shrinks (Ryan, 2026-11-05).** It carries a loop's
+  pass and how the last one went only until these menus can show that.
 - **The piano chords stay.** While playing, hands are on the keys, and a
   chord is faster than reaching for a panel. Each chord gets a matching
   button, so nothing is chord-only.
@@ -676,9 +678,8 @@ Follow the four-phase build order in `docs/feature-evaluation.md` (Part 3):
    (done); ~~note names (F14)~~ (done, Batch A).
 2. **Results, tempo, practice**: ~~tempo ±5%~~, ~~attempt schema v2~~ (both
    done, Batch A), ~~results card with bar heat strip~~, ~~metronome~~ (both
-   done, Batch B), loop worst bar,
-   auto-tempo, wait mode (pitch-only judging), memory fade (all four built,
-   Batch C, awaiting a headset pass).
+   done, Batch B), ~~loop worst bar~~, ~~auto-tempo~~, ~~wait mode~~ (all done,
+   Batch C), memory fade (second round, branch `batchC-fade`).
 3. **Real songs**: MIDI file loading, song picker, hand colours, one-hand
    practice, a free public-domain starter library, per-song history.
 4. **Hand-tracked UI**: hand-tracking spike, settings model, one panel
@@ -854,11 +855,20 @@ attempt ends, while the results card is up.
 Older commits keep their Co-Authored-By lines: Ryan decided on 2026-11-05 not to
 rewrite history. New commits leave them out.
 
-### Batch C status (2026-11-05): built, first headset round next
+### Batch C status (2026-11-05): three merged, second round next
 
-Branches, each from the one before: `batchC-loop`, `batchC-autotempo`,
-`batchC-wait`, `batchC-fade`. `batchC-test` is the build and is never merged.
-527 EditMode tests pass. Decided while building, none of it yet seen by Ryan:
+First headset round: loop, auto-tempo and wait mode passed and were merged into
+main, in that order (`batchC-loop`, `batchC-autotempo`, `batchC-wait`). About 45
+attempts over ten minutes, mean 69.7 fps in the development build, no exceptions
+from our code. `batchC-test` is the build and is never merged.
+
+Waiting on the second round, each on its own branch:
+- `batchC-fade`: fade worked as built but Ryan asked for a different system.
+- `loop-weak-bar`: Ryan asked why a loop would include a bar already played well.
+- `calib-recover`: the anchor came back 86 mm off after a day, 14-25 mm off after
+  taking the headset off. See `docs/anchored-calibration-status.md`.
+
+Decided while building, all confirmed by Ryan unless a branch above changes it:
 
 - **Starting and leaving a loop.** The results card's button starts it; left Y
   or the A0 + A♯0 chord leaves it, back to the full song. No results card
