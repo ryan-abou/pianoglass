@@ -163,6 +163,17 @@ namespace PianoGlass.Piano
         public const float VerticalCapMetres = 0.01f;
         public const float MovedMetres = 0.15f;
 
+        /// <summary>A touch cannot measure finer than this along the keys and in
+        /// depth: fresh calibrations and keys that looked perfect read up to about
+        /// 5 mm. Closer than this, the keys are left alone rather than moved by
+        /// the touch's own error (2026-11-05, a perfect piano made worse).</summary>
+        public const float AlreadyRightMetres = 0.006f;
+
+        /// <summary>A Middle C touch reads 5-10 mm low whatever the keys are doing
+        /// (-4.8, -9.4, -7.1 and -6.8 mm, 2026-11-05), so a height this small says
+        /// nothing and is not applied.</summary>
+        public const float HeightIgnoredMetres = 0.012f;
+
         /// <summary>
         /// One-point (Middle C) correction. <paramref name="expected"/> is the
         /// front-edge centre the current layout says the key has;
@@ -181,7 +192,7 @@ namespace PianoGlass.Piano
                 return OnePointCorrection.Reject(delta,
                     $"Middle C is {delta.magnitude * 1000f:0} mm off -- piano may have moved -- press B to recalibrate");
 
-            delta.y = Mathf.Clamp(delta.y, -verticalCap, verticalCap);
+            delta.y = Mathf.Abs(delta.y) <= HeightIgnoredMetres ? 0f : Mathf.Clamp(delta.y, -verticalCap, verticalCap);
             return OnePointCorrection.Accept(delta);
         }
 
@@ -334,6 +345,10 @@ namespace PianoGlass.Piano
         {
             Accepted = accepted; Delta = delta; Reason = reason;
         }
+
+        /// <summary>Accepted, and too small to tell from the touch's own error.</summary>
+        public bool AlreadyRight =>
+            Accepted && Delta.y == 0f && new Vector2(Delta.x, Delta.z).magnitude <= AnchoredKeyboard.AlreadyRightMetres;
 
         public static OnePointCorrection Accept(Vector3 delta) => new OnePointCorrection(true, delta, null);
         public static OnePointCorrection Reject(Vector3 delta, string reason) => new OnePointCorrection(false, delta, reason);

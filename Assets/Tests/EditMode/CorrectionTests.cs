@@ -53,6 +53,27 @@ namespace PianoGlass.Tests.EditMode
             Assert.AreEqual(0.002f, c.Delta.x, 1e-6f);
         }
 
+        [TestCase(-0.7f, -6.8f, 2.8f)] // a piano that looked perfect, 2026-11-05
+        [TestCase(5f, -9f, 0f)]
+        public void ATouchTooCloseToTellChangesNothing(float x, float y, float z)
+        {
+            Vector3 expected = new Vector3(0f, 0.75f, 0f);
+            OnePointCorrection c = AnchoredKeyboard.CorrectOnePoint(expected, expected + new Vector3(x, y, z) * 0.001f);
+            Assert.IsTrue(c.Accepted);
+            Assert.IsTrue(c.AlreadyRight);
+        }
+
+        [Test]
+        public void ASmallHeightIsNotAppliedButTheDriftBesideItIs()
+        {
+            Vector3 expected = new Vector3(0f, 0.75f, 0f);
+            OnePointCorrection c = AnchoredKeyboard.CorrectOnePoint(expected, expected + new Vector3(0.0191f, -0.0071f, -0.0051f));
+            Assert.IsFalse(c.AlreadyRight);
+            Assert.AreEqual(0f, c.Delta.y, 1e-6f);
+            Assert.AreEqual(0.0191f, c.Delta.x, 1e-6f);
+            Assert.AreEqual(-0.0051f, c.Delta.z, 1e-6f);
+        }
+
         [Test]
         public void MiddleCRejectsOverFifteenCentimetresAsMoved()
         {
