@@ -177,7 +177,7 @@ on them and none can be played by accident.
 | Tempo −5% / +5% | — | hold A0, press B0 / C1 | `SongTransport` | 25–200%, only while stopped or paused, saved |
 | Metronome on/off | — | hold A0, press C♯1 | `SongTransport` → `Metronome` | Only while stopped or paused, saved |
 | Wait mode on/off | — | hold A0, press D1 | `SongTransport` | Only while stopped or paused, saved. While paused part-way it starts a new attempt from there |
-| Memory fade on/off | — | hold A0, press D♯1 | `SongTransport` | Only while stopped or paused, saved. Shows only inside a practice loop |
+| Memory fade on/off | — | hold A0, press D♯1 | `SongTransport` | Only while stopped or paused, saved. Works on whole songs and in loops |
 | Display mode (cycle) | left X | — | `OvrKeyOverlayInput` | FullOverlay / Translucent / ActiveKeysOnly / EdgeMarkers, saved |
 | Passthrough on/off | left stick click | — | `OvrKeyOverlayInput` | A/B test tool |
 
@@ -893,8 +893,11 @@ Decided while building, all confirmed by Ryan unless a branch above changes it:
   together. Any other key is wrong and names what is awaited. Accuracy is right
   keys out of all keys. Schema 4 adds `correct`. The metronome pauses during a
   hold. Auto-tempo does nothing on a wait-mode pass.
-- **Memory fade:** hold A0, press D♯1. Off by default and saved; every new loop
-  starts fully visible. The opacity is a ceiling on anything showing the note: slab, name and
+- **Memory fade:** hold A0, press D♯1. Off by default and saved. On a whole song
+  the ladder moves once per finished play-through and is saved per song, so a
+  memorised song stays faint (Ryan asked for whole songs, the saving is Claude's
+  call, 2026-11-05); an abandoned play-through does not move it. Every new loop
+  has its own ladder, starting fully visible, and leaves the song's alone. The opacity is a ceiling on anything showing the note: slab, name and
   due key fade together, and the panel stops naming a note at a glimpse. The key's own
   coral on a wrong press is not faded, nor is a key the player holds.
 - **The fade ladder (Ryan's steps and request, Claude's system, 2026-11-05):**

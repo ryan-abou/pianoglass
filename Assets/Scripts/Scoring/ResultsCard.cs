@@ -235,6 +235,12 @@ namespace PianoGlass.Scoring
                       $"{s.WrongNotes} wrong | streak {s.BestStreak} | {s.Suggestion.Message}");
         }
 
+        /// <summary>One more fact for this result's line under the title.</summary>
+        public void AddToSubLine(string text)
+        {
+            if (_sub != null) _sub.text += " · " + text;
+        }
+
         public void Hide()
         {
             _hasResult = false;

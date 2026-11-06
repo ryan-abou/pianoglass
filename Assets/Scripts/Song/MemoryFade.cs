@@ -1,9 +1,11 @@
 namespace PianoGlass.Song
 {
     /// <summary>
-    /// Memory fade (F36): a practice loop's notes fade as the player shows they
-    /// know them, and come back when they do not (Ryan, 2026-11-05). Pure, so
-    /// the whole system is tested. One of these lives for one loop.
+    /// Memory fade (F36): notes fade as the player shows they know them, and
+    /// come back when they do not (Ryan, 2026-11-05). Pure, so the whole system
+    /// is tested. One of these lives for one loop, starting at 100%; another
+    /// belongs to the song, moves once per play-through and is saved, so a song
+    /// already memorised stays faint. A "pass" below is either.
     ///
     /// The ladder: 100%, 60%, 30%, 15%, then a glimpse: each note shows at 15%
     /// when it appears and fades out on its way down. Notes never go without
@@ -49,6 +51,12 @@ namespace PianoGlass.Song
 
         private int _mistakesInARow;
 
+        /// <param name="step">Where to start: a saved song's step. Clamped.</param>
+        public MemoryFade(int step = 0)
+        {
+            Step = System.Math.Max(0, System.Math.Min(Glimpse, step));
+        }
+
         /// <summary>The step actually showing, help included.</summary>
         public int ShownStep => System.Math.Max(0, Step - Help);
 
@@ -83,6 +91,13 @@ namespace PianoGlass.Song
         public void AskForHelp()
         {
             if (ShownStep > 0) Help++;
+        }
+
+        /// <summary>A pass given up on: its help goes, the ladder stays.</summary>
+        public void ClearHelp()
+        {
+            Help = 0;
+            _mistakesInARow = 0;
         }
 
         /// <summary>The step the next pass would use, changing nothing.</summary>

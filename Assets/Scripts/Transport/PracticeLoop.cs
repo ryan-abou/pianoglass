@@ -21,7 +21,8 @@ namespace PianoGlass.Transport
     ///
     /// Memory fade (F36): this moves the clock's MemoryFade ladder at each wrap
     /// and feeds it what happens during a pass; with it on, AutoTempo.NextWithFade
-    /// keeps tempo and fade from changing together.
+    /// keeps tempo and fade from changing together. Outside a loop the same rules
+    /// move the song's own ladder once per play-through, and it is saved per song.
     ///
     /// After ScoreKeeper (100), which finishes a pass at the wrap if its last
     /// note's window ran past the end of the bar.
@@ -41,12 +42,18 @@ namespace PianoGlass.Transport
         /// <summary>How the last saved pass went and what it did to the tempo
         /// (AutoTempo.Describe); null before one.</summary>
         public string LastPassLine { get; private set; }
+        /// <summary>What the last whole play-through did to the song's fade.</summary>
+        public string LastSongFadeLine { get; private set; }
 
         private int _lastWraps;
         private float _nextTempo = -1f;
         private bool _passPlayed;
         private double _passKeysRight;
         private float _heldFor;
+        private string _songFadeKey;
+        private string _cardLine;
+
+        private const string SongFadePrefsPrefix = "PianoGlass.SongFade.";
 
         private void Awake()
         {
@@ -54,6 +61,13 @@ namespace PianoGlass.Transport
             if (transport == null) transport = FindAnyObjectByType<SongTransport>();
             if (scoreKeeper == null) scoreKeeper = FindAnyObjectByType<ScoreKeeper>();
             if (resultsCard == null) resultsCard = FindAnyObjectByType<ResultsCard>();
+        }
+
+        private void Start()
+        {
+            if (clock == null || transport == null || transport.Song == null) return;
+            _songFadeKey = SongFadePrefsPrefix + transport.Song.Title;
+            clock.SongFade = new MemoryFade(PlayerPrefs.GetInt(_songFadeKey, 0));
         }
 
         private void OnEnable()
@@ -90,9 +104,30 @@ namespace PianoGlass.Transport
             Debug.Log($"[Loop] looping {clock.Loop.Value.Label}");
         }
 
+        /// <summary>A whole play-through moves the song's ladder. An abandoned
+        /// one does not: it never reached the end to be judged.</summary>
+        private void MoveSongFade(AttemptRecord rec)
+        {
+            MemoryFade fade = clock.SongFade;
+            bool played = rec.notesHit + rec.wrongPitch + rec.extra > 0;
+            double keysRight = rec.KeysRightPercent;
+            string after = fade.Describe(fade.StepAfter(keysRight, played));
+            LastSongFadeLine = played ? $"{keysRight:0}% keys right: {after}" : $"nothing played: {after}";
+            fade.EndPass(keysRight, played);
+            PlayerPrefs.SetInt(_songFadeKey, fade.Step);
+            PlayerPrefs.Save();
+            _cardLine = after;
+            Debug.Log($"[Fade] song: {LastSongFadeLine}");
+        }
+
         private void OnAttemptEnded(AttemptRecord rec, string path)
         {
-            if (!rec.IsLoop || rec.outcome != AttemptRecord.Completed) return;
+            if (rec.outcome != AttemptRecord.Completed) return;
+            if (!rec.IsLoop)
+            {
+                if (clock.IsFading) MoveSongFade(rec);
+                return;
+            }
             float tempo = clock.TempoMultiplier;
             // Wait mode has no timing, so its accuracy says nothing about tempo.
             bool wait = rec.mode == AttemptRecord.Wait;
@@ -141,6 +176,13 @@ namespace PianoGlass.Transport
         private void Update()
         {
             if (clock == null) return;
+
+            // The card came up in the same event, in whichever order.
+            if (_cardLine != null)
+            {
+                if (resultsCard != null && resultsCard.IsShowing) resultsCard.AddToSubLine(_cardLine);
+                _cardLine = null;
+            }
 
             // Wait mode: nothing to press, nothing to see. Do not leave them there.
             if (clock.IsFading && clock.IsHolding)

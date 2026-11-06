@@ -230,11 +230,75 @@ namespace PianoGlass.Tests.EditMode
 
             _clock.Restart();
             Assert.AreEqual(1f, _clock.NoteOpacity, 1e-6f);
-            Assert.IsNull(_clock.Fade);
+            Assert.IsFalse(_clock.IsFading);
 
             _clock.StartLoop(Bar2);
             Assert.AreEqual(1, _clock.LoopPass);
             Assert.AreEqual(1f, _clock.NoteOpacity, 1e-6f);
+        }
+
+        [Test]
+        public void ASavedStepIsWhereASongStartsAndIsClamped()
+        {
+            Assert.AreEqual(3, new MemoryFade(3).Step);
+            Assert.AreEqual(0, new MemoryFade(-2).Step);
+            Assert.AreEqual(MemoryFade.Glimpse, new MemoryFade(99).Step);
+        }
+
+        [Test]
+        public void AWholeSongFadesWithNoLoop()
+        {
+            _clock.MemoryFadeOn = true;
+            Assert.IsFalse(_clock.IsFading, "no ladder loaded yet");
+
+            _clock.SongFade = new MemoryFade(1);
+            Assert.IsTrue(_clock.IsFading);
+            Assert.AreEqual(0.6f, _clock.NoteOpacity, 1e-6f);
+            Assert.AreEqual(0.6f, _clock.NoteOpacityAt(10.0, 3.0), 1e-6f);
+
+            _clock.MemoryFadeOn = false;
+            Assert.AreEqual(1f, _clock.NoteOpacity, 1e-6f, "off means off");
+        }
+
+        [Test]
+        public void ALoopHasItsOwnLadderAndLeavesTheSongsAlone()
+        {
+            _clock.MemoryFadeOn = true;
+            var song = new MemoryFade(3);
+            _clock.SongFade = song;
+
+            _clock.StartLoop(Bar2);
+            Assert.AreEqual(1f, _clock.NoteOpacity, 1e-6f, "a new loop starts visible");
+            _clock.Fade.EndPass(100.0, true);
+            Assert.AreEqual(3, song.Step);
+
+            _clock.Restart();
+            Assert.AreSame(song, _clock.Fade);
+            Assert.AreEqual(0.15f, _clock.NoteOpacity, 1e-6f);
+        }
+
+        [Test]
+        public void RestartingASongDropsItsHelpButKeepsItsStep()
+        {
+            var song = new MemoryFade(2);
+            _clock.MemoryFadeOn = true;
+            _clock.SongFade = song;
+            song.AskForHelp();
+            Assert.AreEqual(1, song.ShownStep);
+
+            _clock.Restart();
+            Assert.AreEqual(2, song.ShownStep);
+            Assert.AreEqual(2, song.Step);
+        }
+
+        [Test]
+        public void TheFirstNotesOfASongGetTheirGlimpse()
+        {
+            _clock.MemoryFadeOn = true;
+            _clock.SongFade = new MemoryFade(MemoryFade.Glimpse);
+            _clock.Restart();
+            // Due at 0 with 5 s of highway: part way down when the song starts.
+            Assert.AreEqual(0.15f, _clock.NoteOpacityAt(0.0, 5.0), 1e-6f);
         }
 
         [Test]

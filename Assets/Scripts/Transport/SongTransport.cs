@@ -76,6 +76,9 @@ namespace PianoGlass.Transport
         private bool _chordLatched;
         private SongData _song;
 
+        /// <summary>The song loaded; null before Awake.</summary>
+        public SongData Song => _song;
+
         private void Awake()
         {
             if (clock == null) clock = FindAnyObjectByType<SongClock>();

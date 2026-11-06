@@ -58,12 +58,18 @@ namespace PianoGlass.Song
         /// <summary>Which time through the loop this is, from 1; 0 with no loop.</summary>
         public int LoopPass => Loop.HasValue ? Wraps - _wrapsAtLoopStart + 1 : 0;
 
-        /// <summary>Memory fade (F36) wanted. It only acts inside a loop.</summary>
+        /// <summary>Memory fade (F36) wanted.</summary>
         public bool MemoryFadeOn { get; set; }
 
-        /// <summary>This loop's fade ladder; a new loop starts it at 100%. Null
-        /// with no loop.</summary>
-        public MemoryFade Fade { get; private set; }
+        /// <summary>The song's own ladder, across play-throughs. PracticeLoop
+        /// loads and saves it.</summary>
+        public MemoryFade SongFade { get; set; }
+
+        private MemoryFade _loopFade;
+
+        /// <summary>The ladder in use: this loop's, which a new loop starts at
+        /// 100%, or with no loop the song's.</summary>
+        public MemoryFade Fade => Loop.HasValue ? _loopFade : SongFade;
 
         /// <summary>Whether notes can fade right now.</summary>
         public bool IsFading => MemoryFadeOn && Fade != null;
@@ -74,12 +80,13 @@ namespace PianoGlass.Song
 
         /// <summary>How visible this note's slab and name are now, 1 unless
         /// fading. A note counts as appearing at the top of the highway, or at
-        /// the wrap for one that is already part way down when a pass starts,
-        /// so that the first notes of a pass get their glimpse too.</summary>
+        /// the start of the pass for one already part way down by then, so that
+        /// the first notes get their glimpse too.</summary>
         public float NoteOpacityAt(double noteStartTime, double leadTimeSeconds)
         {
             if (!IsFading) return 1f;
-            double appeared = System.Math.Max(noteStartTime - leadTimeSeconds, Loop.Value.WrapTo);
+            double passStart = Loop.HasValue ? Loop.Value.WrapTo : -leadInSeconds;
+            double appeared = System.Math.Max(noteStartTime - leadTimeSeconds, passStart);
             double seconds = tempoMultiplier > 0f ? (DisplaySongTime - appeared) / tempoMultiplier : 0.0;
             return Fade.Opacity(seconds);
         }
@@ -177,7 +184,7 @@ namespace PianoGlass.Song
         public void StartLoop(LoopRange loop)
         {
             Loop = loop;
-            Fade = new MemoryFade();
+            _loopFade = new MemoryFade();
             _wrapsAtLoopStart = Wraps;
             SongTime = loop.WrapTo;
         }
@@ -194,7 +201,8 @@ namespace PianoGlass.Song
         public void Restart()
         {
             Loop = null;
-            Fade = null;
+            _loopFade = null;
+            SongFade?.ClearHelp();
             SongTime = -leadInSeconds;
         }
     }
