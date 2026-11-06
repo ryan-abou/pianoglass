@@ -283,8 +283,8 @@ B0 (−5%) or C1 (+5%).
    had clicks 17 ms ahead of the lines (sd 9), within the phone's own audio/video
    uncertainty.
 9. **Loop worst bar ± 1 (F33).** Most useful with step 7 showing which bar.
-   Steps 9-11 passed on the headset and merged 2026-11-05 (Batch C). Step 12 is
-   in its second round.
+   Steps 9-12 passed on the headset and merged 2026-11-05 (Batch C). Memory fade
+   also works on whole songs, past what step 12 planned.
 10. **Auto-tempo in the loop (F35).** Needs steps 5 and 9.
 11. **Wait mode (F22).** After the loop, so scoring and transport aren't
     changing at the same time.

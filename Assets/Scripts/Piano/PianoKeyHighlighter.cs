@@ -243,9 +243,25 @@ namespace PianoGlass.Piano
                 if (MidiInput.Instance != null && MidiInput.Instance.IsHeld(note)) continue;
                 if (_wrongAt.ContainsKey(note)) continue; // UpdateWrongPulses owns it
 
-                bool relevant = _dueSoon.Contains(note);
+                // Memory fade: a lit key would give the note away, so the hint
+                // fades with the slab, and is gone when the slab is. A key the
+                // player is holding is their own press, and is not touched here.
+                float opacity = clock.NoteOpacity;
+                bool relevant = _dueSoon.Contains(note) && opacity > 0f;
                 renderer.enabled = relevant;
-                if (relevant) SetColor(note, PianoKeyLayout.IsBlackKey(note) ? idleBlackKey : idleWhiteKey);
+                if (!relevant) continue;
+
+                Color idle = PianoKeyLayout.IsBlackKey(note) ? idleBlackKey : idleWhiteKey;
+                if (opacity >= 1f || translucentMaterial == null)
+                {
+                    renderer.sharedMaterial = MaterialForMode;
+                    SetColor(note, idle);
+                }
+                else
+                {
+                    renderer.sharedMaterial = translucentMaterial;
+                    FadeOut(note, idle, ModeAlpha * opacity);
+                }
             }
         }
 

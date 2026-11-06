@@ -173,11 +173,12 @@ on them and none can be played by accident.
 | Play / pause | A | — | `OvrSongTransport` | |
 | Restart from the top and play | left Y | A0 + A♯0 | `OvrSongTransport`, `SongTransport` | The chord works whenever calibrated, playing or not. Also how a practice loop is left |
 | Start a practice loop | right controller ray + right trigger on the results card's "Loop bars" button | — | `ResultsCard` → `PracticeLoop` | The button shows when a bar is under 75%: that bar, and a neighbour under 90% |
+| Choose bars to loop | right controller ray + right trigger on a bar pill | — | `ResultsCard`, `BarSelection` | One pill, then another for a range; the suggestion's button becomes "Loop bars 3–5". The same pill again, alone, clears it |
 | Press a results card button (Retry, More/Less info, the suggestion's button) | right controller ray + right trigger | — | `OvrUiPointer`, `GlassButton` | Stopgap until hand poke (Phase 4). The ray shows only while a button is pressable; the trigger goes to calibration unless the ray is on a button |
 | Tempo −5% / +5% | — | hold A0, press B0 / C1 | `SongTransport` | 25–200%, only while stopped or paused, saved |
 | Metronome on/off | — | hold A0, press C♯1 | `SongTransport` → `Metronome` | Only while stopped or paused, saved |
 | Wait mode on/off | — | hold A0, press D1 | `SongTransport` | Only while stopped or paused, saved. While paused part-way it starts a new attempt from there |
-| Memory fade on/off (branch `batchC-fade`, not in main yet) | — | hold A0, press D♯1 | `SongTransport` | Only while stopped or paused, saved. Shows only inside a practice loop |
+| Memory fade on/off | — | hold A0, press D♯1 | `SongTransport` | Only while stopped or paused, saved. Works on whole songs and in loops |
 | Display mode (cycle) | left X | — | `OvrKeyOverlayInput` | FullOverlay / Translucent / ActiveKeysOnly / EdgeMarkers, saved |
 | Passthrough on/off | left stick click | — | `OvrKeyOverlayInput` | A/B test tool |
 
@@ -682,8 +683,8 @@ Follow the four-phase build order in `docs/feature-evaluation.md` (Part 3):
    (done); ~~note names (F14)~~ (done, Batch A).
 2. **Results, tempo, practice**: ~~tempo ±5%~~, ~~attempt schema v2~~ (both
    done, Batch A), ~~results card with bar heat strip~~, ~~metronome~~ (both
-   done, Batch B), ~~loop worst bar~~, ~~auto-tempo~~, ~~wait mode~~ (all done,
-   Batch C), memory fade (second round, branch `batchC-fade`).
+   done, Batch B), ~~loop worst bar~~, ~~auto-tempo~~, ~~wait mode~~, ~~memory fade~~ (all done,
+   Batch C).
 3. **Real songs**: MIDI file loading, song picker, hand colours, one-hand
    practice, a free public-domain starter library, per-song history.
 4. **Hand-tracked UI**: hand-tracking spike, settings model, one panel
@@ -859,20 +860,20 @@ attempt ends, while the results card is up.
 Older commits keep their Co-Authored-By lines: Ryan decided on 2026-11-05 not to
 rewrite history. New commits leave them out.
 
-### Batch C status (2026-11-05): three merged, second round next
+### Batch C status: merged into main 2026-11-05
+
+Third headset round: fade passed in loops and on whole songs and was merged
+(`batchC-fade`, `fade-song`). 68.0-68.7 fps during loops with hands tracked,
+against 68.7-70.4 before, and Ryan felt no difference.
+
+Second headset round: `loop-weak-bar` and `calib-recover` passed and were merged.
 
 First headset round: loop, auto-tempo and wait mode passed and were merged into
 main, in that order (`batchC-loop`, `batchC-autotempo`, `batchC-wait`). 36
 attempts over ten minutes, mean 69.7 fps in the development build, no exceptions
 from our code. `batchC-test` is the build and is never merged.
 
-Waiting on the second round, each on its own branch:
-- `batchC-fade`: fade worked as built but Ryan asked for a different system.
-- `loop-weak-bar`: Ryan asked why a loop would include a bar already played well.
-- `calib-recover`: the anchor came back 86 mm off after a day, 14-25 mm off after
-  taking the headset off. See `docs/anchored-calibration-status.md`.
-
-Decided while building, all confirmed by Ryan unless a branch above changes it:
+Decided while building, all confirmed by Ryan unless a branch changes it:
 
 - **Starting and leaving a loop.** The results card's button starts it; left Y
   or the A0 + A♯0 chord leaves it, back to the full song. No results card
@@ -893,10 +894,44 @@ Decided while building, all confirmed by Ryan unless a branch above changes it:
   together. Any other key is wrong and names what is awaited. Accuracy is right
   keys out of all keys. Schema 4 adds `correct`. The metronome pauses during a
   hold. Auto-tempo does nothing on a wait-mode pass.
-- **Memory fade:** hold A0, press D♯1. Off by default and saved; every new loop
-  starts fully visible. The opacity is a ceiling on anything showing the note: slab, name and
-  due key fade together, and the panel stops naming a hidden note. The key's own
+- **Memory fade:** hold A0, press D♯1. Off by default and saved. On a whole song
+  the ladder moves once per finished play-through and is saved per song, so a
+  memorised song stays faint (Ryan asked for whole songs, the saving is Claude's
+  call, 2026-11-05); an abandoned play-through does not move it. Every new loop
+  has its own ladder, starting fully visible, and leaves the song's alone. The opacity is a ceiling on anything showing the note: slab, name and
+  due key fade together, and the panel stops naming a note at a glimpse. The key's own
   coral on a wrong press is not faded, nor is a key the player holds.
+- **The fade ladder (Ryan's steps and request, Claude's system, 2026-11-05):**
+  100, 60, 30, 15, then a glimpse (15% for 0.6 s when a note appears, gone 0.5 s
+  later), so notes always show at least briefly. It moves by keys right, not
+  timing: 90%+ one step fainter, 70-89% stays, 40-69% one step back, under 40% or
+  nothing played two steps back. Three mistakes in a row, or 5 s held at a note in
+  wait mode, shows notes one step clearer for the rest of the pass, and a pass
+  that needed help cannot go fainter. Tempo and fade never change together: tempo
+  rises only at a glimpse and falls only at 100%. Values are in `MemoryFade`.
+- **Fade in wait mode (Ryan's problem and flash, Claude's measure, 2026-11-05):**
+  right keys say nothing without a clock, since every key can be tried. So a stop
+  counts only if it was right first time and never had to be shown (`WaitRecall`),
+  and the same ladder reads that share ("3 of 4 from memory"). At a glimpse, any
+  wrong key or 2.5 s held flashes just that note on the highway, as a glimpse shows
+  it, and again every 2.5 s; the rest of the pass stays hidden. Other steps keep
+  three mistakes or 5 s. Accuracy and rank on the card are unchanged.
+
+### Batch D (2026-11-05): four merged, second round next
+
+Merged after one headset round: `attempt-empty` (confirming the keys after a song
+ended saved a 0% attempt), `fade-song` (whole-song fade, saved per song), `pick-bars`
+(tap the results card's pills to choose a loop), `calib-bias` (see the status doc).
+`batchD-test` was the build, `batchE-test` is the next one; neither is ever merged.
+
+Next round, each on its own branch:
+- `fade-wait`: Ryan's flash at a glimpse in wait mode, and judging those passes by
+  what came from memory.
+- `middle-c-small`: a Middle C touch on keys already right made them worse.
+- `anchor-trio`, `press-probe`: still measuring. Nothing visible changes.
+
+The last two only measure. Ryan would rather not use a marked controller spot on
+the piano (idea 4 in the status doc), so that is kept for if nothing else works.
 
 ### Batch C — all build on the loop
 
@@ -914,12 +949,12 @@ Decided while building, all confirmed by Ryan unless a branch above changes it:
    until every pitch of it (chords included) is pressed. Pitch-only judging,
    no PERFECT/GREAT; attempt `mode: "wait"`, never compared with continuous
    attempts.
-4. **Memory fade (F36).** Pure tested opacity per loop pass (100 / 60 /
-   30 / hidden); needs a transparent slab material assigned in `SceneSetup`.
+4. **Memory fade (F36).** Pure tested opacity (a ladder, see the status above);
+   needs a transparent slab material assigned in `SceneSetup`.
    **A faded note still turns mint/slate once judged, at the opacity it already
    had (Ryan, 2026-11-05):** the outcome changes its colour only, never its
-   opacity. A half-faded note shows half-visible mint or slate; a fully hidden
-   note stays hidden.
+   opacity. A half-faded note shows half-visible mint or slate; a note whose
+   glimpse has ended stays hidden.
 
 After Batch C, Phase 3 starts with MIDI file loading (F38).
 

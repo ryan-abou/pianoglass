@@ -35,6 +35,17 @@ namespace PianoGlass.Song
             return Color.Lerp(baseColor, target, Fade(secondsSinceJudged));
         }
 
+        /// <summary>A slab in a memory-fading loop: the outcome moves its colour
+        /// as usual, and its alpha is the fade's whatever the outcome (Ryan,
+        /// 2026-11-05: never brighter or less transparent than the note was).</summary>
+        public static Color FadedSlab(Color baseColor, NoteOutcome outcome, float secondsSinceJudged,
+                                      Color hit, Color missed, float opacity)
+        {
+            Color c = Slab(baseColor, outcome, secondsSinceJudged, hit, missed);
+            c.a = opacity;
+            return c;
+        }
+
         /// <summary>0 at the moment of judging, 1 once FadeSeconds have
         /// passed, eased out so most of the change lands early.</summary>
         public static float Fade(float seconds)

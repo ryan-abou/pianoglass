@@ -138,10 +138,12 @@ namespace PianoGlass.Piano
                 _sb.AppendLine($"transport:  {StateLabel(transport.CurrentState)}   t = {clock.SongTime:0.0}s   " +
                                $"{TempoStep.Label(clock.TempoMultiplier)}" +
                                (metronome != null ? $"   metronome {(metronome.IsOn ? "on" : "off")}" : "") +
-                               (transport.WaitMode ? "   wait mode" : ""));
+                               (transport.WaitMode ? "   wait mode" : "") +
+                               (clock.MemoryFadeOn ? "   memory fade" : ""));
             }
 
             if (loop != null && loop.IsActive) AppendLoop(loop);
+            else if (clock != null && clock.IsFading) AppendSongFade(loop);
 
             if (score != null && score.Session != null) AppendScore(score);
 
@@ -180,9 +182,18 @@ namespace PianoGlass.Piano
 
         private void AppendLoop(PracticeLoop practice)
         {
-            _sb.AppendLine($"<color=#E8D48A>loop:       {practice.Range.Value.Label}, pass {practice.Pass}   Y = full song</color>");
+            string fade = clock != null && clock.IsFading
+                ? $", {MemoryFade.Label(clock.Fade.ShownStep)}{(clock.Fade.Help > 0 ? " (helping)" : "")}" : "";
+            _sb.AppendLine($"<color=#E8D48A>loop:       {practice.Range.Value.Label}, pass {practice.Pass}{fade}   Y = full song</color>");
             if (practice.LastPassLine != null)
                 _sb.AppendLine($"<color=#E8D48A>last pass:  {practice.LastPassLine}</color>");
+        }
+
+        private void AppendSongFade(PracticeLoop practice)
+        {
+            _sb.AppendLine($"<color=#E8D48A>fade:       {MemoryFade.Label(clock.Fade.ShownStep)}{(clock.Fade.Help > 0 ? " (helping)" : "")}</color>");
+            if (practice != null && practice.LastSongFadeLine != null)
+                _sb.AppendLine($"<color=#E8D48A>last play:  {practice.LastSongFadeLine}</color>");
         }
 
         private void AppendScore(ScoreKeeper keeper)
@@ -194,7 +205,9 @@ namespace PianoGlass.Piano
                 if (clock != null && clock.IsHolding)
                 {
                     _sb.Append("<b><color=#E8D48A>waiting:    ");
-                    foreach (int pitch in s.WaitingPitches()) _sb.Append(MidiInput.NoteName(pitch)).Append(' ');
+                    // Not the note's name once it is hidden: that would give it away.
+                    if (clock.NoteOpacity <= 0f) _sb.Append("from memory");
+                    else foreach (int pitch in s.WaitingPitches()) _sb.Append(MidiInput.NoteName(pitch)).Append(' ');
                     _sb.AppendLine("</color></b>");
                 }
             }
@@ -221,7 +234,10 @@ namespace PianoGlass.Piano
             WrongNote w = s.LastWrongNote;
             if (w != null)
                 _sb.AppendLine($"<color=#E5948A>wrong:      {MidiInput.NoteName(w.pressedPitch)}" +
-                               (w.expectedPitch >= 0 ? $" instead of {MidiInput.NoteName(w.expectedPitch)}" : " (nothing due)") +
+                               // Not the answer once notes are hidden: the flash is the only hint.
+                               (w.expectedPitch < 0 ? " (nothing due)"
+                                   : clock != null && clock.NoteOpacity <= 0f ? ""
+                                   : $" instead of {MidiInput.NoteName(w.expectedPitch)}") +
                                $", bar {w.bar}</color>");
 
             if (keeper.AttemptSaved)
