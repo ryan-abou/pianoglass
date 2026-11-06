@@ -57,11 +57,11 @@ namespace PianoGlass.Tests.EditMode
         }
 
         [Test]
-        public void APassWithNothingPlayedComesBackTwoSteps()
+        public void APassWithNothingPlayedMovesNothing()
         {
             MemoryFade f = At(4);
             f.EndPass(0.0, false);
-            Assert.AreEqual(2, f.Step);
+            Assert.AreEqual(4, f.Step);
         }
 
         [Test]
