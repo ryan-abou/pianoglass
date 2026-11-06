@@ -384,11 +384,13 @@ namespace PianoGlass.Piano
 
             Vector3 appliedMm = AnchoredKeyboard.NudgeToKeyboardMm(c.Delta, layout.Right, layout.Up, layout.Forward);
             bool capped = Mathf.Abs(rawMm.y - appliedMm.y) > 0.05f;
-            Log($"{error} -- applied {Mm(appliedMm)}" + (capped ? $" (vertical capped from {rawMm.y:+0.0;-0.0} mm)" : ""));
+            bool heightIgnored = capped && appliedMm.y == 0f;
+            Log($"{error} -- applied {Mm(appliedMm)}" +
+                (heightIgnored ? " (too little height to act on)" : capped ? $" (vertical capped from {rawMm.y:+0.0;-0.0} mm)" : ""));
 
             LastProblem = null;
             CorrectionNote = $"Middle C fix: x {appliedMm.x:+0.0;-0.0;0} · y {appliedMm.y:+0.0;-0.0;0} · " +
-                             $"z {appliedMm.z:+0.0;-0.0;0} mm" + (capped ? $"   (y capped; measured {rawMm.y:+0.0;-0.0})" : "");
+                             $"z {appliedMm.z:+0.0;-0.0;0} mm" + (capped && !heightIgnored ? $"   (y capped; measured {rawMm.y:+0.0;-0.0})" : "");
             PlacementChanged?.Invoke();
             return Fire(FlowEvent.CorrectionApplied);
         }
