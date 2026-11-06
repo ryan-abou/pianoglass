@@ -457,7 +457,7 @@ recenters of up to 1.1 m / 180° kept the keys on the piano).
   press. Right grip starts a Middle C fix (touch the front edge, trigger):
   a rigid anchor-local shift, vertical capped at 10 mm, refused over 150 mm.
   Under 6 mm sideways with under 12 mm of height it changes nothing: that is the
-  touch's own error, and every touch reads 5-10 mm low (2026-11-05). Ready
+  touch's own error (2026-11-05). Ready
   also returns to Verifying after 3 s or more away (headset off).
 - **All logs start with `[AnchorFlow]`**: `adb logcat -s Unity | findstr AnchorFlow`.
 

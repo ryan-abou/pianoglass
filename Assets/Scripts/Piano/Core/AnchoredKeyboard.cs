@@ -169,9 +169,10 @@ namespace PianoGlass.Piano
         /// the touch's own error (2026-11-05, a perfect piano made worse).</summary>
         public const float AlreadyRightMetres = 0.006f;
 
-        /// <summary>A Middle C touch reads 5-10 mm low whatever the keys are doing
-        /// (-4.8, -9.4, -7.1 and -6.8 mm, 2026-11-05), so a height this small says
-        /// nothing and is not applied.</summary>
+        /// <summary>A touch's height is its weakest reading: -3.7 to -9.4 mm across
+        /// five touches, on keys both fine and off (2026-11-05). A height this small
+        /// says nothing about drift and is not applied; the nudge holds the
+        /// height the player chose by eye.</summary>
         public const float HeightIgnoredMetres = 0.012f;
 
         /// <summary>
