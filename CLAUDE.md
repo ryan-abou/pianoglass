@@ -683,7 +683,7 @@ Follow the four-phase build order in `docs/feature-evaluation.md` (Part 3):
 2. **Results, tempo, practice**: ~~tempo ±5%~~, ~~attempt schema v2~~ (both
    done, Batch A), ~~results card with bar heat strip~~, ~~metronome~~ (both
    done, Batch B), ~~loop worst bar~~, ~~auto-tempo~~, ~~wait mode~~ (all done,
-   Batch C), memory fade (second round, branch `batchC-fade`).
+   Batch C), memory fade (next round, branch `fade-song`).
 3. **Real songs**: MIDI file loading, song picker, hand colours, one-hand
    practice, a free public-domain starter library, per-song history.
 4. **Hand-tracked UI**: hand-tracking spike, settings model, one panel
@@ -859,20 +859,19 @@ attempt ends, while the results card is up.
 Older commits keep their Co-Authored-By lines: Ryan decided on 2026-11-05 not to
 rewrite history. New commits leave them out.
 
-### Batch C status (2026-11-05): three merged, second round next
+### Batch C status (2026-11-05): five merged, fade still to be seen
+
+Second headset round: `loop-weak-bar` and `calib-recover` passed and were merged.
+The log shows the fade ladder never ran inside a loop that session, so
+`batchC-fade` stays on its branch for the next round. In-song frame rate 68.7-70.4
+fps in the development build, no exceptions from our code.
 
 First headset round: loop, auto-tempo and wait mode passed and were merged into
 main, in that order (`batchC-loop`, `batchC-autotempo`, `batchC-wait`). 36
 attempts over ten minutes, mean 69.7 fps in the development build, no exceptions
 from our code. `batchC-test` is the build and is never merged.
 
-Waiting on the second round, each on its own branch:
-- `batchC-fade`: fade worked as built but Ryan asked for a different system.
-- `loop-weak-bar`: Ryan asked why a loop would include a bar already played well.
-- `calib-recover`: the anchor came back 86 mm off after a day, 14-25 mm off after
-  taking the headset off. See `docs/anchored-calibration-status.md`.
-
-Decided while building, all confirmed by Ryan unless a branch above changes it:
+Decided while building, all confirmed by Ryan unless a branch changes it:
 
 - **Starting and leaving a loop.** The results card's button starts it; left Y
   or the A0 + A♯0 chord leaves it, back to the full song. No results card
@@ -897,6 +896,22 @@ Decided while building, all confirmed by Ryan unless a branch above changes it:
   starts fully visible. The opacity is a ceiling on anything showing the note: slab, name and
   due key fade together, and the panel stops naming a hidden note. The key's own
   coral on a wrong press is not faded, nor is a key the player holds.
+
+### Batch D (2026-11-05): built, headset round next
+
+Ryan's request: no recalibrating after every headset removal, memory fade on whole
+songs, and choosing your own bars. Branches, `batchD-test` is the build and is never
+merged:
+- `attempt-empty`: confirming the keys after a song had ended saved and showed a 0%
+  attempt with no notes, which then also made the next "vs last" read +85%.
+- `fade-song` (holds `batchC-fade`): whole-song fade, saved per song.
+- `pick-bars`: tap the results card's bar pills to choose a loop.
+- `calib-bias`: replaces clearing the nudge on recalibration, see the status doc.
+- `anchor-trio`: two measuring anchors. Nothing visible changes.
+- `press-probe`: logs fingertips against pressed keys. Nothing visible changes.
+
+The last two only measure. Ryan would rather not use a marked controller spot on
+the piano (idea 4 in the status doc), so that is kept for if nothing else works.
 
 ### Batch C — all build on the loop
 

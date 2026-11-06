@@ -186,6 +186,51 @@ recovering cheap:
 The lasting fix to try is the "learn from key presses" idea in `CLAUDE.md`, which
 could correct drift during play without a touch.
 
+## Coming back to the headset (second round, 2026-11-05)
+
+One session, 21:21-22:19, the piano not moved. Ryan's requirement after it: he does
+not want to recalibrate every time the headset comes off.
+
+| Headset off | What the log shows |
+|---|---|
+| 2 min | Confirmed with no touch and no nudge |
+| 2 min, with a recenter | Confirmed with no touch and no nudge |
+| 19 min | Middle C measured 21.0 mm off (+19.1 / -7.1 / -5.1). One touch fixed it, 16 s after coming back |
+
+So the 150 mm limit, the return to Verifying and the one-touch fix all work, and none
+of it needed a recalibration. Ryan still has to look and sometimes touch, which is
+what the rest of this section is trying to remove.
+
+**The anchor keeps moving after it comes back.** `anchor refined` logged 15.5 mm
+within 15 s of a launch and 17.6 mm within 5 s of the 19-minute return, then smaller
+moves during play (5-9 mm). That log cannot separate the map shifting from tracking
+space being re-based, which moves the anchor's world pose harmlessly. The witness
+anchors below can.
+
+**Clearing the nudge on recalibration was my mistake.** Four fresh calibrations in
+a row (key width 23.0-23.6 mm) were each followed by the same correction, about
+-5 to -10 mm along the keys and -3 to -6 mm in depth. That steady offset is what the
+carried nudge was holding. What was wrong that morning was the drift mixed into it.
+Branch `calib-bias` keeps them apart: the nudge settled on before confirming a fresh
+calibration is what the next one starts from, and later nudges are not.
+
+**What PianoVision does (web research, 2026-11-05).** Reviews and store reviews
+report readjusting at every use and drift during it. Its "Magic Calibration" uses the
+passthrough cameras to find the keyboard, and Meta lists that camera access for
+Quest 3 and 3S only. Nothing found says users keep alignment between sessions.
+
+**Options, in order:**
+1. Wait for the anchor to settle before asking for a check, if the witnesses show it
+   does settle.
+2. Three anchors, if they drift apart. Branch `anchor-trio` measures it: every 5 mm
+   of change in agreement logs `witnesses vs primary`, and every Middle C touch logs
+   how far each anchor and their average put the key from the real one.
+3. Correct from key presses during play. Branch `press-probe` logs `[PressProbe]`
+   lines. It assumes the nearest finger pressed, so it cannot see a shift over half
+   a key, and it needs hand tracking on with the controllers put down.
+4. A marked spot on the piano for the controller, which the headset sees directly.
+   Ryan's last choice.
+
 ## What's next
 
 1. Measure observation 2: a seated Middle C fix with the y value written
