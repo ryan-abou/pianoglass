@@ -188,6 +188,12 @@ namespace PianoGlass.Scoring
             Show(ResultsSummary.From(rec, LoadPrevious(path), hasSongList));
         }
 
+        /// <summary>One more fact for this result's line under the title.</summary>
+        public void AddToSubLine(string text)
+        {
+            if (_sub != null) _sub.text += " · " + text;
+        }
+
         public void Show(ResultsSummary s)
         {
             EnsureBuilt();
@@ -233,12 +239,6 @@ namespace PianoGlass.Scoring
             ApplyVisibility();
             Debug.Log($"[Results] {s.AccuracyText} {s.Rank} | {s.ChangeText ?? "first"} | {s.TimingText} | " +
                       $"{s.WrongNotes} wrong | streak {s.BestStreak} | {s.Suggestion.Message}");
-        }
-
-        /// <summary>One more fact for this result's line under the title.</summary>
-        public void AddToSubLine(string text)
-        {
-            if (_sub != null) _sub.text += " · " + text;
         }
 
         public void Hide()
