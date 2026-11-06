@@ -56,7 +56,7 @@ namespace PianoGlass.Piano
             "Middle C fix",
             "Fix survives a relaunch",
             "Cancel from Ready",
-            "Over 50 mm is refused",
+            "Over 150 mm is refused",
             "Vertical cap (10 mm)",
             "Recalibrate wording",
             "Seated check",

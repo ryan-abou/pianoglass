@@ -20,18 +20,6 @@ namespace PianoGlass.Tests.EditMode
             Assert.AreEqual(4.0, Twinkle.BarStartTime(3), 1e-9);
         }
 
-        [TestCase(3, 8, 2, 4)]
-        [TestCase(1, 8, 1, 2)]
-        [TestCase(8, 8, 7, 8)]
-        [TestCase(1, 1, 1, 1)]
-        [TestCase(1, 2, 1, 2)]
-        [TestCase(99, 8, 7, 8)]
-        [TestCase(0, 8, 1, 2)]
-        public void AroundBarIsOneEitherSideClampedToTheSong(int bar, int count, int from, int to)
-        {
-            Assert.AreEqual((from, to), LoopRange.AroundBar(bar, count));
-        }
-
         [Test]
         public void TimesCoverTheBarsWithOneBarOfCountIn()
         {
@@ -191,26 +179,43 @@ namespace PianoGlass.Tests.EditMode
             CollectionAssert.Contains(due, 65);
         }
 
-        [Test]
-        public void SuggestionLoopsTheWeakBarAndOneEitherSide()
+        private static Suggestion ForBars(params double[] accuracy)
         {
             var bars = new List<BarStats>();
-            for (int i = 1; i <= 8; i++) bars.Add(new BarStats { bar = i, notes = 4, accuracy = i == 3 ? 62 : 100 });
-            Suggestion s = SuggestionPicker.Pick(90, 85, AttemptRecord.BothHands, BarGrouping.Build(bars), false, false);
-            Assert.AreEqual("Bar 3 needs work", s.Message);
-            Assert.AreEqual("Loop bars 2–4", s.ButtonText);
-            Assert.AreEqual(2, s.FromBar);
-            Assert.AreEqual(4, s.ToBar);
+            for (int i = 0; i < accuracy.Length; i++) bars.Add(new BarStats { bar = i + 1, notes = 4, accuracy = accuracy[i] });
+            return SuggestionPicker.Pick(90, 85, AttemptRecord.BothHands, BarGrouping.Build(bars), false, false);
         }
 
         [Test]
-        public void SuggestionClampsAtTheSongsEnds()
+        public void SolidNeighboursAreLeftOut()
         {
-            var bars = new List<BarStats>();
-            for (int i = 1; i <= 8; i++) bars.Add(new BarStats { bar = i, notes = 4, accuracy = i == 8 ? 62 : 100 });
-            Suggestion s = SuggestionPicker.Pick(90, 85, AttemptRecord.BothHands, BarGrouping.Build(bars), false, false);
-            Assert.AreEqual(7, s.FromBar);
-            Assert.AreEqual(8, s.ToBar);
+            Suggestion s = ForBars(100, 100, 62, 100, 100, 100, 100, 100);
+            Assert.AreEqual("Bar 3 needs work", s.Message);
+            Assert.AreEqual("Loop bar 3", s.ButtonText);
+            Assert.AreEqual(3, s.FromBar);
+            Assert.AreEqual(3, s.ToBar);
+        }
+
+        [Test]
+        public void ANeighbourThatWasNotSolidComesAlong()
+        {
+            Suggestion s = ForBars(100, 89.9, 62, 90, 100, 100, 100, 100);
+            Assert.AreEqual("Bar 3 needs work", s.Message);
+            Assert.AreEqual("Loop bars 2–3", s.ButtonText);
+
+            s = ForBars(100, 100, 62, 70, 100, 100, 100, 100);
+            Assert.AreEqual("Loop bars 3–4", s.ButtonText);
+
+            s = ForBars(100, 80, 62, 70, 80, 100, 100, 100);
+            Assert.AreEqual("Loop bars 2–4", s.ButtonText, "one either side at most");
+        }
+
+        [Test]
+        public void TheFirstAndLastBarsStayInTheSong()
+        {
+            Assert.AreEqual("Loop bars 1–2", ForBars(62, 70, 100, 100, 100, 100, 100, 100).ButtonText);
+            Assert.AreEqual("Loop bars 7–8", ForBars(100, 100, 100, 100, 100, 100, 70, 62).ButtonText);
+            Assert.AreEqual("Loop bar 8", ForBars(100, 100, 100, 100, 100, 100, 100, 62).ButtonText);
         }
     }
 }

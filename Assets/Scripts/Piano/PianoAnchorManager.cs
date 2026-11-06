@@ -34,6 +34,10 @@ namespace PianoGlass.Piano
         private Pose _lastFrame;
         private bool _dirty;
         private bool _lastTracked;
+        private Pose _lastLogged;
+
+        /// <summary>Slow movement adds up to this before it is logged.</summary>
+        private const float RefinedMetres = 0.005f;
 
         public IPianoAnchorHandle BoundAnchor => _bound;
 
@@ -65,6 +69,7 @@ namespace PianoGlass.Piano
                 if (anchor != null)
                 {
                     _lastFrame = anchor.Pose;
+                    _lastLogged = _lastFrame;
                     _lastTracked = anchor.IsTracked;
                 }
             }
@@ -90,8 +95,22 @@ namespace PianoGlass.Piano
             float moved = (pose.position - _lastFrame.position).magnitude;
             float turned = Quaternion.Angle(pose.rotation, _lastFrame.rotation);
             if (moved > jumpMetres || turned > jumpDegrees)
+            {
                 Debug.Log($"[AnchorFlow] anchor world pose jumped {moved * 1000f:0} mm / {turned:0.0} deg in one frame " +
                           "(tracking space re-based -- recenter or relocalization); layout rebuilt");
+                _lastLogged = pose;
+            }
+            else
+            {
+                // Whether the runtime keeps refining it after a launch: a jump
+                // above would hide this, and the keys follow it either way.
+                float crept = (pose.position - _lastLogged.position).magnitude;
+                if (crept >= RefinedMetres)
+                {
+                    Debug.Log($"[AnchorFlow] anchor refined {crept * 1000f:0.0} mm at t={Time.realtimeSinceStartup:0.0}s");
+                    _lastLogged = pose;
+                }
+            }
 
             bool tracked = _bound.IsTracked;
             if (tracked != _lastTracked) Debug.Log($"[AnchorFlow] anchor tracked={tracked}");

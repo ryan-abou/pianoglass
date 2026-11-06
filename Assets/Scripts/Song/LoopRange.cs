@@ -45,14 +45,6 @@ namespace PianoGlass.Song
             return new LoopRange(from, to, start, song.BarStartTime(to + 1), start - song.SecondsPerBar);
         }
 
-        /// <summary>The worst bar and one either side, clamped to the song.</summary>
-        public static (int from, int to) AroundBar(int bar, int barCount)
-        {
-            int last = System.Math.Max(1, barCount);
-            int b = System.Math.Max(1, System.Math.Min(bar, last));
-            return (System.Math.Max(1, b - 1), System.Math.Min(last, b + 1));
-        }
-
         /// <summary>Whether a note starting at this song time is in the loop.
         /// A hair of tolerance, so rounding cannot move a note on a bar line
         /// into the wrong bar.</summary>

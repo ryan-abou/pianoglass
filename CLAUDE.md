@@ -166,13 +166,13 @@ on them and none can be played by accident.
 | Nudge left/right, nearer/further | right stick | — | `OvrCalibrationInput` | Rigid shift; it survives recalibration |
 | Nudge up/down | left stick up/down | — | `OvrCalibrationInput` | Axis-locked against yaw |
 | Turn the keyboard (yaw) | left stick left/right | — | `OvrCalibrationInput` | ±10° |
-| Clear the nudge | right stick click | — | `OvrCalibrationInput` | |
+| Clear the nudge | right stick click | — | `OvrCalibrationInput` | Also cleared by a fresh calibration once the tip is measured |
 | Measure the controller tip | left menu button (again = cancel) | — | `ControllerTipCalibration` | Written to the profile root |
-| "Looks right" in Verifying | A | — | `OvrCalibrationInput` | Anchored mode; that A does not reach play/pause |
+| "Looks right" in Verifying | A | — | `OvrCalibrationInput` | Anchored mode; that A does not reach play/pause. Asked after launch, calibration, and 3 s or more away |
 | Middle C fix: start / cancel | right grip | — | `OvrCalibrationInput` | Anchored mode; then touch Middle C and pull the right trigger |
 | Play / pause | A | — | `OvrSongTransport` | |
 | Restart from the top and play | left Y | A0 + A♯0 | `OvrSongTransport`, `SongTransport` | The chord works whenever calibrated, playing or not. Also how a practice loop is left |
-| Start a practice loop | right controller ray + right trigger on the results card's "Loop bars" button | — | `ResultsCard` → `PracticeLoop` | The button shows when a bar is under 75%: that bar and one either side |
+| Start a practice loop | right controller ray + right trigger on the results card's "Loop bars" button | — | `ResultsCard` → `PracticeLoop` | The button shows when a bar is under 75%: that bar, and a neighbour under 90% |
 | Press a results card button (Retry, More/Less info, the suggestion's button) | right controller ray + right trigger | — | `OvrUiPointer`, `GlassButton` | Stopgap until hand poke (Phase 4). The ray shows only while a button is pressable; the trigger goes to calibration unless the ray is on a button |
 | Tempo −5% / +5% | — | hold A0, press B0 / C1 | `SongTransport` | 25–200%, only while stopped or paused, saved |
 | Metronome on/off | — | hold A0, press C♯1 | `SongTransport` → `Metronome` | Only while stopped or paused, saved |
@@ -433,6 +433,9 @@ recenters of up to 1.1 m / 180° kept the keys on the piano).
   `AnchoredCalibrationSession` carries out the commands), tested headlessly
   against `EditorPianoAnchorService`. The MonoBehaviours only forward input.
   New behaviour goes in Core with a test first.
+- **The headset's map can move an anchor** (86 mm after a day, 14-25 mm after
+  the headset was off, 2026-11-05), with the anchor still reporting tracked. Recovery
+  is one Middle C touch, up to 150 mm. See the status doc's "Anchor drift".
 - **Rules the flow keeps:** nothing is created on launch; no failure path
   (timeout, failed load, failed save) ever erases an anchor or rewrites the
   profile; the old anchor is erased only after the profile naming the new
@@ -451,7 +454,8 @@ recenters of up to 1.1 m / 180° kept the keys on the piano).
   localize or calibration the keys are drawn and A means "looks right"
   (→ Ready, `lastVerifiedUtc`), *not* play — `SongTransport` ignores that one
   press. Right grip starts a Middle C fix (touch the front edge, trigger):
-  a rigid anchor-local shift, vertical capped at 10 mm, refused over 50 mm.
+  a rigid anchor-local shift, vertical capped at 10 mm, refused over 150 mm. Ready
+  also returns to Verifying after 3 s or more away (headset off).
 - **All logs start with `[AnchorFlow]`**: `adb logcat -s Unity | findstr AnchorFlow`.
 
 ---
@@ -874,9 +878,11 @@ Decided while building, all confirmed by Ryan unless a branch above changes it:
   or the A0 + A♯0 chord leaves it, back to the full song. No results card
   between passes (it would cover the next one); the status panel shows the pass
   and how the last one went.
-- **The card's range is now the weak bar ±1** ("Bar 3 needs work", "Loop bars
-  2–4"), replacing "Loop bar 3" from the results redesign. Grouped pills on long
-  songs keep the 4-bar phrase rule.
+- **The card's range is the weak bar, plus a neighbour only if it was under 90%**
+  (Ryan, 2026-11-05: why practise a bar already played well?). Bar 3 weak with
+  good bars around it gives "Loop bar 3"; at most one bar either side. This
+  replaces the plan's plain ±1. The count-in leads into the bar. Grouped pills on
+  long songs keep the 4-bar phrase rule.
 - **One bar of count-in** on every pass. A wrap keeps the frame's overshoot.
   Notes, due keys, grid lines and clicks all stop at the loop's end.
 - **A pass nobody played in is not saved** and does not change the tempo.

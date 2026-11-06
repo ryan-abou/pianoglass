@@ -54,10 +54,10 @@ namespace PianoGlass.Tests.EditMode
         }
 
         [Test]
-        public void MiddleCRejectsOverFiveCentimetresAsMoved()
+        public void MiddleCRejectsOverFifteenCentimetresAsMoved()
         {
             Vector3 expected = new Vector3(0f, 0.75f, 0f);
-            OnePointCorrection c = AnchoredKeyboard.CorrectOnePoint(expected, expected + new Vector3(0.051f, 0f, 0f));
+            OnePointCorrection c = AnchoredKeyboard.CorrectOnePoint(expected, expected + new Vector3(0.151f, 0f, 0f));
             Assert.IsFalse(c.Accepted);
             StringAssert.Contains("moved", c.Reason);
         }
