@@ -204,6 +204,12 @@ namespace PianoGlass.Piano
         private PianoProfile _savedProfile;
         private Capture? _pending;
         private bool _writeIsNewCalibration;
+        /// <summary>A fresh calibration has not been confirmed yet, so the
+        /// nudge now is its bias.</summary>
+        private bool _learningBias;
+        /// <summary>A bigger nudge than this is not a steady offset from the
+        /// touches; something else was wrong, and it is not kept.</summary>
+        public const float MaxBiasMm = 25f;
         /// <summary>Set by an accepted Middle C touch for the WriteProfile
         /// that follows: the applied shift, anchor-local mm.</summary>
         private Vector3? _writeCorrectionMm;
@@ -666,15 +672,19 @@ namespace PianoGlass.Piano
 
             if (newCalibration)
             {
-                // A nudge made up for the controller's tip, which survives a
-                // recalibration. Once the tip is measured, all a nudge can hold
-                // is where the anchor had drifted to, and that does not apply
-                // to keys that were just touched (16 mm off, 2026-11-05).
-                if (store.hasTipOffset && NudgeMm != Vector3.zero)
+                // A nudge made later may hold where the anchor had drifted to,
+                // which does not apply to keys that were just touched (16 mm
+                // off, 2026-11-05). The steady offset from the touches does:
+                // start from that, and let this calibration's own nudge replace it.
+                if (store.hasTipOffset)
                 {
-                    Log($"tip is measured: fresh calibration clears the nudge, was {Mm(NudgeMm)}");
-                    NudgeMm = Vector3.zero;
-                    PlacementChanged?.Invoke();
+                    _learningBias = true;
+                    if (NudgeMm != store.calibrationBiasMm)
+                    {
+                        Log($"fresh calibration: nudge {Mm(NudgeMm)} -> calibration bias {Mm(store.calibrationBiasMm)}");
+                        NudgeMm = store.calibrationBiasMm;
+                        PlacementChanged?.Invoke();
+                    }
                 }
 
                 string utc = _utcNow().ToString("yyyy-MM-dd'T'HH:mm:ss'Z'");
@@ -742,6 +752,16 @@ namespace PianoGlass.Piano
             if (store == null) { Log("verified not recorded: " + error); return; }
             string utc = _utcNow().ToString("yyyy-MM-dd'T'HH:mm:ss'Z'");
             PianoProfileEdits.MarkVerified(store, utc);
+            if (_learningBias)
+            {
+                _learningBias = false;
+                if (NudgeMm.magnitude <= MaxBiasMm)
+                {
+                    store.calibrationBiasMm = NudgeMm;
+                    Log($"calibration bias now {Mm(NudgeMm)}");
+                }
+                else Log($"nudge {Mm(NudgeMm)} is too big to be a steady offset: calibration bias stays {Mm(store.calibrationBiasMm)}");
+            }
             if (!_serializer.Save(store, out error)) { Log("verified not recorded: " + error); return; }
             Log($"verified by the player: lastVerifiedUtc={utc}");
         }
