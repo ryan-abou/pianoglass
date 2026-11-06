@@ -6,7 +6,7 @@ namespace PianoGlass.Transport
 {
     /// <summary>
     /// The practice loop as the player meets it (F33): the results card's
-    /// "Loop bars 2-4" button starts it, the clock wraps by itself, and each
+    /// "Loop bar 3" button starts it, the clock wraps by itself, and each
     /// pass is saved as its own attempt by ScoreKeeper. Restarting from the
     /// top (left Y, or the A0 + A#0 chord) is how a loop is left.
     ///

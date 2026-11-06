@@ -92,6 +92,27 @@ namespace PianoGlass.Scoring
             worstAccuracy >= 85.0 ? Colour85 :
             worstAccuracy >= 75.0 ? Colour75 : ColourLow;
 
+        /// <summary>A neighbour this good is not worth practising (Ryan, 2026-11-05).</summary>
+        public const double SolidFrom = 90.0;
+
+        /// <summary>
+        /// What to loop for one weak bar when every pill is one bar: that bar,
+        /// plus the bar either side only if it was not solid itself. Time spent
+        /// on a bar already played well is time not spent on the weak one, and
+        /// the count-in leads into the bar anyway.
+        /// </summary>
+        public static (int from, int to) AroundWeakBar(IReadOnlyList<BarGroup> groups, int bar)
+        {
+            int from = bar, to = bar;
+            foreach (BarGroup g in groups)
+            {
+                if (g.Size != 1 || !g.HasNotes || g.WorstAccuracy >= SolidFrom) continue;
+                if (g.FirstBar == bar - 1) from = g.FirstBar;
+                if (g.FirstBar == bar + 1) to = g.FirstBar;
+            }
+            return (from, to);
+        }
+
         /// <summary>What to loop for a weak group: the group itself, or, when
         /// it is bigger than a phrase, the 4-bar phrase (counted from bar 1)
         /// holding its worst bar, cut off at the group's end.</summary>
