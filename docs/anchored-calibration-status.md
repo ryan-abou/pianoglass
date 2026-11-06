@@ -90,7 +90,7 @@ Development builds, anchored mode only:
   capped at 10 mm, and persisted in the profile (`lastCorrection =
   "middle-c"`, `lastCorrectionMm` anchor-local, geometry updated). Then back
   to Verifying: A to accept the corrected keys.
-- Over **50 mm** is refused with
+- Over **150 mm** (50 mm until 2026-11-05, see "Anchor drift") is refused with
   `Middle C is N mm off -- piano may have moved -- press B to recalibrate`;
   nothing moves and nothing is written.
 - Right grip again cancels; a fix started from Ready and cancelled stays in
@@ -130,7 +130,7 @@ Quest 2, 2026-10-26, development build with the in-headset checklist.
 **All ten steps behaved as intended**, as judged by the tester: launch →
 Verifying with the banner; A confirmed without starting the song, and the
 next A played; the Middle C fix applied and survived a relaunch; a cancel
-from Ready stayed Ready; a touch over 50 mm away was refused; the vertical
+from Ready stayed Ready; a touch over the limit (then 50 mm) was refused; the vertical
 cap held; recalibration said "recalibrating -- touch the lowest key";
 a recenter kept the keys on the piano, and MIDI lit them.
 
@@ -148,6 +148,38 @@ at a shallow angle.
 on step 4 ("Fix survives a relaunch") after the fix had visibly survived,
 so steps 7 and 9 were run by hand. Not investigated. The device log would
 show whether `[AnchorFlow] checklist: step 4 ... Passed` was ever logged.
+
+## Anchor drift (2026-11-05)
+
+Ryan: after a day away the keys were about 4 key widths off, with the piano not
+moved, and about one key off after taking the headset off for a minute.
+
+**From the log:** the anchor loaded in 124 ms and reported tracked, so nothing
+failed. Middle C measured +78 / -25 / -24 mm off (86 mm). After the headset came
+back, Ryan nudged 14 mm along the keys and 4 mm in depth.
+
+**Why this is the headset's map and not our geometry:** the stored geometry and
+nudge were the same numbers that lined up the session before, and the anchor sits
+at the middle of the keyboard, so a turn cannot produce a shift that large at
+Middle C. It also dropped 25 mm, which a piano on a floor does not do. The earlier
+"all passed" results never tested more than a reboot or ten minutes away. Not
+proven: nothing measured the room independently, and a second anchor would shift
+with the same map, so more anchors are not the obvious cure.
+
+**What changed (branch `calib-recover`).** None of it stops the drift; it makes
+recovering cheap:
+- A Middle C fix now reaches 150 mm, so that 86 mm is one touch, not a full
+  recalibration. The 10 mm vertical cap stays.
+- Once the controller tip is measured, a fresh calibration clears the nudge. That
+  day's recalibration carried a -16 mm nudge onto keys that had just been touched.
+- A frame gap, or lost tracking, of 3 s or more sends Ready back to Verifying, so
+  the keys get looked at after the headset comes back.
+- `[AnchorFlow] anchor refined` logs slow movement, to show whether the anchor
+  settles in the first seconds after a launch. If it does, waiting before Verifying
+  may help. `verify error` lines across days measure the drift itself.
+
+The lasting fix to try is the "learn from key presses" idea in `CLAUDE.md`, which
+could correct drift during play without a touch.
 
 ## What's next
 
