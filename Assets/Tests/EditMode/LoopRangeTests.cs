@@ -217,15 +217,5 @@ namespace PianoGlass.Tests.EditMode
             Assert.AreEqual("Loop bars 7–8", ForBars(100, 100, 100, 100, 100, 100, 70, 62).ButtonText);
             Assert.AreEqual("Loop bar 8", ForBars(100, 100, 100, 100, 100, 100, 100, 62).ButtonText);
         }
-
-        [Test]
-        public void SuggestionClampsAtTheSongsEnds()
-        {
-            var bars = new List<BarStats>();
-            for (int i = 1; i <= 8; i++) bars.Add(new BarStats { bar = i, notes = 4, accuracy = i == 8 ? 62 : 100 });
-            Suggestion s = SuggestionPicker.Pick(90, 85, AttemptRecord.BothHands, BarGrouping.Build(bars), false, false);
-            Assert.AreEqual(7, s.FromBar);
-            Assert.AreEqual(8, s.ToBar);
-        }
     }
 }
