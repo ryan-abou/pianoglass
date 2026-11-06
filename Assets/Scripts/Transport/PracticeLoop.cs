@@ -19,6 +19,10 @@ namespace PianoGlass.Transport
     /// pass nobody played in is not saved, so it changes nothing. These tempos
     /// are not saved: leaving the loop goes back to the tempo the player chose.
     ///
+    /// Memory fade (F36): this moves the clock's MemoryFade ladder at each wrap
+    /// and feeds it what happens during a pass; with it on, AutoTempo.NextWithFade
+    /// keeps tempo and fade from changing together.
+    ///
     /// After ScoreKeeper (100), which finishes a pass at the wrap if its last
     /// note's window ran past the end of the bar.
     /// </summary>
@@ -40,6 +44,9 @@ namespace PianoGlass.Transport
 
         private int _lastWraps;
         private float _nextTempo = -1f;
+        private bool _passPlayed;
+        private double _passKeysRight;
+        private float _heldFor;
 
         private void Awake()
         {
@@ -52,13 +59,23 @@ namespace PianoGlass.Transport
         private void OnEnable()
         {
             if (resultsCard != null) resultsCard.LoopRequested += StartLoop;
-            if (scoreKeeper != null) scoreKeeper.AttemptEnded += OnAttemptEnded;
+            if (scoreKeeper != null)
+            {
+                scoreKeeper.AttemptEnded += OnAttemptEnded;
+                scoreKeeper.NoteJudged += OnNoteJudged;
+                scoreKeeper.WrongNotePlayed += OnWrongNote;
+            }
         }
 
         private void OnDisable()
         {
             if (resultsCard != null) resultsCard.LoopRequested -= StartLoop;
-            if (scoreKeeper != null) scoreKeeper.AttemptEnded -= OnAttemptEnded;
+            if (scoreKeeper != null)
+            {
+                scoreKeeper.AttemptEnded -= OnAttemptEnded;
+                scoreKeeper.NoteJudged -= OnNoteJudged;
+                scoreKeeper.WrongNotePlayed -= OnWrongNote;
+            }
         }
 
         public void StartLoop(int fromBar, int toBar)
@@ -68,6 +85,8 @@ namespace PianoGlass.Transport
             _lastWraps = clock.Wraps;
             LastPassLine = null;
             _nextTempo = -1f;
+            _passPlayed = false;
+            _heldFor = 0f;
             Debug.Log($"[Loop] looping {clock.Loop.Value.Label}");
         }
 
@@ -77,18 +96,70 @@ namespace PianoGlass.Transport
             float tempo = clock.TempoMultiplier;
             // Wait mode has no timing, so its accuracy says nothing about tempo.
             bool wait = rec.mode == AttemptRecord.Wait;
-            _nextTempo = wait ? tempo : AutoTempo.Next(tempo, rec.accuracy);
-            LastPassLine = wait ? $"{rec.accuracy:0}% of keys right" : AutoTempo.Describe(tempo, _nextTempo, rec.accuracy);
-            Debug.Log($"[Loop] pass {Pass}: {rec.accuracy:0.0}% -> {LastPassLine}");
+            _passPlayed = true;
+            _passKeysRight = rec.KeysRightPercent;
+
+            if (clock.IsFading)
+            {
+                MemoryFade fade = clock.Fade;
+                _nextTempo = wait ? tempo : AutoTempo.NextWithFade(tempo, rec.accuracy, fade);
+                LastPassLine = TempoStep.ToPercent(_nextTempo) != TempoStep.ToPercent(tempo)
+                    ? AutoTempo.Describe(tempo, _nextTempo, rec.accuracy)
+                    : $"{_passKeysRight:0}% keys right: {fade.Describe(fade.StepAfter(_passKeysRight, true))}";
+            }
+            else
+            {
+                _nextTempo = wait ? tempo : AutoTempo.Next(tempo, rec.accuracy);
+                LastPassLine = wait ? $"{rec.accuracy:0}% of keys right" : AutoTempo.Describe(tempo, _nextTempo, rec.accuracy);
+            }
+            Debug.Log($"[Loop] pass {Pass}: {rec.accuracy:0.0}%, keys right {_passKeysRight:0.0}% -> {LastPassLine}");
+        }
+
+        private void OnNoteJudged(JudgementResult result)
+        {
+            if (clock == null || !clock.IsFading) return;
+            if (result.IsHit) clock.Fade.OnNoteRight();
+            else clock.Fade.OnMistake();
+        }
+
+        private void OnWrongNote(WrongNote wrong)
+        {
+            if (clock != null && clock.IsFading) clock.Fade.OnMistake();
+        }
+
+        /// <summary>The pass that just wrapped moves the ladder. A pass nobody
+        /// played in has no record, and brings the notes back.</summary>
+        private void MoveFade()
+        {
+            if (!clock.IsFading) return;
+            MemoryFade fade = clock.Fade;
+            if (!_passPlayed) LastPassLine = $"nothing played: {fade.Describe(fade.StepAfter(0.0, false))}";
+            fade.EndPass(_passKeysRight, _passPlayed);
+            Debug.Log($"[Loop] {MemoryFade.Label(fade.Step)}");
         }
 
         private void Update()
         {
             if (clock == null) return;
+
+            // Wait mode: nothing to press, nothing to see. Do not leave them there.
+            if (clock.IsFading && clock.IsHolding)
+            {
+                _heldFor += Time.unscaledDeltaTime;
+                if (_heldFor >= MemoryFade.StuckSeconds)
+                {
+                    _heldFor = 0f;
+                    clock.Fade.AskForHelp();
+                }
+            }
+            else _heldFor = 0f;
+
             if (clock.Wraps == _lastWraps) return;
             _lastWraps = clock.Wraps;
+            if (clock.Loop.HasValue) MoveFade();
             if (clock.Loop.HasValue && _nextTempo > 0f) clock.TempoMultiplier = _nextTempo;
             _nextTempo = -1f;
+            _passPlayed = false;
         }
     }
 }

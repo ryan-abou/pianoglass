@@ -181,7 +181,8 @@ namespace PianoGlass.Piano
 
         private void AppendLoop(PracticeLoop practice)
         {
-            string fade = clock != null && clock.MemoryFadeOn ? $", notes {clock.NoteOpacity * 100f:0}%" : "";
+            string fade = clock != null && clock.IsFading
+                ? $", {MemoryFade.Label(clock.Fade.ShownStep)}{(clock.Fade.Help > 0 ? " (helping)" : "")}" : "";
             _sb.AppendLine($"<color=#E8D48A>loop:       {practice.Range.Value.Label}, pass {practice.Pass}{fade}   Y = full song</color>");
             if (practice.LastPassLine != null)
                 _sb.AppendLine($"<color=#E8D48A>last pass:  {practice.LastPassLine}</color>");
