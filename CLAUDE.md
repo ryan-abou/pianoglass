@@ -163,13 +163,13 @@ on them and none can be played by accident.
 |---|---|---|---|---|
 | Capture the next calibration point | right trigger | — | `OvrCalibrationInput` | Two touches, lowest then highest key |
 | Start calibration over | B, or left trigger | — | `OvrCalibrationInput` | |
-| Nudge left/right, nearer/further | right stick | — | `OvrCalibrationInput` | Rigid shift. Made before confirming a fresh calibration, it is what the next one starts from |
+| Nudge left/right, nearer/further | right stick | — | `OvrCalibrationInput` | Rigid shift. Made after a fresh calibration, before the headset next comes off, it is what the next one starts from |
 | Nudge up/down | left stick up/down | — | `OvrCalibrationInput` | Axis-locked against yaw |
 | Turn the keyboard (yaw) | left stick left/right | — | `OvrCalibrationInput` | ±10° |
 | Clear the nudge | right stick click | — | `OvrCalibrationInput` | A fresh calibration resets it to the steady offset learned from the last one |
 | Measure the controller tip | left menu button (again = cancel) | — | `ControllerTipCalibration` | Written to the profile root |
-| "Looks right" in Verifying | A | — | `OvrCalibrationInput` | Anchored mode; that A does not reach play/pause. Asked after launch, calibration, and 3 s or more away |
-| Middle C fix: start / cancel | right grip | — | `OvrCalibrationInput` | Anchored mode; then touch Middle C and pull the right trigger |
+| "Looks right" in Verifying | A | — | `OvrCalibrationInput` | Anchored mode; that A does not reach play/pause. Asked after launch and calibration, and after 3 s or more away only if the anchor then moves 8 mm or more within 15 s |
+| Middle C fix: start / cancel | right grip | — | `OvrCalibrationInput` | Anchored mode, in Verifying or Ready; then touch Middle C and pull the right trigger |
 | Play / pause | A | — | `OvrSongTransport` | |
 | Restart from the top and play | left Y | A0 + A♯0 | `OvrSongTransport`, `SongTransport` | The chord works whenever calibrated, playing or not. Also how a practice loop is left |
 | Start a practice loop | right controller ray + right trigger on the results card's "Loop bars" button | — | `ResultsCard` → `PracticeLoop` | The button shows when a bar is under 75%: that bar, and a neighbour under 90% |

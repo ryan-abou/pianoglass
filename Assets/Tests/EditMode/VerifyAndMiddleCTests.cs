@@ -354,12 +354,29 @@ namespace PianoGlass.Tests.EditMode
         }
 
         [Test]
-        public void ANudgeAfterConfirmingIsNotABias()
+        public void ANudgeAfterConfirmingIsStillABiasUntilTheHeadsetComesOff()
         {
-            AnchoredCalibrationSession s = CalibratedWithError(Vector3.zero);
+            AnchoredCalibrationSession s = ReadySession();
             MarkTipMeasured();
             Recalibrated(s);
             s.Confirm();
+            s.Nudge(new Vector3(-0.011f, -0.010f, 0f));
+            s.Persist();
+
+            Recalibrated(s);
+
+            Near(new Vector3(-11f, -10f, 0f), s.NudgeMm, 1e-3f, "kept");
+        }
+
+        [Test]
+        public void ANudgeAfterTheHeadsetCameOffIsNotABias()
+        {
+            AnchoredCalibrationSession s = ReadySession();
+            MarkTipMeasured();
+            Recalibrated(s);
+            s.Confirm();
+            _time = _time.AddSeconds(AnchoredCalibrationSession.AwaySeconds + 1);
+            s.UpdateTracking();
             s.Nudge(new Vector3(-0.014f, 0f, 0.004f)); // following a drifted anchor
             s.Persist();
 
@@ -399,17 +416,85 @@ namespace PianoGlass.Tests.EditMode
             return s;
         }
 
+        private void Away(AnchoredCalibrationSession s)
+        {
+            _time = _time.AddSeconds(AnchoredCalibrationSession.AwaySeconds + 1);
+            s.UpdateTracking();
+        }
+
+        /// <summary>Past the watch, a second at a time: one big gap would be
+        /// time away all over again.</summary>
+        private void PastTheWatch(AnchoredCalibrationSession s)
+        {
+            for (int i = 0; i <= AnchoredCalibrationSession.SettleSeconds + 1; i++)
+            {
+                _time = _time.AddSeconds(1);
+                s.UpdateTracking();
+            }
+        }
+
         [Test]
-        public void AFrameGapOfSecondsMeansCheckTheKeysAgain()
+        public void BackWithAnAnchorThatStaysPutAsksNothing()
         {
             AnchoredCalibrationSession s = ReadySession();
-            _time = _time.AddSeconds(AnchoredCalibrationSession.AwaySeconds + 1);
+            Away(s);
+            Assert.AreEqual(FlowState.Ready, s.Flow.State);
+
+            _fake.SimulateAnchorDrift(s.Anchor.Id, new Vector3(0.004f, 0f, 0f));
+            PastTheWatch(s);
+            Assert.AreEqual(FlowState.Ready, s.Flow.State, "4 mm is nothing");
+        }
+
+        [Test]
+        public void BackWithAnAnchorThatMovesAsksOnce()
+        {
+            AnchoredCalibrationSession s = ReadySession();
+            Away(s);
+            _fake.SimulateAnchorDrift(s.Anchor.Id, new Vector3(0.009f, 0f, 0f));
             s.UpdateTracking();
             Assert.AreEqual(FlowState.Verifying, s.Flow.State);
 
             s.Confirm();
             s.UpdateTracking();
+            _fake.SimulateAnchorDrift(s.Anchor.Id, new Vector3(0.009f, 0f, 0f));
+            s.UpdateTracking();
             Assert.AreEqual(FlowState.Ready, s.Flow.State, "once");
+        }
+
+        [Test]
+        public void TrackingSpaceBeingRebasedDoesNotCountAsMoving()
+        {
+            AnchoredCalibrationSession s = ReadySession();
+            Away(s);
+            _fake.SimulateRecenter(new Pose(new Vector3(1f, 0f, -2f), Quaternion.Euler(0f, 90f, 0f)));
+            s.UpdateTracking();
+            Assert.AreEqual(FlowState.Ready, s.Flow.State);
+        }
+
+        [Test]
+        public void MovementSplitByARebaseStillAddsUp()
+        {
+            AnchoredCalibrationSession s = ReadySession();
+            Away(s);
+            _fake.SimulateAnchorDrift(s.Anchor.Id, new Vector3(0.006f, 0f, 0f));
+            s.UpdateTracking();
+            _fake.SimulateRecenter(new Pose(new Vector3(1f, 0f, -2f), Quaternion.identity));
+            s.UpdateTracking();
+            Assert.AreEqual(FlowState.Ready, s.Flow.State);
+            _fake.SimulateAnchorDrift(s.Anchor.Id, new Vector3(0.006f, 0f, 0f));
+            s.UpdateTracking();
+            Assert.AreEqual(FlowState.Verifying, s.Flow.State);
+        }
+
+        [Test]
+        public void MovementAfterTheWatchEndsAsksNothing()
+        {
+            AnchoredCalibrationSession s = ReadySession();
+            Away(s);
+            PastTheWatch(s);
+            _fake.SimulateAnchorDrift(s.Anchor.Id, new Vector3(0.02f, 0f, 0f));
+            s.UpdateTracking();
+            Assert.AreEqual(FlowState.Ready, s.Flow.State);
         }
 
         [Test]

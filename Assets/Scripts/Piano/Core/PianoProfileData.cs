@@ -60,6 +60,17 @@ namespace PianoGlass.Piano
 
     /// <summary>One physical piano, as seen from its anchor.</summary>
     [Serializable]
+    public class WitnessAnchor
+    {
+        public string uuid = "";
+        /// <summary>"low" or "high", for the log.</summary>
+        public string label = "";
+        /// <summary>The primary anchor's pose in this anchor's frame.</summary>
+        public Vector3 primaryInWitness;
+        public Quaternion primaryRotationInWitness = Quaternion.identity;
+    }
+
+    [Serializable]
     public class PianoProfile
     {
         public string profileId = "";
@@ -68,6 +79,10 @@ namespace PianoGlass.Piano
         /// <summary>A list so a two-anchor mode (one near each end) can be
         /// added without a schema change. Today exactly one.</summary>
         public List<string> anchorUuids = new List<string>();
+
+        /// <summary>Anchors that only measure (AnchorWitnesses). Absent in older
+        /// files, which simply have none until the next calibration.</summary>
+        public List<WitnessAnchor> witnessAnchors = new List<WitnessAnchor>();
 
         public int lowestNote;
         public int highestNote;

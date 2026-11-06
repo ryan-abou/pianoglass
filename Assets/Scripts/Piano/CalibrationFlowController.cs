@@ -79,7 +79,8 @@ namespace PianoGlass.Piano
                 Path.Combine(Application.persistentDataPath, PianoProfileSerializer.DefaultFileName));
             Session = new AnchoredCalibrationSession(service, serializer, localizeTimeoutSeconds, maxLocalizeAttempts)
             {
-                ConfiguredWhiteKeyDepth = calibration.WhiteKeyDepth
+                ConfiguredWhiteKeyDepth = calibration.WhiteKeyDepth,
+                UseWitnessAnchors = true
             };
             Session.CaptureRequested += calibration.BeginExternalCapture;
 
