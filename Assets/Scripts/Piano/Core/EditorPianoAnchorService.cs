@@ -109,6 +109,15 @@ namespace PianoGlass.Piano
         /// world space, the physical piano does not.</summary>
         public void SimulateRecenter(Pose physicalToWorld) => TrackingOffset = physicalToWorld;
 
+        /// <summary>The headset's map moves one anchor and not the others.</summary>
+        public void SimulateAnchorDrift(string uuid, Vector3 physicalDelta)
+        {
+            if (_stored.TryGetValue(uuid, out Pose stored))
+                _stored[uuid] = new Pose(stored.position + physicalDelta, stored.rotation);
+            if (_live.TryGetValue(uuid, out FakeHandle h))
+                h.Physical = new Pose(h.Physical.position + physicalDelta, h.Physical.rotation);
+        }
+
         /// <summary>App quit: live handles die, saved anchors stay.</summary>
         public void EndSession()
         {
@@ -133,7 +142,7 @@ namespace PianoGlass.Piano
         private sealed class FakeHandle : IPianoAnchorHandle
         {
             public readonly EditorPianoAnchorService Owner;
-            public readonly Pose Physical;
+            public Pose Physical;
             private bool _alive = true;
 
             public FakeHandle(EditorPianoAnchorService owner, string id, Pose physical)
