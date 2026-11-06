@@ -259,6 +259,46 @@ that matter. It needs a return after 20+ minutes and one after a day.
 So correcting a drift of 10 mm or more from about 20 presses looks possible, and
 nothing has shown it works yet.
 
+## Fourth round (2026-11-05, late): what the anchor's own movement predicts
+
+Headset off 27 s by the log. Middle C read 10.2 mm off (-6.3 / -3.7 / +7.1); Ryan
+fixed it with one touch and a small nudge, with no recalibration.
+
+**Three anchors look like no help.** They have read exactly 0.0 mm apart at every
+return so far, with the same error at Middle C, while the anchor's world pose moved
+5-9 mm. So those moves shift all three together. The long-gap cases (19 minutes
+and a day) are still untested with witnesses.
+
+**How far the anchor moves just after coming back matched which returns needed
+fixing:**
+
+| Off | `anchor refined` in the first 15 s | What it needed |
+|---|---|---|
+| 2 min | none | Nothing |
+| 2 min | 5.9 mm | Nothing at the check (Ryan recalibrated 45 s later, as the checklist asked) |
+| 4.6 min | none | Nothing: "perfectly aligned" |
+| 27 s | 12 mm | Fixed, 10.2 mm |
+| 19 min | 33 mm | Fixed, 21 mm |
+
+Five returns is few, and the day-long case is not among them. Branch `return-settle`
+uses it: after time away the keys simply show, the anchor is watched for 15 s, and
+only 8 mm or more of movement brings up the check. If a return is off with no check,
+right grip still fixes it. The threshold is a guess from these five.
+
+**Height is not settled, and I overstated it.** I wrote that every touch reads low
+whatever the keys are doing. But a minute after a fresh calibration, with the headset
+on throughout, Ryan lowered the keys 10 mm by eye and moved them 4.6 mm along the
+keyboard, which is the same direction the touches say. So fresh calibrations may
+really draw the keys high. The earlier round, where lowering them 6.8 mm looked
+worse, disagrees, and depth perception through Quest 2 passthrough is poor.
+The calibration bias now keeps such nudges, so at least they need making only once.
+
+**Fingertips still unproven.** The touch moved the keys about 5.5 mm along the
+keyboard; the fingertip reading moved 3.8 mm the other way (28 and 82 presses). That
+is within its noise, and this drift was too small to test it. Depth read 85 mm
+before the fix and 62 after, which is more than the fix moved, so depth stays
+unusable.
+
 ## What's next
 
 1. Measure observation 2: a seated Middle C fix with the y value written

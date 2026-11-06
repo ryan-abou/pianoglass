@@ -922,13 +922,17 @@ Decided while building, all confirmed by Ryan unless a branch changes it:
 Merged after one headset round: `attempt-empty` (confirming the keys after a song
 ended saved a 0% attempt), `fade-song` (whole-song fade, saved per song), `pick-bars`
 (tap the results card's pills to choose a loop), `calib-bias` (see the status doc).
-`batchD-test` was the build, `batchE-test` is the next one; neither is ever merged.
+`batchD-test` and `batchE-test` were builds; neither is ever merged.
+
+`fade-wait` passed and was merged. `batchF-test` is the next build, not merged.
 
 Next round, each on its own branch:
-- `fade-wait`: Ryan's flash at a glimpse in wait mode, and judging those passes by
-  what came from memory.
+- `fade-reveal`: at a glimpse, a note brought back fades in and stays until played,
+  and a pass with no key pressed moves nothing (both Ryan's).
 - `middle-c-small`: a Middle C touch on keys already right made them worse.
-- `anchor-trio`, `press-probe`: still measuring. Nothing visible changes.
+- `return-settle` (holds `anchor-trio`): no check after time away unless the anchor
+  moves, and nudges before the headset comes off count as the calibration bias.
+- `press-probe`: still measuring. Nothing visible changes.
 
 The last two only measure. Ryan would rather not use a marked controller spot on
 the piano (idea 4 in the status doc), so that is kept for if nothing else works.
