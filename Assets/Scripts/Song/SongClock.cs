@@ -61,10 +61,28 @@ namespace PianoGlass.Song
         /// <summary>Memory fade (F36) wanted. It only acts inside a loop.</summary>
         public bool MemoryFadeOn { get; set; }
 
-        /// <summary>How visible a note is right now, 0-1: below 1 only on later
-        /// passes of a loop with memory fade on. The ceiling for everything
-        /// that shows a note: its slab, its name, its due key.</summary>
-        public float NoteOpacity => Loop.HasValue && MemoryFadeOn ? MemoryFade.Opacity(LoopPass) : 1f;
+        /// <summary>This loop's fade ladder; a new loop starts it at 100%. Null
+        /// with no loop.</summary>
+        public MemoryFade Fade { get; private set; }
+
+        /// <summary>Whether notes can fade right now.</summary>
+        public bool IsFading => MemoryFadeOn && Fade != null;
+
+        /// <summary>The ceiling for what does not fall with the note: its due
+        /// key, the panel naming it. 1 unless fading.</summary>
+        public float NoteOpacity => IsFading ? Fade.SteadyOpacity : 1f;
+
+        /// <summary>How visible this note's slab and name are now, 1 unless
+        /// fading. A note counts as appearing at the top of the highway, or at
+        /// the wrap for one that is already part way down when a pass starts,
+        /// so that the first notes of a pass get their glimpse too.</summary>
+        public float NoteOpacityAt(double noteStartTime, double leadTimeSeconds)
+        {
+            if (!IsFading) return 1f;
+            double appeared = System.Math.Max(noteStartTime - leadTimeSeconds, Loop.Value.WrapTo);
+            double seconds = tempoMultiplier > 0f ? (DisplaySongTime - appeared) / tempoMultiplier : 0.0;
+            return Fade.Opacity(seconds);
+        }
 
         private int _wrapsAtLoopStart;
 
@@ -159,6 +177,7 @@ namespace PianoGlass.Song
         public void StartLoop(LoopRange loop)
         {
             Loop = loop;
+            Fade = new MemoryFade();
             _wrapsAtLoopStart = Wraps;
             SongTime = loop.WrapTo;
         }
@@ -175,6 +194,7 @@ namespace PianoGlass.Song
         public void Restart()
         {
             Loop = null;
+            Fade = null;
             SongTime = -leadInSeconds;
         }
     }
