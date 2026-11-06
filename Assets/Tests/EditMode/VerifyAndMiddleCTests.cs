@@ -301,6 +301,72 @@ namespace PianoGlass.Tests.EditMode
                  s.BuildLayout().FrontEdgeCenter(60), 1e-3f, "the keys are where they were touched");
         }
 
+        private AnchoredCalibrationSession Recalibrated(AnchoredCalibrationSession s)
+        {
+            Run(s.RecalibrateAsync());
+            Run(s.OnCapturedAsync(Low, High, Toward, Lowest, Highest, Depth));
+            return s;
+        }
+
+        [Test]
+        public void TheNudgeBeforeConfirmingACalibrationStartsTheNextOne()
+        {
+            AnchoredCalibrationSession s = CalibratedWithError(Vector3.zero);
+            MarkTipMeasured();
+            Recalibrated(s);
+            s.Nudge(new Vector3(-0.008f, 0f, -0.005f));
+            s.Confirm();
+
+            Recalibrated(s);
+
+            Near(new Vector3(-8f, 0f, -5f), s.NudgeMm, 1e-3f, "starts from the bias");
+            Near(new Vector3(-8f, 0f, -5f), new PianoProfileSerializer(_path).Load().Store.calibrationBiasMm, 1e-3f, "saved");
+        }
+
+        [Test]
+        public void AFreshCalibrationsOwnNudgeReplacesTheBias()
+        {
+            AnchoredCalibrationSession s = CalibratedWithError(Vector3.zero);
+            MarkTipMeasured();
+            Recalibrated(s);
+            s.Nudge(new Vector3(-0.008f, 0f, 0f));
+            s.Confirm();
+            Recalibrated(s);
+            s.Nudge(new Vector3(0.002f, 0f, 0f));
+            s.Confirm();
+
+            Near(new Vector3(-6f, 0f, 0f), new PianoProfileSerializer(_path).Load().Store.calibrationBiasMm, 1e-3f, "updated");
+        }
+
+        [Test]
+        public void ANudgeAfterConfirmingIsNotABias()
+        {
+            AnchoredCalibrationSession s = CalibratedWithError(Vector3.zero);
+            MarkTipMeasured();
+            Recalibrated(s);
+            s.Confirm();
+            s.Nudge(new Vector3(-0.014f, 0f, 0.004f)); // following a drifted anchor
+            s.Persist();
+
+            Recalibrated(s);
+
+            Assert.AreEqual(Vector3.zero, s.NudgeMm);
+        }
+
+        [Test]
+        public void AHugeNudgeIsNotKeptAsABias()
+        {
+            AnchoredCalibrationSession s = CalibratedWithError(Vector3.zero);
+            MarkTipMeasured();
+            Recalibrated(s);
+            s.Nudge(new Vector3(-0.030f, 0f, 0f));
+            s.Confirm();
+
+            Recalibrated(s);
+
+            Assert.AreEqual(Vector3.zero, s.NudgeMm);
+        }
+
         // ------------------------------------------------------------------
         // Back from time away: the keys get looked at again
         // ------------------------------------------------------------------

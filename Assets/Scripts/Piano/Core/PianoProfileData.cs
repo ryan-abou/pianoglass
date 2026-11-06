@@ -29,6 +29,14 @@ namespace PianoGlass.Piano
         /// changes.</summary>
         public Vector3 tipNudgeKeyboardMm;
 
+        /// <summary>What a fresh calibration starts with once the tip is
+        /// measured: the nudge the player settled on straight after the last
+        /// one, before confirming. Touches land a steady few millimetres off
+        /// (2026-11-05), so this is hardware, unlike a nudge made later, which
+        /// may only be following a drifted anchor. Absent in older files, which
+        /// JsonUtility reads as zero.</summary>
+        public Vector3 calibrationBiasMm;
+
         /// <summary>Set by pivot calibration. When false, tipOffsetController
         /// is meaningless and PointerTip stays where the scene put it.</summary>
         public bool hasTipOffset;

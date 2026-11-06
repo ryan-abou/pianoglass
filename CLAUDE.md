@@ -163,10 +163,10 @@ on them and none can be played by accident.
 |---|---|---|---|---|
 | Capture the next calibration point | right trigger | — | `OvrCalibrationInput` | Two touches, lowest then highest key |
 | Start calibration over | B, or left trigger | — | `OvrCalibrationInput` | |
-| Nudge left/right, nearer/further | right stick | — | `OvrCalibrationInput` | Rigid shift; it survives recalibration |
+| Nudge left/right, nearer/further | right stick | — | `OvrCalibrationInput` | Rigid shift. Made before confirming a fresh calibration, it is what the next one starts from |
 | Nudge up/down | left stick up/down | — | `OvrCalibrationInput` | Axis-locked against yaw |
 | Turn the keyboard (yaw) | left stick left/right | — | `OvrCalibrationInput` | ±10° |
-| Clear the nudge | right stick click | — | `OvrCalibrationInput` | Also cleared by a fresh calibration once the tip is measured |
+| Clear the nudge | right stick click | — | `OvrCalibrationInput` | A fresh calibration resets it to the steady offset learned from the last one |
 | Measure the controller tip | left menu button (again = cancel) | — | `ControllerTipCalibration` | Written to the profile root |
 | "Looks right" in Verifying | A | — | `OvrCalibrationInput` | Anchored mode; that A does not reach play/pause. Asked after launch, calibration, and 3 s or more away |
 | Middle C fix: start / cancel | right grip | — | `OvrCalibrationInput` | Anchored mode; then touch Middle C and pull the right trigger |
