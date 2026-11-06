@@ -862,7 +862,7 @@ rewrite history. New commits leave them out.
 ### Batch C status (2026-11-05): three merged, second round next
 
 First headset round: loop, auto-tempo and wait mode passed and were merged into
-main, in that order (`batchC-loop`, `batchC-autotempo`, `batchC-wait`). About 45
+main, in that order (`batchC-loop`, `batchC-autotempo`, `batchC-wait`). 36
 attempts over ten minutes, mean 69.7 fps in the development build, no exceptions
 from our code. `batchC-test` is the build and is never merged.
 
