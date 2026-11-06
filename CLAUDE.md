@@ -683,8 +683,8 @@ Follow the four-phase build order in `docs/feature-evaluation.md` (Part 3):
    (done); ~~note names (F14)~~ (done, Batch A).
 2. **Results, tempo, practice**: ~~tempo ±5%~~, ~~attempt schema v2~~ (both
    done, Batch A), ~~results card with bar heat strip~~, ~~metronome~~ (both
-   done, Batch B), ~~loop worst bar~~, ~~auto-tempo~~, ~~wait mode~~ (all done,
-   Batch C), memory fade (next round, branch `fade-song`).
+   done, Batch B), ~~loop worst bar~~, ~~auto-tempo~~, ~~wait mode~~, ~~memory fade~~ (all done,
+   Batch C).
 3. **Real songs**: MIDI file loading, song picker, hand colours, one-hand
    practice, a free public-domain starter library, per-song history.
 4. **Hand-tracked UI**: hand-tracking spike, settings model, one panel
@@ -860,12 +860,13 @@ attempt ends, while the results card is up.
 Older commits keep their Co-Authored-By lines: Ryan decided on 2026-11-05 not to
 rewrite history. New commits leave them out.
 
-### Batch C status (2026-11-05): five merged, fade still to be seen
+### Batch C status: merged into main 2026-11-05
+
+Third headset round: fade passed in loops and on whole songs and was merged
+(`batchC-fade`, `fade-song`). 68.0-68.7 fps during loops with hands tracked,
+against 68.7-70.4 before, and Ryan felt no difference.
 
 Second headset round: `loop-weak-bar` and `calib-recover` passed and were merged.
-The log shows the fade ladder never ran inside a loop that session, so
-`batchC-fade` stays on its branch for the next round. In-song frame rate 68.7-70.4
-fps in the development build, no exceptions from our code.
 
 First headset round: loop, auto-tempo and wait mode passed and were merged into
 main, in that order (`batchC-loop`, `batchC-autotempo`, `batchC-wait`). 36
@@ -909,18 +910,18 @@ Decided while building, all confirmed by Ryan unless a branch changes it:
   that needed help cannot go fainter. Tempo and fade never change together: tempo
   rises only at a glimpse and falls only at 100%. Values are in `MemoryFade`.
 
-### Batch D (2026-11-05): built, headset round next
+### Batch D (2026-11-05): four merged, second round next
 
-Ryan's request: no recalibrating after every headset removal, memory fade on whole
-songs, and choosing your own bars. Branches, `batchD-test` is the build and is never
-merged:
-- `attempt-empty`: confirming the keys after a song had ended saved and showed a 0%
-  attempt with no notes, which then also made the next "vs last" read +85%.
-- `fade-song` (holds `batchC-fade`): whole-song fade, saved per song.
-- `pick-bars`: tap the results card's bar pills to choose a loop.
-- `calib-bias`: replaces clearing the nudge on recalibration, see the status doc.
-- `anchor-trio`: two measuring anchors. Nothing visible changes.
-- `press-probe`: logs fingertips against pressed keys. Nothing visible changes.
+Merged after one headset round: `attempt-empty` (confirming the keys after a song
+ended saved a 0% attempt), `fade-song` (whole-song fade, saved per song), `pick-bars`
+(tap the results card's pills to choose a loop), `calib-bias` (see the status doc).
+`batchD-test` was the build, `batchE-test` is the next one; neither is ever merged.
+
+Next round, each on its own branch:
+- `fade-wait`: Ryan's flash at a glimpse in wait mode, and judging those passes by
+  what came from memory.
+- `middle-c-small`: a Middle C touch on keys already right made them worse.
+- `anchor-trio`, `press-probe`: still measuring. Nothing visible changes.
 
 The last two only measure. Ryan would rather not use a marked controller spot on
 the piano (idea 4 in the status doc), so that is kept for if nothing else works.

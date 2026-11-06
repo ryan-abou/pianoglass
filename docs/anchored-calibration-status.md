@@ -231,6 +231,34 @@ Quest 3 and 3S only. Nothing found says users keep alignment between sessions.
 4. A marked spot on the piano for the controller, which the headset sees directly.
    Ryan's last choice.
 
+## Third round (2026-11-05): keys perfect after 5 minutes, and what a touch can tell
+
+Headset off 4.6 minutes by the log (Ryan's guess was about 10). The keys came back
+perfect, Ryan touched Middle C because the checklist said to, and that made them
+worse: it measured -0.7 / -6.8 / +2.8 mm and applied all of it. The keys had not
+moved. **Every Middle C touch reads 5-10 mm low** (-4.8, -9.4, -7.1, -6.8), whatever
+the keys are doing, and along the keys and in depth a touch only agrees to about
+5 mm. Branch `middle-c-small` leaves the keys alone under 6 mm sideways and ignores
+height under 12 mm. Why a touch reads low is still the open height question; a tip
+pushing the key down is a guess worth testing.
+
+**Witnesses:** 0.0 mm against the primary after that return, and all three anchors
+read 7.4 mm at the touch. Nothing moved, so this says nothing yet about the drifts
+that matter. It needs a return after 20+ minutes and one after a day.
+
+**Fingertips (328 presses, none during drift):**
+- The median of 20 presses stayed within 4.6 mm of the session's median (sd 2.3).
+- Only along the keys is useful: the tracked tip reads about 70 mm toward the player
+  from the key's centre, near the front edge, which is not where fingers press.
+- Each note has its own offset: G4 -10.7 mm, F4 +0.8, C4 +0.1, on keys that had not
+  moved. It looks like hand shape, and a correction would have to allow for it, by
+  comparing a note with itself over time.
+- In 115 of 328 presses a second finger was within 6 mm of the chosen one.
+- No presses were logged after a return, so it has never been tried against drift.
+
+So correcting a drift of 10 mm or more from about 20 presses looks possible, and
+nothing has shown it works yet.
+
 ## What's next
 
 1. Measure observation 2: a seated Middle C fix with the y value written
