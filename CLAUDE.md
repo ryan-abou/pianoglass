@@ -929,14 +929,18 @@ ended saved a 0% attempt), `fade-song` (whole-song fade, saved per song), `pick-
 (tap the results card's pills to choose a loop), `calib-bias` (see the status doc).
 `batchD-test` and `batchE-test` were builds; neither is ever merged.
 
-`fade-wait` passed and was merged. `batchF-test` is the next build, not merged.
+`fade-wait` passed and was merged. `batchF-test` was a build, not merged.
+
+Merged 2026-11-07 after the `batchF-test` round: `fade-reveal` (at a glimpse, a note
+brought back fades in and stays until played, and a pass with no key pressed moves
+nothing; both Ryan's) and `middle-c-small` (a Middle C touch on keys already right
+made them worse).
 
 Next round, each on its own branch:
-- `fade-reveal`: at a glimpse, a note brought back fades in and stays until played,
-  and a pass with no key pressed moves nothing (both Ryan's).
-- `middle-c-small`: a Middle C touch on keys already right made them worse.
 - `return-settle` (holds `anchor-trio`): no check after time away unless the anchor
-  moves, and nudges before the headset comes off count as the calibration bias.
+  moves, and nudges before the headset comes off count as the calibration bias. The
+  bias did not land the keys where they were left (status doc, fifth round), and a
+  20+ minute return has not been run.
 - `press-probe`: still measuring. Nothing visible changes.
 
 The last two only measure. Ryan would rather not use a marked controller spot on

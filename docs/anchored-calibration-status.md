@@ -299,6 +299,45 @@ is within its noise, and this drift was too small to test it. Depth read 85 mm
 before the fix and 62 after, which is more than the fix moved, so depth stays
 unusable.
 
+## Fifth round (2026-11-06 and 07): a night away, and the bias misses
+
+`batchF-test`. `fade-reveal` and `middle-c-small` passed and were merged: on good
+keys a touch read 5.1 mm and left them alone.
+
+| Off | What the log shows | Result |
+|---|---|---|
+| 73 s | The app kept running, and Ryan wore the headset for 1.4 s afterwards | No test: nothing was watched |
+| 17.5 h, app asleep | Anchor moved 5 mm, no check, keys looked right | Pass, though the headset came off 12 s into the 15 s watch |
+| 87 s | Anchor moved 0 mm, no check; Middle C read 5 mm across and 10 mm in height, left alone | Pass |
+| 31 s | Anchor moved 14.3 mm, with the check already up from the Middle C touch | No test of the new check |
+| 29 s, then a relaunch | Check as on every launch. Middle C read 32.2 mm (+28.1 along the keys); one touch fixed it | The fix passed |
+
+No 20+ minute return was run, and the new check has not yet had to catch anything.
+The keys looked right after the night and were 28 mm off four minutes later, so a
+shift can come after the first 15 s. The two moves after the relaunch and the 14.3 mm
+before it add up to about the 28 mm, but their directions are not logged, so the
+relaunch itself is not shown to be the cause.
+
+**Three anchors are no help, and that idea is dropped.** The witnesses read 0.0 mm
+against the primary after the night too, and all three gave the same error at Middle
+C both times (10.9 and 32.2 mm).
+
+**The calibration bias misses, for two reasons.** It holds nudges only, so a Middle C
+fix made just after calibrating is left out. And a nudge saved mid-way can outlive a
+later one over the limit: a final (-5.5, 0, -26.1) was refused, leaving (+7.2, 0, +3.2)
+from four nudges earlier, without A ever being pressed. Sideways:
+
+| Calibration | Saved bias | Total shift actually needed |
+|---|---|---|
+| 17:50, 2026-11-06 | +7.2 mm | -4.5 mm (+5.0 nudge, -9.5 Middle C) |
+| 11:40, 2026-11-07 | +5.0 mm | -10.1 mm (+3.9 nudge, -14.0 Middle C) |
+
+Ryan only needed a 1-3 mm nudge after the second, but the touch before it had moved
+the keys 14 mm. Nobody nudged height this round, so that is still untested.
+
+**Fingertips still untested against drift:** no presses after the relaunch. 423
+presses before it give the baseline: +0.5 mm along the keys, spread 3.6 mm.
+
 ## What's next
 
 1. Measure observation 2: a seated Middle C fix with the y value written
