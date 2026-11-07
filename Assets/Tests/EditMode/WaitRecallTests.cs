@@ -83,10 +83,9 @@ namespace PianoGlass.Tests.EditMode
             Assert.AreEqual(0f, fade.FlashOpacity(5.0, 100.0), 1e-6f, "nothing flashed yet");
 
             fade.Flash(5.0, 100.0);
-            Assert.AreEqual(0.15f, fade.FlashOpacity(5.0, 100.0), 1e-6f);
             Assert.AreEqual(0.15f, fade.FlashOpacity(5.0, 100.0 + MemoryFade.GlimpseHoldSeconds), 1e-6f);
             Assert.AreEqual(0f, fade.FlashOpacity(5.0, 100.0 + MemoryFade.GlimpseHoldSeconds + MemoryFade.GlimpseFadeSeconds), 1e-6f);
-            Assert.AreEqual(0f, fade.FlashOpacity(6.0, 100.0), 1e-6f, "another note stays hidden");
+            Assert.AreEqual(0f, fade.FlashOpacity(6.0, 100.0 + MemoryFade.GlimpseHoldSeconds), 1e-6f, "another note stays hidden");
         }
 
         [Test]
@@ -95,10 +94,54 @@ namespace PianoGlass.Tests.EditMode
             var fade = new MemoryFade(MemoryFade.Glimpse);
             fade.Flash(5.0, 100.0);
             fade.Flash(5.0, 110.0);
-            Assert.AreEqual(0.15f, fade.FlashOpacity(5.0, 110.0), 1e-6f);
+            Assert.AreEqual(0.15f, fade.FlashOpacity(5.0, 110.5), 1e-6f);
 
             fade.EndPass(100.0, true);
-            Assert.AreEqual(0f, fade.FlashOpacity(5.0, 110.0), 1e-6f);
+            Assert.AreEqual(0f, fade.FlashOpacity(5.0, 110.5), 1e-6f);
+        }
+
+        [Test]
+        public void ARevealFadesInAndStaysUntilThePassEnds()
+        {
+            var fade = new MemoryFade(MemoryFade.Glimpse);
+            fade.Reveal(5.0, 100.0);
+
+            Assert.AreEqual(0f, fade.FlashOpacity(5.0, 100.0), 1e-6f, "not all at once");
+            Assert.AreEqual(0.075f, fade.FlashOpacity(5.0, 100.0 + MemoryFade.RevealFadeInSeconds / 2), 1e-5f);
+            Assert.AreEqual(0.15f, fade.FlashOpacity(5.0, 100.0 + MemoryFade.RevealFadeInSeconds), 1e-6f);
+            Assert.AreEqual(0.15f, fade.FlashOpacity(5.0, 500.0), 1e-6f, "it does not go away");
+            Assert.AreEqual(0f, fade.FlashOpacity(6.0, 500.0), 1e-6f, "only that note");
+
+            fade.EndPass(100.0, true);
+            Assert.AreEqual(0f, fade.FlashOpacity(5.0, 500.0), 1e-6f);
+        }
+
+        [Test]
+        public void AskingForTheSameRevealAgainDoesNotStartItOver()
+        {
+            var fade = new MemoryFade(MemoryFade.Glimpse);
+            fade.Reveal(5.0, 100.0);
+            fade.Reveal(5.0, 103.0);
+            Assert.AreEqual(0.15f, fade.FlashOpacity(5.0, 103.0), 1e-6f);
+        }
+
+        [Test]
+        public void ARevealDuringAFlashDoesNotDip()
+        {
+            var fade = new MemoryFade(MemoryFade.Glimpse);
+            fade.Flash(5.0, 100.0);
+            fade.Reveal(5.0, 100.4);
+            Assert.AreEqual(0.15f, fade.FlashOpacity(5.0, 100.4), 1e-6f);
+            Assert.AreEqual(0.15f, fade.FlashOpacity(5.0, 100.8), 1e-6f);
+        }
+
+        [Test]
+        public void ABriefFlashFadesInToo()
+        {
+            var fade = new MemoryFade(MemoryFade.Glimpse);
+            fade.Flash(5.0, 100.0);
+            Assert.AreEqual(0f, fade.FlashOpacity(5.0, 100.0), 1e-6f);
+            Assert.AreEqual(0.075f, fade.FlashOpacity(5.0, 100.0 + MemoryFade.RevealFadeInSeconds / 2), 1e-5f);
         }
     }
 }

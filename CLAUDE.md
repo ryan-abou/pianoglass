@@ -455,7 +455,9 @@ recenters of up to 1.1 m / 180° kept the keys on the piano).
   localize or calibration the keys are drawn and A means "looks right"
   (→ Ready, `lastVerifiedUtc`), *not* play — `SongTransport` ignores that one
   press. Right grip starts a Middle C fix (touch the front edge, trigger):
-  a rigid anchor-local shift, vertical capped at 10 mm, refused over 150 mm. Ready
+  a rigid anchor-local shift, vertical capped at 10 mm, refused over 150 mm.
+  Under 6 mm sideways with under 12 mm of height it changes nothing: that is the
+  touch's own error (2026-11-05). Ready
   also returns to Verifying after 3 s or more away (headset off).
 - **All logs start with `[AnchorFlow]`**: `adb logcat -s Unity | findstr AnchorFlow`.
 
@@ -904,31 +906,42 @@ Decided while building, all confirmed by Ryan unless a branch changes it:
 - **The fade ladder (Ryan's steps and request, Claude's system, 2026-11-05):**
   100, 60, 30, 15, then a glimpse (15% for 0.6 s when a note appears, gone 0.5 s
   later), so notes always show at least briefly. It moves by keys right, not
-  timing: 90%+ one step fainter, 70-89% stays, 40-69% one step back, under 40% or
-  nothing played two steps back. Three mistakes in a row, or 5 s held at a note in
+  timing: 90%+ one step fainter, 70-89% stays, 40-69% one step back, under 40%
+  two steps back. Three mistakes in a row, or 5 s held at a note in
   wait mode, shows notes one step clearer for the rest of the pass, and a pass
   that needed help cannot go fainter. Tempo and fade never change together: tempo
   rises only at a glimpse and falls only at 100%. Values are in `MemoryFade`.
 - **Fade in wait mode (Ryan's problem and flash, Claude's measure, 2026-11-05):**
   right keys say nothing without a clock, since every key can be tried. So a stop
   counts only if it was right first time and never had to be shown (`WaitRecall`),
-  and the same ladder reads that share ("3 of 4 from memory"). At a glimpse, any
-  wrong key or 2.5 s held flashes just that note on the highway, as a glimpse shows
-  it, and again every 2.5 s; the rest of the pass stays hidden. Other steps keep
-  three mistakes or 5 s. Accuracy and rank on the card are unchanged.
+  and the same ladder reads that share ("3 of 4 from memory"). At a glimpse, a
+  wrong key flashes just that note on the highway, and 2.5 s held brings it back at
+  15% until it is played (Ryan, 2026-11-06); both fade in over 0.2 s, and the rest
+  of the pass stays hidden. Other steps keep three mistakes or 5 s. Accuracy and
+  rank on the card are unchanged.
+- **A pass with no key pressed moves nothing** (Ryan, 2026-11-06): the player has
+  most likely walked away.
 
 ### Batch D (2026-11-05): four merged, second round next
 
 Merged after one headset round: `attempt-empty` (confirming the keys after a song
 ended saved a 0% attempt), `fade-song` (whole-song fade, saved per song), `pick-bars`
 (tap the results card's pills to choose a loop), `calib-bias` (see the status doc).
-`batchD-test` was the build, `batchE-test` is the next one; neither is ever merged.
+`batchD-test` and `batchE-test` were builds; neither is ever merged.
+
+`fade-wait` passed and was merged. `batchF-test` was a build, not merged.
+
+Merged 2026-11-07 after the `batchF-test` round: `fade-reveal` (at a glimpse, a note
+brought back fades in and stays until played, and a pass with no key pressed moves
+nothing; both Ryan's) and `middle-c-small` (a Middle C touch on keys already right
+made them worse).
 
 Next round, each on its own branch:
-- `fade-wait`: Ryan's flash at a glimpse in wait mode, and judging those passes by
-  what came from memory.
-- `middle-c-small`: a Middle C touch on keys already right made them worse.
-- `anchor-trio`, `press-probe`: still measuring. Nothing visible changes.
+- `return-settle` (holds `anchor-trio`): no check after time away unless the anchor
+  moves, and nudges before the headset comes off count as the calibration bias. The
+  bias did not land the keys where they were left (status doc, fifth round), and a
+  20+ minute return has not been run.
+- `press-probe`: still measuring. Nothing visible changes.
 
 The last two only measure. Ryan would rather not use a marked controller spot on
 the piano (idea 4 in the status doc), so that is kept for if nothing else works.

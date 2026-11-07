@@ -413,6 +413,14 @@ namespace PianoGlass.Piano
                 return Fire(FlowEvent.CorrectionRejectedMoved);
             }
 
+            if (c.AlreadyRight)
+            {
+                Log($"{error} -- within what a touch can measure: keys left alone");
+                LastProblem = null;
+                CorrectionNote = $"Middle C checked: {new Vector2(rawMm.x, rawMm.z).magnitude:0} mm off, keys left alone";
+                return Fire(FlowEvent.CorrectionApplied);
+            }
+
             // The anchor is yaw-only, so its local y is world up and the
             // capped vertical stays capped.
             Vector3 local = AnchoredKeyboard.DirectionToLocal(Anchor.Pose, c.Delta);
@@ -422,11 +430,13 @@ namespace PianoGlass.Piano
 
             Vector3 appliedMm = AnchoredKeyboard.NudgeToKeyboardMm(c.Delta, layout.Right, layout.Up, layout.Forward);
             bool capped = Mathf.Abs(rawMm.y - appliedMm.y) > 0.05f;
-            Log($"{error} -- applied {Mm(appliedMm)}" + (capped ? $" (vertical capped from {rawMm.y:+0.0;-0.0} mm)" : ""));
+            bool heightIgnored = capped && appliedMm.y == 0f;
+            Log($"{error} -- applied {Mm(appliedMm)}" +
+                (heightIgnored ? " (too little height to act on)" : capped ? $" (vertical capped from {rawMm.y:+0.0;-0.0} mm)" : ""));
 
             LastProblem = null;
             CorrectionNote = $"Middle C fix: x {appliedMm.x:+0.0;-0.0;0} · y {appliedMm.y:+0.0;-0.0;0} · " +
-                             $"z {appliedMm.z:+0.0;-0.0;0} mm" + (capped ? $"   (y capped; measured {rawMm.y:+0.0;-0.0})" : "");
+                             $"z {appliedMm.z:+0.0;-0.0;0} mm" + (capped && !heightIgnored ? $"   (y capped; measured {rawMm.y:+0.0;-0.0})" : "");
             PlacementChanged?.Invoke();
             return Fire(FlowEvent.CorrectionApplied);
         }

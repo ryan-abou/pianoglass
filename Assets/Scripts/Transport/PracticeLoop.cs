@@ -191,7 +191,7 @@ namespace PianoGlass.Transport
         }
 
         /// <summary>The pass that just wrapped moves the ladder. A pass nobody
-        /// played in has no record, and brings the notes back.</summary>
+        /// played in has no record and leaves it where it is.</summary>
         private void MoveFade()
         {
             if (!clock.IsFading) return;
@@ -226,7 +226,7 @@ namespace PianoGlass.Transport
                 {
                     _heldFor = 0f;
                     _recall.NeededHelp();
-                    if (glimpse) clock.Fade.Flash(clock.HoldAt, Time.unscaledTimeAsDouble);
+                    if (glimpse) clock.Fade.Reveal(clock.HoldAt, Time.unscaledTimeAsDouble);
                     else clock.Fade.AskForHelp();
                 }
             }
