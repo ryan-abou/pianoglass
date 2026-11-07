@@ -335,6 +335,11 @@ from four nudges earlier, without A ever being pressed. Sideways:
 Ryan only needed a 1-3 mm nudge after the second, but the touch before it had moved
 the keys 14 mm. Nobody nudged height this round, so that is still untested.
 
+Branch `calib-bias-total`: the bias is the nudge plus any Middle C fixes since the
+touches, up to 25 mm together, and a calibration teaches nothing until A confirms it.
+A touch that leaves the keys alone is not counted, nor is anything after the headset
+has come off. Not yet run on the headset.
+
 **Fingertips still untested against drift:** no presses after the relaunch. 423
 presses before it give the baseline: +0.5 mm along the keys, spread 3.6 mm.
 

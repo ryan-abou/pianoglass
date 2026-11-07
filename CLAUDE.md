@@ -163,7 +163,7 @@ on them and none can be played by accident.
 |---|---|---|---|---|
 | Capture the next calibration point | right trigger | — | `OvrCalibrationInput` | Two touches, lowest then highest key |
 | Start calibration over | B, or left trigger | — | `OvrCalibrationInput` | |
-| Nudge left/right, nearer/further | right stick | — | `OvrCalibrationInput` | Rigid shift. Made after a fresh calibration, before the headset next comes off, it is what the next one starts from |
+| Nudge left/right, nearer/further | right stick | — | `OvrCalibrationInput` | Rigid shift. Once a fresh calibration is confirmed with A, the nudge and any Middle C fix since the touches, up to 25 mm together and before the headset next comes off, are what the next one starts from |
 | Nudge up/down | left stick up/down | — | `OvrCalibrationInput` | Axis-locked against yaw |
 | Turn the keyboard (yaw) | left stick left/right | — | `OvrCalibrationInput` | ±10° |
 | Clear the nudge | right stick click | — | `OvrCalibrationInput` | A fresh calibration resets it to the steady offset learned from the last one |
@@ -941,6 +941,8 @@ Next round, each on its own branch:
   moves, and nudges before the headset comes off count as the calibration bias. The
   bias did not land the keys where they were left (status doc, fifth round), and a
   20+ minute return has not been run.
+- `calib-bias-total` (holds `return-settle`): the bias now holds nudge and Middle C
+  fixes together, and only from a placement confirmed with A.
 - `press-probe`: still measuring. Nothing visible changes.
 
 The last two only measure. Ryan would rather not use a marked controller spot on
