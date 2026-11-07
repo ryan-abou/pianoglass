@@ -904,18 +904,21 @@ Decided while building, all confirmed by Ryan unless a branch changes it:
 - **The fade ladder (Ryan's steps and request, Claude's system, 2026-11-05):**
   100, 60, 30, 15, then a glimpse (15% for 0.6 s when a note appears, gone 0.5 s
   later), so notes always show at least briefly. It moves by keys right, not
-  timing: 90%+ one step fainter, 70-89% stays, 40-69% one step back, under 40% or
-  nothing played two steps back. Three mistakes in a row, or 5 s held at a note in
+  timing: 90%+ one step fainter, 70-89% stays, 40-69% one step back, under 40%
+  two steps back. Three mistakes in a row, or 5 s held at a note in
   wait mode, shows notes one step clearer for the rest of the pass, and a pass
   that needed help cannot go fainter. Tempo and fade never change together: tempo
   rises only at a glimpse and falls only at 100%. Values are in `MemoryFade`.
 - **Fade in wait mode (Ryan's problem and flash, Claude's measure, 2026-11-05):**
   right keys say nothing without a clock, since every key can be tried. So a stop
   counts only if it was right first time and never had to be shown (`WaitRecall`),
-  and the same ladder reads that share ("3 of 4 from memory"). At a glimpse, any
-  wrong key or 2.5 s held flashes just that note on the highway, as a glimpse shows
-  it, and again every 2.5 s; the rest of the pass stays hidden. Other steps keep
-  three mistakes or 5 s. Accuracy and rank on the card are unchanged.
+  and the same ladder reads that share ("3 of 4 from memory"). At a glimpse, a
+  wrong key flashes just that note on the highway, and 2.5 s held brings it back at
+  15% until it is played (Ryan, 2026-11-06); both fade in over 0.2 s, and the rest
+  of the pass stays hidden. Other steps keep three mistakes or 5 s. Accuracy and
+  rank on the card are unchanged.
+- **A pass with no key pressed moves nothing** (Ryan, 2026-11-06): the player has
+  most likely walked away.
 
 ### Batch D (2026-11-05): four merged, second round next
 
