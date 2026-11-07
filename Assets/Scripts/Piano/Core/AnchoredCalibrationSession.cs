@@ -251,8 +251,16 @@ namespace PianoGlass.Piano
         /// so the anchor has had no reason to shift and any nudge is its bias.
         /// (2026-11-05: Ryan nudged 10 mm of height a minute after confirming.)</summary>
         private bool _learningBias;
-        /// <summary>A bigger nudge than this is not a steady offset from the
-        /// touches; something else was wrong, and it is not kept.</summary>
+        /// <summary>Middle C shifts since that calibration, keyboard mm. The keys
+        /// land where they were left only if the bias holds these with the nudge
+        /// (2026-11-07: it held +5 sideways when -10 was needed in all).</summary>
+        private Vector3 _biasFixMm;
+        /// <summary>A has accepted this placement. Until then the sticks may only
+        /// be passing through a value, and B may be throwing the placement away.</summary>
+        private bool _biasConfirmed;
+        /// <summary>A bigger shift than this, nudge and fixes together, is not a
+        /// steady offset from the touches; something else was wrong, and it is
+        /// not kept.</summary>
         public const float MaxBiasMm = 25f;
         /// <summary>Set by an accepted Middle C touch for the WriteProfile
         /// that follows: the applied shift, anchor-local mm.</summary>
@@ -339,6 +347,7 @@ namespace PianoGlass.Piano
         {
             // A load still in flight belongs to the attempt being abandoned.
             _loadGeneration++;
+            _learningBias = false;
             return Fire(FlowEvent.RecalibrateRequested);
         }
 
@@ -429,6 +438,11 @@ namespace PianoGlass.Piano
             BaselineWitnesses();
 
             Vector3 appliedMm = AnchoredKeyboard.NudgeToKeyboardMm(c.Delta, layout.Right, layout.Up, layout.Forward);
+            if (_learningBias)
+            {
+                _biasFixMm += appliedMm;
+                _biasConfirmed = false;
+            }
             bool capped = Mathf.Abs(rawMm.y - appliedMm.y) > 0.05f;
             bool heightIgnored = capped && appliedMm.y == 0f;
             Log($"{error} -- applied {Mm(appliedMm)}" +
@@ -556,7 +570,7 @@ namespace PianoGlass.Piano
             if (store == null) { Log("adjustment not saved: " + error); return false; }
 
             store.tipNudgeKeyboardMm = NudgeMm;
-            if (_learningBias && NudgeMm.magnitude <= MaxBiasMm) store.calibrationBiasMm = NudgeMm;
+            if (_learningBias && _biasConfirmed) KeepBias(store);
             bool geometry = Anchor != null && Anchor.Id == SavedAnchorUuid &&
                             PianoProfileEdits.ApplyGeometry(store, Anchor.Id, LocalGeometry);
 
@@ -904,6 +918,8 @@ namespace PianoGlass.Piano
                 if (store.hasTipOffset)
                 {
                     _learningBias = true;
+                    _biasConfirmed = false;
+                    _biasFixMm = Vector3.zero;
                     if (NudgeMm != store.calibrationBiasMm)
                     {
                         Log($"fresh calibration: nudge {Mm(NudgeMm)} -> calibration bias {Mm(store.calibrationBiasMm)}");
@@ -995,15 +1011,25 @@ namespace PianoGlass.Piano
             if (store.ActiveProfile != null && _witnesses.Count > 0) store.ActiveProfile.witnessAnchors = SavedWitnesses(_witnesses);
             if (_learningBias)
             {
-                if (NudgeMm.magnitude <= MaxBiasMm)
-                {
-                    store.calibrationBiasMm = NudgeMm;
-                    Log($"calibration bias now {Mm(NudgeMm)}");
-                }
-                else Log($"nudge {Mm(NudgeMm)} is too big to be a steady offset: calibration bias stays {Mm(store.calibrationBiasMm)}");
+                _biasConfirmed = true;
+                KeepBias(store);
             }
             if (!_serializer.Save(store, out error)) { Log("verified not recorded: " + error); return; }
             Log($"verified by the player: lastVerifiedUtc={utc}");
+        }
+
+        /// <summary>Everything the keys moved since the touches, in the store
+        /// about to be saved.</summary>
+        private void KeepBias(PianoProfileStore store)
+        {
+            Vector3 total = NudgeMm + _biasFixMm;
+            if (total == store.calibrationBiasMm) return;
+            if (total.magnitude <= MaxBiasMm)
+            {
+                store.calibrationBiasMm = total;
+                Log($"calibration bias now {Mm(total)} (nudge {Mm(NudgeMm)}, Middle C {Mm(_biasFixMm)})");
+            }
+            else Log($"{Mm(total)} is too big to be a steady offset: calibration bias stays {Mm(store.calibrationBiasMm)}");
         }
 
         // ------------------------------------------------------------------

@@ -399,6 +399,107 @@ namespace PianoGlass.Tests.EditMode
             Assert.AreEqual(Vector3.zero, s.NudgeMm);
         }
 
+        /// <summary>A Middle C touch this far along the keys from where they are drawn.</summary>
+        private static void FixAlongTheKeys(AnchoredCalibrationSession s, float metres)
+        {
+            StartCorrecting(s);
+            PianoKeyLayout layout = s.BuildLayout();
+            Run(s.OnMiddleCTouchedAsync(layout.FrontEdgeCenter(60) + layout.Right * metres));
+        }
+
+        [Test]
+        public void AMiddleCFixBeforeConfirmingCountsInTheBias()
+        {
+            // 2026-11-07: the bias held +5 while the keys needed -10 in all.
+            AnchoredCalibrationSession s = CalibratedWithError(Vector3.zero);
+            MarkTipMeasured();
+            Recalibrated(s);
+            s.Nudge(new Vector3(0.005f, 0f, 0f));
+            FixAlongTheKeys(s, -0.014f);
+            s.Confirm();
+
+            Recalibrated(s);
+
+            Near(new Vector3(-9f, 0f, 0f), s.NudgeMm, 1e-2f, "nudge and fix together");
+        }
+
+        [Test]
+        public void AFixCountsOnlyInTheCalibrationItWasMadeFor()
+        {
+            AnchoredCalibrationSession s = CalibratedWithError(Vector3.zero);
+            MarkTipMeasured();
+            Recalibrated(s);
+            FixAlongTheKeys(s, -0.014f);
+            s.Confirm();
+            Recalibrated(s);
+            s.Confirm();
+
+            Recalibrated(s);
+
+            Near(new Vector3(-14f, 0f, 0f), s.NudgeMm, 1e-2f, "not counted twice");
+        }
+
+        [Test]
+        public void AMiddleCTouchThatLeavesTheKeysAloneIsNotInTheBias()
+        {
+            AnchoredCalibrationSession s = CalibratedWithError(Vector3.zero);
+            MarkTipMeasured();
+            Recalibrated(s);
+            FixAlongTheKeys(s, -0.003f);
+            s.Confirm();
+
+            Recalibrated(s);
+
+            Assert.AreEqual(Vector3.zero, s.NudgeMm);
+        }
+
+        [Test]
+        public void AMiddleCFixAfterTheHeadsetCameOffIsNotInTheBias()
+        {
+            AnchoredCalibrationSession s = ReadySession();
+            MarkTipMeasured();
+            Recalibrated(s);
+            s.Confirm();
+            _time = _time.AddSeconds(AnchoredCalibrationSession.AwaySeconds + 1);
+            s.UpdateTracking();
+            FixAlongTheKeys(s, -0.020f); // following a drifted anchor
+            s.Confirm();
+
+            Recalibrated(s);
+
+            Assert.AreEqual(Vector3.zero, s.NudgeMm);
+        }
+
+        [Test]
+        public void ACalibrationNeverConfirmedTeachesNothing()
+        {
+            // 2026-11-06: B before A left a value the sticks had only passed through.
+            AnchoredCalibrationSession s = CalibratedWithError(Vector3.zero);
+            MarkTipMeasured();
+            Recalibrated(s);
+            s.Nudge(new Vector3(0.007f, 0f, 0.003f));
+            s.Persist();
+
+            Recalibrated(s);
+
+            Assert.AreEqual(Vector3.zero, s.NudgeMm);
+        }
+
+        [Test]
+        public void TooMuchInAllIsNotABiasEvenIfEachPartIsSmall()
+        {
+            AnchoredCalibrationSession s = CalibratedWithError(Vector3.zero);
+            MarkTipMeasured();
+            Recalibrated(s);
+            s.Nudge(new Vector3(-0.015f, 0f, 0f));
+            FixAlongTheKeys(s, -0.015f);
+            s.Confirm();
+
+            Recalibrated(s);
+
+            Assert.AreEqual(Vector3.zero, s.NudgeMm);
+        }
+
         // ------------------------------------------------------------------
         // Back from time away: the keys get looked at again
         // ------------------------------------------------------------------
