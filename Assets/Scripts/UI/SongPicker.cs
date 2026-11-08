@@ -78,8 +78,15 @@ namespace PianoGlass.UI
             SetVisible(false);
         }
 
-        /// <summary>Show the list. It waits if calibration needs the player first.</summary>
-        public void Open() => _wantOpen = true;
+        /// <summary>Show the list. It waits if calibration needs the player
+        /// first. The results card can come up while the last note is still
+        /// sounding, so this stops the clock, or the list would close again
+        /// because the song counts as playing.</summary>
+        public void Open()
+        {
+            _wantOpen = true;
+            if (transport != null) transport.Pause();
+        }
 
         /// <summary>Hide the list, keeping the current song.</summary>
         public void Close() => _wantOpen = false;

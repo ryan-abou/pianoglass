@@ -147,6 +147,12 @@ namespace PianoGlass.Transport
             if (clock.IsPlaying) clock.Pause(); else clock.Play();
         }
 
+        /// <summary>Stops the clock where it is.</summary>
+        public void Pause()
+        {
+            if (clock != null) clock.Pause();
+        }
+
         /// <summary>A new song is loaded: stopped at the top, out of any loop.</summary>
         private void StopAtTop()
         {
