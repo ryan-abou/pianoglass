@@ -28,6 +28,11 @@ namespace PianoGlass.Highway
     /// than one object per note in the song, so a long song costs no more
     /// than a short one. A note keeps its slab for as long as it is showing.
     ///
+    /// Practicing one hand, your notes are solid and the other hand's are
+    /// outlines in their own colour. Outlines have no name, never change
+    /// colour and don't fade: memory fade tests your memory of your own part.
+    /// Scoring never looks at them, so nothing here has to tell it.
+    ///
     /// Thin Cubes, not the Quad primitive: PianoKeyHighlighter hit this exact
     /// choice for the same reason -- a Quad's normal can end up facing away
     /// from the player with nothing in the console to explain why it's
@@ -68,6 +73,10 @@ namespace PianoGlass.Highway
         [SerializeField] private Material noteMaterial;
         [Tooltip("Transparent, for memory fade. Assigned by SceneSetup.")]
         [SerializeField] private Material fadedNoteMaterial;
+        [Tooltip("PianoGlass/NoteOutline, for the other hand's notes. Assigned by SceneSetup.")]
+        [SerializeField] private Material outlineMaterial;
+        [Tooltip("Metres an outline sits behind a solid note on the same key.")]
+        [SerializeField] private float outlineBehind = 0.0005f;
         [Tooltip("Thickness of the wall, front to back. It's meant to read as a " +
                  "flat plane, so keep this small.")]
         [SerializeField] private float slabThickness = 0.006f;
@@ -317,7 +326,7 @@ namespace PianoGlass.Highway
         }
 
         /// <summary>This note's slab, taking a free one if it has none yet.</summary>
-        private Slab SlabFor(int index, SongNote note, float keyWidth)
+        private Slab SlabFor(int index, SongNote note, float keyWidth, bool named)
         {
             Slab slab = _slabOfNote[index];
             if (slab != null) return slab;
@@ -328,7 +337,7 @@ namespace PianoGlass.Highway
             _inUse.Add(slab);
             slab.Renderer.enabled = true;
 
-            if (slab.Label != null)
+            if (slab.Label != null && named)
             {
                 string name = LabelName(note.Pitch);
                 if (slab.Label.text != name) slab.Label.text = name;
@@ -392,7 +401,8 @@ namespace PianoGlass.Highway
             {
                 int index = _window.NoteAt(i);
                 SongNote note = _song.Notes[index];
-                if (!note.BelongsTo(_hand)) continue;
+                bool mine = note.BelongsTo(_hand);
+                if (!mine && outlineMaterial == null) continue;
                 if (!layout.TryGetKey(note.Pitch, out PianoKey key)) continue; // outside this keyboard
 
                 (float b, float height) = SlabGeometry.VerticalExtent(
@@ -405,20 +415,25 @@ namespace PianoGlass.Highway
                 // In a practice loop, only the loop's own notes are drawn, and
                 // a fully faded note not at all: being judged does not bring it
                 // back, nor does help that arrives after it was judged.
-                float opacity = clock.NoteOpacityAt(note.StartTime, leadTimeSeconds);
-                if (_outcome[index] == NoteOutcome.Pending) _noteCeiling[index] = opacity;
-                else opacity = Mathf.Min(opacity, _noteCeiling[index]);
+                float opacity = 1f;
+                if (mine)
+                {
+                    opacity = clock.NoteOpacityAt(note.StartTime, leadTimeSeconds);
+                    if (_outcome[index] == NoteOutcome.Pending) _noteCeiling[index] = opacity;
+                    else opacity = Mathf.Min(opacity, _noteCeiling[index]);
+                }
 
                 bool visible = height > 0f && opacity > 0f &&
                                (!(clock.Loop is LoopRange loop) || loop.Holds(note.StartTime));
                 if (!visible) continue;
 
-                Slab slab = SlabFor(index, note, key.Width);
+                Slab slab = SlabFor(index, note, key.Width, mine);
                 slab.Frame = _frame;
-                if (slab.Material != solid)
+                Material material = mine ? solid : outlineMaterial;
+                if (slab.Material != material)
                 {
-                    slab.Material = solid;
-                    if (solid != null) slab.Renderer.sharedMaterial = solid;
+                    slab.Material = material;
+                    if (material != null) slab.Renderer.sharedMaterial = material;
                 }
 
                 // PianoKey.Center is the middle of the key's playing surface
@@ -426,7 +441,7 @@ namespace PianoGlass.Highway
                 // far edge -- away from the player -- is Center minus half
                 // the key's own depth along Forward.
                 Vector3 farEdge = key.Center - layout.Forward * (key.Depth * 0.5f + depthOffset);
-                Vector3 pos = farEdge + tiltedUp * (b + height * 0.5f);
+                Vector3 pos = farEdge + tiltedUp * (b + height * 0.5f) - normal * (mine ? 0f : outlineBehind);
                 Transform t = slab.Renderer.transform;
                 t.SetPositionAndRotation(pos, tiltRotation);
                 t.localScale = new Vector3(key.Width * widthFraction, height, slabThickness);
@@ -434,7 +449,7 @@ namespace PianoGlass.Highway
                 TextMeshPro label = slab.Label;
                 if (label != null)
                 {
-                    bool fits = NoteLabel.Fits(height, labelHeight, labelPadding);
+                    bool fits = mine && NoteLabel.Fits(height, labelHeight, labelPadding);
                     SetLabelVisible(label, fits);
                     if (fits)
                     {
@@ -451,8 +466,10 @@ namespace PianoGlass.Highway
                     }
                 }
 
-                Color color = OutcomeTint.FadedSlab(handColor, _outcome[index], now - _judgedAt[index],
-                                                    OutcomeTint.Hit, OutcomeTint.Missed, opacity);
+                Color color = mine
+                    ? OutcomeTint.FadedSlab(handColor, _outcome[index], now - _judgedAt[index],
+                                            OutcomeTint.Hit, OutcomeTint.Missed, opacity)
+                    : current.Palette.OutlineColor(note.Hand);
                 if (color != slab.Applied) SetSlabColor(slab, color);
             }
 
