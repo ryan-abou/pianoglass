@@ -967,6 +967,171 @@ namespace PianoGlass.EditorTools
             Debug.Log("[SceneSetup] Memory fade configured.");
         }
 
+        private const string SongsFolder = "Assets/Songs";
+        private const string NotePalettePath = "Assets/UI/NotePalette.asset";
+        private const string OutlineShaderPath = "Assets/Shaders/NoteOutline.shader";
+        private const string OutlineMaterialPath = "Assets/NoteOutline.mat";
+
+        // The picker is centred on the keyboard, about 25 cm above the top of
+        // the highway: the wall is 0.5 m long and leans back 60 degrees, so its
+        // top is 0.25 m up and 0.433 m back. A placeholder spot until the menus
+        // are redesigned for hand tracking.
+        private const float PickerHeightAboveKeys = 0.50f;
+        private const float PickerDepthOffset = 0.433f;
+        private const float PickerTiltDegrees = 15f;
+
+        /// <summary>
+        /// MIDI songs: the current song with the three built-in songs and the
+        /// colour palette, the outline material, and the Liquid Glass picker.
+        /// Everything that reads the song is pointed at it here. Idempotent.
+        /// </summary>
+        [MenuItem("PianoGlass/Scene/Configure Songs")]
+        public static void ConfigureSongs()
+        {
+            Scene scene = OpenScene();
+
+            var calibration = Object.FindAnyObjectByType<KeyboardCalibration>();
+            var transport = Object.FindAnyObjectByType<SongTransport>();
+            var keeper = Object.FindAnyObjectByType<ScoreKeeper>();
+            var highway = Object.FindAnyObjectByType<NoteHighway>();
+            var card = Object.FindAnyObjectByType<ResultsCard>(FindObjectsInactive.Include);
+            TMPro.TMP_FontAsset font = GlassFont.GetOrCreate();
+            Material glass = GetOrCreateGlassMaterial();
+            PianoGlass.UI.GlassTokens tokens = GetOrCreateGlassTokens();
+            if (calibration == null || transport == null || keeper == null || highway == null || card == null ||
+                font == null || glass == null || tokens == null)
+            {
+                Debug.LogError("[SceneSetup] Songs need the calibration, transport, scoring, highway and results card -- " +
+                               "run the earlier Configure steps first.");
+                return;
+            }
+
+            NotePalette palette = GetOrCreateNotePalette();
+            CurrentSong current = GetOrAdd<CurrentSong>("CurrentSong");
+
+            var songs = new SerializedObject(current);
+            SerializedProperty list = songs.FindProperty("builtInSongs");
+            string[] files = { "TwinkleTwinkle.mid", "OdeToJoy.mid", "MinuetInG.mid" };
+            list.arraySize = files.Length;
+            for (int i = 0; i < files.Length; i++)
+            {
+                var asset = AssetDatabase.LoadAssetAtPath<MidiSongAsset>($"{SongsFolder}/{files[i]}");
+                if (asset == null) Debug.LogError($"[SceneSetup] {SongsFolder}/{files[i]} did not import as a song.");
+                list.GetArrayElementAtIndex(i).objectReferenceValue = asset;
+            }
+            songs.FindProperty("palette").objectReferenceValue = palette;
+            songs.FindProperty("resultsCard").objectReferenceValue = card;
+            songs.FindProperty("transport").objectReferenceValue = transport;
+            songs.ApplyModifiedProperties();
+
+            void Point(Component c)
+            {
+                if (c == null) return;
+                var so = new SerializedObject(c);
+                so.FindProperty("current").objectReferenceValue = current;
+                so.ApplyModifiedProperties();
+            }
+            Point(transport);
+            Point(keeper);
+            Point(highway);
+            Point(Object.FindAnyObjectByType<Metronome>());
+            Point(Object.FindAnyObjectByType<PracticeLoop>());
+            Point(Object.FindAnyObjectByType<PianoKeyHighlighter>());
+
+            var highwaySo = new SerializedObject(highway);
+            highwaySo.FindProperty("outlineMaterial").objectReferenceValue = GetOrCreateOutlineMaterial();
+            highwaySo.ApplyModifiedProperties();
+
+            PianoGlass.UI.SongPicker picker = ConfigurePicker(calibration, current, transport, tokens, font, glass);
+
+            var cardSo = new SerializedObject(card);
+            cardSo.FindProperty("picker").objectReferenceValue = picker;
+            cardSo.ApplyModifiedProperties();
+
+            GetOrAdd<PianoGlass.UI.EditorUiPointer>("EditorUiPointer");
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            Debug.Log($"[SceneSetup] Songs configured: {files.Length} built-in, picker {PickerHeightAboveKeys} m above the keys.");
+        }
+
+        private static PianoGlass.UI.SongPicker ConfigurePicker(
+            KeyboardCalibration calibration, CurrentSong current, SongTransport transport,
+            PianoGlass.UI.GlassTokens tokens, TMPro.TMP_FontAsset font, Material glass)
+        {
+            var picker = Object.FindAnyObjectByType<PianoGlass.UI.SongPicker>(FindObjectsInactive.Include);
+            GameObject go;
+            if (picker != null) go = picker.gameObject;
+            else
+            {
+                go = new GameObject("SongPicker", typeof(RectTransform));
+                go.AddComponent<Canvas>();
+            }
+
+            var canvas = go.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.WorldSpace;
+            canvas.worldCamera = Camera.main;
+            go.transform.localScale = Vector3.one * 0.001f;
+
+            PianoGlass.UI.GlassPanel panel = AddGlass(go, glass, tokens);
+            var panelSo = new SerializedObject(panel);
+            panelSo.FindProperty("paddingMetres").vector2Value = Vector2.zero;
+            panelSo.ApplyModifiedProperties();
+
+            if (picker == null) picker = go.AddComponent<PianoGlass.UI.SongPicker>();
+            var so = new SerializedObject(picker);
+            so.FindProperty("current").objectReferenceValue = current;
+            so.FindProperty("transport").objectReferenceValue = transport;
+            so.FindProperty("calibration").objectReferenceValue = calibration;
+            so.FindProperty("tip").objectReferenceValue = Object.FindAnyObjectByType<ControllerTipCalibration>();
+            so.FindProperty("tokens").objectReferenceValue = tokens;
+            so.FindProperty("font").objectReferenceValue = font;
+            so.FindProperty("textMaterial").objectReferenceValue = GlassTextMaterial.GetOrCreate(font);
+            so.FindProperty("glassMaterial").objectReferenceValue = glass;
+            so.ApplyModifiedProperties();
+
+            CanvasCalibrationFollower follower = go.GetComponent<CanvasCalibrationFollower>();
+            if (follower == null) follower = go.AddComponent<CanvasCalibrationFollower>();
+            var followerSo = new SerializedObject(follower);
+            followerSo.FindProperty("calibration").objectReferenceValue = calibration;
+            followerSo.FindProperty("depthOffset").floatValue = PickerDepthOffset;
+            followerSo.FindProperty("heightAboveKeys").floatValue = PickerHeightAboveKeys;
+            followerSo.FindProperty("tiltDegrees").floatValue = PickerTiltDegrees;
+            followerSo.ApplyModifiedProperties();
+            return picker;
+        }
+
+        private static NotePalette GetOrCreateNotePalette()
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<NotePalette>(NotePalettePath);
+            if (existing != null) return existing;
+
+            if (!AssetDatabase.IsValidFolder(UiFolder)) AssetDatabase.CreateFolder("Assets", "UI");
+            var palette = ScriptableObject.CreateInstance<NotePalette>();
+            AssetDatabase.CreateAsset(palette, NotePalettePath);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"[SceneSetup] created {NotePalettePath}");
+            return palette;
+        }
+
+        private static Material GetOrCreateOutlineMaterial()
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<Material>(OutlineMaterialPath);
+            if (existing != null) return existing;
+
+            var shader = AssetDatabase.LoadAssetAtPath<Shader>(OutlineShaderPath);
+            if (shader == null)
+            {
+                Debug.LogError($"[SceneSetup] {OutlineShaderPath} not found -- no outline material.");
+                return null;
+            }
+            var mat = new Material(shader) { name = "NoteOutline" };
+            AssetDatabase.CreateAsset(mat, OutlineMaterialPath);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"[SceneSetup] created {OutlineMaterialPath}");
+            return mat;
+        }
+
         [MenuItem("PianoGlass/Scene/Remove Test Cube")]
         public static void RemoveTestCube()
         {
@@ -1118,7 +1283,7 @@ namespace PianoGlass.EditorTools
                 return null;
             }
 
-            var mat = new Material(shader) { color = new Color(0.40f, 0.68f, 0.95f, 1f) };
+            var mat = new Material(shader) { color = NotePalette.DefaultRightHand };
             AssetDatabase.CreateAsset(mat, NoteMaterialPath);
             AssetDatabase.SaveAssets();
             Debug.Log($"[SceneSetup] created {NoteMaterialPath}");
