@@ -196,10 +196,21 @@ chord in the right hand. `SongSources/` is deleted after the move.
 **Licences**: `Assets/Songs/SOURCES.md` records, for each song, that the
 composition is public domain (traditional French melody 1761; Beethoven 1824;
 Petzold c. 1725), and who made the file. Twinkle and Ode are written for
-PianoGlass and released as CC0. **For the Minuet, Ryan fills in where the file
-came from.** If you made it yourself, say so. If it was downloaded, #2 only
-allows a clear public-domain or CC0 licence, so write the source and its
-licence. That covers the "write down where each file came from" item on #2.
+PianoGlass and released as CC0. The Minuet's line, checked 2026-11-07:
+
+> Minuet in G major, BWV Anh. 114 (Christian Petzold, c. 1725, public domain).
+> Source sheet: the PianoXML engraving, marked "Public Domain (PianoXML
+> typeset)" at the foot of the score, downloaded from
+> https://en.truongca.com/nhac/7294-bach-minuet-in-g-major-bwv-anh-114 .
+> Turned into MIDI by Ryan with help from Claude, and checked bar by bar
+> against that sheet. Repeats are not written out.
+
+The website itself names no licence, only a general "for reference,
+non-commercial" note. The **sheet's own public-domain label** is what passes
+#2's rule. A copy of that PDF is kept next to the song as
+`Assets/Songs/sources/MinuetInG-PianoXML.pdf`, so the evidence survives if the
+site changes. That covers the "write down where each file came from" item on
+#2.
 
 Twinkle and Ode are written by an editor-only script,
 `Assets/Editor/StarterSongWriter.cs` (menu *PianoGlass → Songs → Write starter
@@ -222,12 +233,13 @@ is the opening of the Minuet in G major, BWV Anh. 114.
 | Tempo setting for 60 BPM | 50% | 50% |
 
 Things for you to decide. I haven't changed anything about the study:
-1. **Minuet bar 8.** Your file has **B4 (1 beat) then A4 (2 beats)**. The
-   editions I know hold **A4 for the whole bar**. This bar is inside Passage
-   B, so please check it against your sheet along with bars 25, 26, 29 and the
-   last chord. Two more things to look at while you're there: bar 28's left
-   hand holds D4 for 2 beats and then rests, and bars 25, 26 and 29 have
-   overlapping left-hand notes (two voices).
+1. **Minuet notes, checked against the source sheet (2026-11-07).** Bar 8
+   (B4 then A4, inside Passage B), bar 28 (left hand D4 then a rest) and the
+   last chord (B3 D4 G4) all match the PianoXML sheet. Other editions may
+   differ in small places. For the study, Passage B is this edition, so write
+   "PianoXML edition" in the study notes. Still to check by eye: bars 25 and
+   26, where the left hand has two voices and the picture was too small for me
+   to be sure.
 2. **"Matched for note count and range."** The counts are close (30 vs 33),
    but the range isn't: the Minuet passage spans almost twice as many keys and
    has eighth notes where the Ode has quarters. Changing a passage may need an
@@ -316,8 +328,8 @@ All of these must be true. Each step names how it's checked.
    check*. *(Unity MCP)*
 3. **Files**: you open `TwinkleTwinkle.mid`, `OdeToJoy.mid` and
    `MinuetInG.mid` in MuseScore, and each looks and sounds like a real
-   recording. The Minuet matches your sheet at bars 8, 25, 26, 29 and the last
-   chord. *(Ryan)*
+   recording. The Minuet matches the PianoXML sheet, including bars 25 and 26.
+   *(Ryan)*
 4. **Headset**: on the Quest, with the keyboard plugged in: pick Ode to Joy →
    Right, play it, see your notes solid blue and the left hand outlined in
    sand, and get a results card. Press Songs, pick Minuet → Left, play bars
