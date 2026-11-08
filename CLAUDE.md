@@ -146,6 +146,13 @@ these steps exactly. Ask before force-pushing, rewriting history, or deleting a
 branch. If a merge reports a conflict, stop and explain it rather than
 resolving it silently.
 
+Whenever you mention an issue, write its number and title together, like
+"#1 MIDI file loading". When you start work on an issue, move its card to Doing
+on the project board (github.com/users/ryan-abou/projects/2) with gh, and tell
+me in one line, like "Moved #1 MIDI file loading to Doing." PRs must say
+"Closes #N". When a PR is merged, tell me which issues it closed, with their
+titles, and that GitHub will move them to Done.
+
 Never add Co-Authored-By lines, 'Generated with Claude Code' footers, or any
 Claude/AI attribution to commits, PR descriptions, issues, or comments.
 
