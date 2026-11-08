@@ -5,6 +5,7 @@ PianoGlass. One line each, in alphabetical order, with an example from this
 project. Add a word the first time it comes up.
 
 - **APK**: the single app file that gets installed on the headset, like an installer on a PC. PianoGlass example: `Builds\PianoGlass.apk` (about 61 MB), put on the Quest with `adb install -r`.
+- **batchmode**: running Unity with no window, from a command. PianoGlass example: the tests and `[SongCheck] PASS` both run this way while the editor is closed.
 - **branch**: a separate copy of the work where changes can be tried without touching the safe version. PianoGlass example: `drop-template-packages` holds the package removal until it passes on the headset, while `main` stays the version that works.
 - **build**: turning the Unity project into an app the headset can run. PianoGlass example: `.\build.ps1` makes the APK and takes about 6 to 12 minutes.
 - **commit**: a saved snapshot of your changes with a short note saying what changed. PianoGlass example: "Remove unused template packages" is one commit.
@@ -21,8 +22,9 @@ project. Add a word the first time it comes up.
 - **Play Mode**: running the app inside the Unity Editor on the PC, without the headset. PianoGlass example: the song check runs in Play Mode and prints `[SongCheck] PASS` in the Console.
 - **pooling**: reusing a small set of objects over and over instead of making a new one each time, like a restaurant washing plates instead of buying new ones. PianoGlass example: the highway reuses a few dozen note slabs as notes scroll by, instead of one per note in the song.
 - **PR (pull request)**: a request on GitHub to merge a branch into `main`, where you can see every change before it goes in. PianoGlass example: a PR that says "Closes #1" closes issue #1 by itself when it is merged.
+- **shader**: a small program that tells the graphics chip how to colour something. PianoGlass example: `NoteOutline.shader` draws only the edge of the other hand's notes.
 - **tag**: a name stuck on one commit so you can find it again, like a bookmark. PianoGlass example: `milestone-slice-playable` marks the first version where a song could be played.
 - **tempo map**: the list of where every beat of a song falls in seconds, worked out once from the MIDI file. PianoGlass example: it keeps bar lines on the notes in a song that slows down part-way.
-- **test**: a small piece of code that checks another piece of code gives the right answer. PianoGlass example: 578 tests check things like the scoring and calibration maths without opening the headset.
+- **test**: a small piece of code that checks another piece of code gives the right answer. PianoGlass example: 727 tests check things like the scoring and calibration maths without opening the headset.
 - **tick**: the small step of time a MIDI file counts in, a slice of one beat. PianoGlass example: the Minuet file uses 480 ticks per beat.
 - **track**: one strand of a MIDI file, usually one staff of the sheet music. PianoGlass example: the Minuet file has a "Right Hand" track and a "Left Hand" track.

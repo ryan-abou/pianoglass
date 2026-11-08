@@ -199,8 +199,12 @@ compensation, results card, tempo, metronome, loops, auto-tempo, wait mode,
 memory fade. On branches: `return-settle` (holds `anchor-trio`), `press-probe`,
 `calib-bias-total`.
 
-Next: Phase 3, starting with MIDI file loading (F38): the board's To do column, top to
-bottom. When Ryan says "do Batch X", follow "How a batch runs" in `docs/history.md`.
+Built on `midi-loading`, waiting for its headset round (`SPEC.md`): MIDI songs, three
+built-in songs, the song picker, one-hand practice with outlines, tempo and time signature
+changes. After it merges: #11 Play songs with both hands, on a `both-hands` branch.
+
+Next: the board's To do column, top to bottom. When Ryan says "do Batch X", follow
+"How a batch runs" in `docs/history.md`.
 
 Rules that stay: the song clock is a `double` of seconds with a tempo multiplier, and note
 positions come from `(noteTime − songTime)`, never frame counts. Every attempt is written

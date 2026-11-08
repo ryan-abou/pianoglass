@@ -2,6 +2,21 @@
 
 Batch plans, round results and the state of the project as CLAUDE.md said it, moved out word for word on 2026-11-07. Calibration rounds are in `docs/calibration-rounds.md`.
 
+## MIDI songs (`midi-loading`, built 2026-11-08)
+
+Built from `SPEC.md`. At the desk: 727 EditMode tests pass (578 before), and
+`[SongCheck] PASS` covers all 7 steps in batchmode Play Mode. The song check
+caught one real bug: the results card comes up while the last note is still
+sounding, so the clock still counted as playing and the picker closed itself.
+The Songs button now stops the clock.
+
+To run the song check with the editor closed, use the batchmode test command in
+`CLAUDE.md` with `-executeMethod PianoGlass.EditorTools.SongCheckRunner.RunHeadless`
+in place of the test arguments. Leave off `-quit`: it exits by itself with 0 or 1.
+
+Still to do, on the headset: the Songs round in `SPEC.md`. The picker's spot is
+a placeholder until then.
+
 ## Current state and what is next
 
 Working and proven on device: MIDI input end to end, 88-key overlay registered
