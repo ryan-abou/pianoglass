@@ -18,7 +18,7 @@ Where things live:
 - `docs/anchored-calibration-status.md` (update after every phase) and
   `docs/calibration-rounds.md`: anchored calibration, its rules and rounds.
 - `docs/history.md`: batch plans, how a batch runs, every round's results.
-- Board: https://github.com/users/ryan-abou/projects (To do, top to bottom).
+- Board: https://github.com/users/ryan-abou/projects/2 (To do, top to bottom).
 
 ## Environment — pinned, do not upgrade mid-project
 
