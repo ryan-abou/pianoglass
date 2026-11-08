@@ -191,7 +191,7 @@ Bad commit example:
 Implement robust MIDI file ingestion pipeline with comprehensive error handling
 ```
 
-## Current state (2026-11-07)
+## Current state (2026-11-08)
 
 Proven on device: MIDI input, the key overlay, calibration (anchored in dev
 builds), the highway (grid, note names, outcome colours), scoring, latency
@@ -199,9 +199,11 @@ compensation, results card, tempo, metronome, loops, auto-tempo, wait mode,
 memory fade. On branches: `return-settle` (holds `anchor-trio`), `press-probe`,
 `calib-bias-total`.
 
-Built on `midi-loading`, waiting for its headset round (`SPEC.md`): MIDI songs, three
-built-in songs, the song picker, one-hand practice with outlines, tempo and time signature
-changes. After it merges: #11 Play songs with both hands, on a `both-hands` branch.
+Merged from `midi-loading` after its headset round (`SPEC.md`): MIDI songs, three built-in
+songs, the song picker, one-hand practice with outlines, tempo and time signature changes.
+72 fps still needs reading on a release build. Next up: #11 Play songs with both hands, on
+a `both-hands` branch. Known problem: at launch the keys start about a piano width to the
+right until a recenter (`docs/history.md`).
 
 Next: the board's To do column, top to bottom. When Ryan says "do Batch X", follow
 "How a batch runs" in `docs/history.md`.

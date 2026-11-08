@@ -14,8 +14,20 @@ To run the song check with the editor closed, use the batchmode test command in
 `CLAUDE.md` with `-executeMethod PianoGlass.EditorTools.SongCheckRunner.RunHeadless`
 in place of the test arguments. Leave off `-quit`: it exits by itself with 0 or 1.
 
-Still to do, on the headset: the Songs round in `SPEC.md`. The picker's spot is
-a placeholder until then.
+Headset round, 2026-11-08, passed. Ryan checked the controller ray on the picker,
+the picker's spot, the outline notes, the hand colours, Ode to Joy right hand,
+Minuet left hand with wait mode, both study passages at 50%, `adb push` of an own
+song, and all three files in MuseScore, including Minuet bars 25 and 26.
+`Android/data` shows up over USB once file access is allowed in the headset.
+
+72 fps was not measured on a release build. Ryan played it on the development
+build and it felt smooth. That build logged about 68 fps on average with a low of
+52 during the stretch the Minuet was picked, and development builds run slower.
+Read `VrApi FPS=` on a release build at the next round.
+
+Known problem, not from this work: at launch the keys start about a piano width
+to the right and a little toward the player, until a recenter. Not fixed yet.
+It gets its own branch.
 
 ## Current state and what is next
 

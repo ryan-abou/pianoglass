@@ -292,9 +292,9 @@ B0 (−5%) or C1 (+5%).
 
 ### Phase 3: Real songs
 
-Status 2026-11-08: steps 13 to 17 are built on the `midi-loading` branch and
-pass at the desk. They still need the headset round in `SPEC.md`. Both hands
-(#11) comes after that, on its own branch.
+Status 2026-11-08: steps 13 to 17 are built and passed the headset round in
+`SPEC.md`, except that 72 fps still needs reading on a release build. Both hands
+(#11) comes next, on its own branch.
 
 13. **MIDI file loading (F38).** Foundation for everything in this phase.
     Built: reader, tempo map, the Songs folder.
