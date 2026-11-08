@@ -71,12 +71,11 @@ namespace PianoGlass.Song
         /// last note).
         /// </summary>
         public static int CollectVisible(
-            float bpm, int beatsPerBar, double earliest, double latest,
+            TempoMap map, double earliest, double latest,
             double songTime, double leadTime, List<BeatLine> into)
         {
             into.Clear();
-            double spb = SecondsPerBeat(bpm);
-            if (spb <= 0.0 || leadTime < 0.0) return 0;
+            if (map == null || !map.HasBeats || leadTime < 0.0) return 0;
 
             double from = Math.Max(songTime, earliest);
             double to = Math.Min(songTime + leadTime, latest);
@@ -86,13 +85,20 @@ namespace PianoGlass.Song
             // not lost to rounding -- a line on the key line at the instant
             // its beat is due is the one that matters most.
             const double eps = 1e-9;
-            long first = (long)Math.Ceiling(from / spb - eps);
-            long last = (long)Math.Floor(to / spb + eps);
-
-            for (long k = first; k <= last; k++)
-                into.Add(new BeatLine(k * spb, BeatInBar(k, beatsPerBar), BarOf(k, beatsPerBar)));
+            for (long k = map.FirstBeatAtOrAfter(from - eps); ; k++)
+            {
+                BeatLine beat = map.Beat(k);
+                if (beat.Time > to + eps) break;
+                into.Add(beat);
+            }
             return into.Count;
         }
+
+        /// <summary>The same for one tempo and one time signature.</summary>
+        public static int CollectVisible(
+            float bpm, int beatsPerBar, double earliest, double latest,
+            double songTime, double leadTime, List<BeatLine> into) =>
+            CollectVisible(TempoMap.Constant(bpm, beatsPerBar), earliest, latest, songTime, leadTime, into);
 
         /// <summary>
         /// The notes that get a lane line on the highway: every C in

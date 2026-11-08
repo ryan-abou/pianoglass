@@ -15,7 +15,8 @@ namespace PianoGlass.Song
         public readonly double NotesFrom;
         /// <summary>Song time of the last bar's end: where the clock wraps.</summary>
         public readonly double NotesUntil;
-        /// <summary>Song time the clock wraps back to, one bar before NotesFrom.</summary>
+        /// <summary>Song time the clock wraps back to: the start of the bar
+        /// before NotesFrom.</summary>
         public readonly double WrapTo;
 
         private LoopRange(int fromBar, int toBar, double notesFrom, double notesUntil, double wrapTo)
@@ -41,8 +42,7 @@ namespace PianoGlass.Song
             int last = System.Math.Max(1, song.BarCount);
             int from = System.Math.Max(1, System.Math.Min(System.Math.Min(fromBar, toBar), last));
             int to = System.Math.Max(from, System.Math.Min(System.Math.Max(fromBar, toBar), last));
-            double start = song.BarStartTime(from);
-            return new LoopRange(from, to, start, song.BarStartTime(to + 1), start - song.SecondsPerBar);
+            return new LoopRange(from, to, song.BarStartTime(from), song.BarStartTime(to + 1), song.BarStartTime(from - 1));
         }
 
         /// <summary>Whether a note starting at this song time is in the loop.

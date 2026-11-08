@@ -194,7 +194,7 @@ namespace PianoGlass.Highway
                 earliest = System.Math.Min(earliest, loop.WrapTo);
                 latest = loop.NotesUntil;
             }
-            BeatGrid.CollectVisible(song.Bpm, song.BeatsPerBar, earliest, latest,
+            BeatGrid.CollectVisible(song.TempoMap, earliest, latest,
                                     songTime, highway.LeadTimeSeconds, _beats);
 
             float lineLeft = leftEnd - lineOverhang;
@@ -239,7 +239,7 @@ namespace PianoGlass.Highway
             {
                 _loggedBuild = true;
                 Debug.Log($"[HighwayGrid] drawing {_lanes.Count} lane lines over notes " +
-                          $"{layout.LowestNote}-{layout.HighestNote}, {song.BeatsPerBar}/4 at {song.Bpm} BPM");
+                          $"{layout.LowestNote}-{layout.HighestNote}, {song.TempoMap.TimeSignatureText} at {song.Bpm} BPM");
             }
         }
 

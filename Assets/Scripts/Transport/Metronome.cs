@@ -142,7 +142,7 @@ namespace PianoGlass.Transport
                 latest = loop.NotesUntil;
             }
             latest = System.Math.Min(latest, clock.HoldAt);
-            _schedule.Collect(_song.Bpm, _song.BeatsPerBar, earliest, latest,
+            _schedule.Collect(_song.TempoMap, earliest, latest,
                               songTime, clock.TempoMultiplier, _dsp.Estimate(real), _clicks);
             foreach (MetronomeClick c in _clicks)
             {

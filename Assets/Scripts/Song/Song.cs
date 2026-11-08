@@ -45,26 +45,38 @@ namespace PianoGlass.Song
         /// of them, computed once rather than on every read.</summary>
         public double Duration { get; }
 
-        /// <summary>Beats in a bar -- 4 for everything so far. Fixed for the
-        /// whole song: no time-signature changes yet.</summary>
+        /// <summary>Where every beat and bar falls. Everything that counts
+        /// beats or bars asks this, so tempo changes work everywhere at once.</summary>
+        public TempoMap TempoMap { get; }
+
+        /// <summary>Beats in the first bar. Later bars can differ: ask the
+        /// tempo map.</summary>
         public int BeatsPerBar { get; }
 
-        /// <summary>Song seconds in one bar.</summary>
-        public double SecondsPerBar => Bpm > 0f ? 60.0 / Bpm * BeatsPerBar : 0.0;
+        /// <summary>Song seconds in the first bar.</summary>
+        public double SecondsPerBar => TempoMap.FirstBarSeconds;
 
         /// <summary>Bars up to the one holding the last note's end. A note
         /// ending exactly on a bar line does not start another bar.</summary>
         public int BarCount => Duration <= 0.0 ? 0 : BarOf(Duration - 1e-6);
 
         /// <summary>Song time at which a 1-based bar starts.</summary>
-        public double BarStartTime(int bar) => (bar - 1) * SecondsPerBar;
+        public double BarStartTime(int bar) => TempoMap.BarStartTime(bar);
 
+        /// <summary>One tempo and one time signature for the whole song.</summary>
         public SongData(string title, float bpm, IReadOnlyList<SongNote> notes, int beatsPerBar = 4)
+            : this(title, notes, TempoMap.Constant(bpm, beatsPerBar))
+        {
+        }
+
+        /// <summary>A song with its own tempo map. Bpm is the first tempo.</summary>
+        public SongData(string title, IReadOnlyList<SongNote> notes, TempoMap tempoMap)
         {
             Title = title;
-            Bpm = bpm;
             Notes = notes;
-            BeatsPerBar = beatsPerBar < 1 ? 1 : beatsPerBar;
+            TempoMap = tempoMap;
+            Bpm = tempoMap.FirstBpm;
+            BeatsPerBar = tempoMap.FirstBeatsPerBar;
 
             double duration = 0.0;
             foreach (SongNote note in notes)
@@ -75,14 +87,7 @@ namespace PianoGlass.Song
         /// <summary>1-based bar number of a song time; anything before 0
         /// (the lead-in) is bar 1. "Bar 9 is where you fall apart" is in these
         /// units, so they match how a player counts.</summary>
-        public int BarOf(double songTime)
-        {
-            double secondsPerBar = 60.0 / Bpm * BeatsPerBar;
-            if (songTime <= 0.0 || secondsPerBar <= 0.0) return 1;
-            // A hair of tolerance so a note exactly on a barline is not put in
-            // the previous bar by rounding.
-            return (int)System.Math.Floor(songTime / secondsPerBar + 1e-9) + 1;
-        }
+        public int BarOf(double songTime) => TempoMap.BarOf(songTime);
 
         // Middle C = 60, scientific pitch notation -- matches MidiInput.NoteName.
         private const int C4 = 60, D4 = 62, E4 = 64, F4 = 65, G4 = 67, A4 = 69;

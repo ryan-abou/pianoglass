@@ -56,13 +56,13 @@ namespace PianoGlass.Song
         /// <summary>The clicks to schedule now, appended to <paramref name="into"/>
         /// (cleared first). <paramref name="earliest"/>/<paramref name="latest"/>
         /// bound the song in song seconds: -leadIn and the song's end.</summary>
-        public int Collect(float bpm, int beatsPerBar, double earliest, double latest,
+        public int Collect(TempoMap map, double earliest, double latest,
                            double songTime, double tempo, double dspNow, List<MetronomeClick> into)
         {
             into.Clear();
             if (tempo <= 0.0) return 0;
 
-            BeatGrid.CollectVisible(bpm, beatsPerBar, earliest, latest, songTime, LookaheadSeconds * tempo, _beats);
+            BeatGrid.CollectVisible(map, earliest, latest, songTime, LookaheadSeconds * tempo, _beats);
             foreach (BeatLine b in _beats)
             {
                 if (b.Time <= _lastScheduled + 1e-9) continue;
@@ -74,6 +74,11 @@ namespace PianoGlass.Song
             }
             return into.Count;
         }
+
+        /// <summary>The same for one tempo and one time signature.</summary>
+        public int Collect(float bpm, int beatsPerBar, double earliest, double latest,
+                           double songTime, double tempo, double dspNow, List<MetronomeClick> into) =>
+            Collect(TempoMap.Constant(bpm, beatsPerBar), earliest, latest, songTime, tempo, dspNow, into);
 
         /// <summary>When, on the DSP clock, a clip must start for its sound to
         /// leave the speaker as the song reaches <paramref name="beatSongTime"/>.</summary>
