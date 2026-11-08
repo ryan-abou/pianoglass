@@ -46,11 +46,9 @@ namespace PianoGlass.Song
     }
 
     /// <summary>
-    /// A song is just a title, a tempo and a list of notes. No file format, no
-    /// parser -- MIDI file import is a later problem. Right now the highway,
-    /// hit detection and wait-mode only need (pitch, start, duration), and
-    /// hand-typing eight bars is faster and has less to get wrong than writing
-    /// and debugging a parser this early in the slice.
+    /// A song is a title, a tempo map and a list of notes. MidiSongLoader
+    /// makes these from MIDI files. The highway, hit detection and wait mode
+    /// only need (pitch, start, duration, hand).
     ///
     /// Named SongData, not Song: a type with the same name as its own
     /// namespace's last segment (PianoGlass.Song) resolves the wrong way from
@@ -123,6 +121,7 @@ namespace PianoGlass.Song
         private const int C4 = 60, D4 = 62, E4 = 64, F4 = 65, G4 = 67, A4 = 69;
 
         /// <summary>
+        /// Test fixture only: the app's songs are MIDI files now.
         /// "Twinkle, Twinkle, Little Star" (the tune is "Ah! vous dirai-je,
         /// Maman", public domain), first eight bars, in C major at 120 BPM.
         /// Monophonic and rest-free, so every note starts exactly where the

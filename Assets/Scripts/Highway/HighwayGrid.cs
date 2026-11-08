@@ -99,7 +99,7 @@ namespace PianoGlass.Highway
         private readonly List<int> _lanes = new List<int>();
         private readonly List<TextMeshPro> _tagText = new List<TextMeshPro>();
         private readonly float[] _xs = new float[4];
-        private bool _loggedBuild;
+        private SongData _loggedSong;
 
         private void Awake()
         {
@@ -235,9 +235,9 @@ namespace PianoGlass.Highway
             _mesh.SetTriangles(_tris, 0);
             _mesh.RecalculateBounds();
 
-            if (!_loggedBuild)
+            if (_loggedSong != song)
             {
-                _loggedBuild = true;
+                _loggedSong = song;
                 Debug.Log($"[HighwayGrid] drawing {_lanes.Count} lane lines over notes " +
                           $"{layout.LowestNote}-{layout.HighestNote}, {song.TempoMap.TimeSignatureText} at {song.Bpm} BPM");
             }

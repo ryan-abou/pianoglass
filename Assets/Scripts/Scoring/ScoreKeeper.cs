@@ -59,6 +59,7 @@ namespace PianoGlass.Scoring
         [SerializeField] private SongClock clock;
         [SerializeField] private SongTransport transport;
         [SerializeField] private KeyboardCalibration calibration;
+        [SerializeField] private CurrentSong current;
         [Tooltip("Recorded as 'metronome' in each attempt: whether it clicked at any point.")]
         [SerializeField] private Metronome metronome;
 
@@ -115,9 +116,8 @@ namespace PianoGlass.Scoring
             if (transport == null) transport = FindAnyObjectByType<SongTransport>();
             if (calibration == null) calibration = FindAnyObjectByType<KeyboardCalibration>();
             if (metronome == null) metronome = FindAnyObjectByType<Metronome>();
-            // The same song SongTransport, NoteHighway and the highlighter each
-            // build; one shared song source arrives with MIDI file loading.
-            _song = SongData.TwinkleTwinkleLittleStar();
+            if (current == null) current = FindAnyObjectByType<CurrentSong>();
+            _song = current != null ? current.Song : null;
             PrepareClockFormatting();
         }
 
@@ -139,11 +139,25 @@ namespace PianoGlass.Scoring
         private void OnEnable()
         {
             if (MidiInput.Instance != null) MidiInput.Instance.NoteOn += OnNoteOn;
+            if (current != null) current.SongChanged += OnSongChanged;
         }
 
         private void OnDisable()
         {
             if (MidiInput.Instance != null) MidiInput.Instance.NoteOn -= OnNoteOn;
+            if (current != null) current.SongChanged -= OnSongChanged;
+        }
+
+        /// <summary>A different song or hand: whatever was running is over.</summary>
+        private void OnSongChanged()
+        {
+            if (Session != null && !AttemptSaved && Session.JudgedCount + Session.WrongNotes.Count > 0)
+                Save(AttemptRecord.Abandoned);
+            Session = null;
+            _pending.Clear();
+            _song = current.Song;
+            _lastSongTime = double.NegativeInfinity;
+            AttemptReset?.Invoke();
         }
 
         private void OnNoteOn(int note, int velocity, double time)
@@ -299,7 +313,8 @@ namespace PianoGlass.Scoring
             Session = new ScoringSession(_song, new TimingWindows(perfectMs, greatMs, goodMs),
                                          layout != null ? (Func<int, bool>)layout.Contains : null,
                                          scoreFrom, scoreUntil,
-                                         transport != null && transport.WaitMode);
+                                         transport != null && transport.WaitMode,
+                                         current != null ? current.Hand : PracticeHand.All);
             AttemptReset?.Invoke();
             Session.Judged += r => NoteJudged?.Invoke(r);
             Session.WrongNotePlayed += w => WrongNotePlayed?.Invoke(w);
@@ -376,7 +391,8 @@ namespace PianoGlass.Scoring
 
         private bool SongUses(int pitch)
         {
-            foreach (SongNote n in _song.Notes) if (n.Pitch == pitch) return true;
+            PracticeHand hand = current != null ? current.Hand : PracticeHand.All;
+            foreach (SongNote n in _song.Notes) if (n.Pitch == pitch && n.BelongsTo(hand)) return true;
             return false;
         }
 

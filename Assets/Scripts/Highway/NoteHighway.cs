@@ -4,6 +4,7 @@ using UnityEngine;
 using PianoGlass.Piano;
 using PianoGlass.Scoring;
 using PianoGlass.Song;
+using PianoGlass.Transport;
 
 namespace PianoGlass.Highway
 {
@@ -56,6 +57,8 @@ namespace PianoGlass.Highway
         [Tooltip("Source of hit/miss judgements for the outcome colours. Optional: " +
                  "without it the slabs simply never change colour.")]
         [SerializeField] private ScoreKeeper scoreKeeper;
+        [Tooltip("Which song and hand to draw.")]
+        [SerializeField] private CurrentSong current;
 
         [Header("Appearance")]
         [Tooltip("Assign a material made in the editor -- a runtime Shader.Find " +
@@ -161,14 +164,28 @@ namespace PianoGlass.Highway
             if (calibration == null) calibration = FindAnyObjectByType<KeyboardCalibration>();
             if (clock == null) clock = FindAnyObjectByType<SongClock>();
             if (scoreKeeper == null) scoreKeeper = FindAnyObjectByType<ScoreKeeper>();
+            if (current == null) current = FindAnyObjectByType<CurrentSong>();
             _block = new MaterialPropertyBlock();
-            _song = SongData.TwinkleTwinkleLittleStar();
+            UseCurrentSong();
+        }
+
+        private void UseCurrentSong()
+        {
+            if (current == null) return;
+            _song = current.Song;
             _outcome = new NoteOutcome[_song.Notes.Count];
             _judgedAt = new float[_song.Notes.Count];
         }
 
+        private void OnSongChanged()
+        {
+            UseCurrentSong();
+            Build();
+        }
+
         private void OnEnable()
         {
+            if (current != null) current.SongChanged += OnSongChanged;
             if (scoreKeeper != null)
             {
                 scoreKeeper.NoteJudged += OnNoteJudged;
@@ -182,6 +199,7 @@ namespace PianoGlass.Highway
 
         private void OnDisable()
         {
+            if (current != null) current.SongChanged -= OnSongChanged;
             if (scoreKeeper != null)
             {
                 scoreKeeper.NoteJudged -= OnNoteJudged;
@@ -243,7 +261,7 @@ namespace PianoGlass.Highway
                 if (label != null) Destroy(label.gameObject);
             _labels.Clear();
 
-            if (calibration == null || !calibration.IsCalibrated) return;
+            if (calibration == null || !calibration.IsCalibrated || _song == null) return;
             PianoKeyLayout layout = calibration.Layout;
 
             Material mat = noteMaterial != null ? noteMaterial : CreateFallbackMaterial();

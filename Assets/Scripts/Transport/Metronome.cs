@@ -31,6 +31,7 @@ namespace PianoGlass.Transport
     public class Metronome : MonoBehaviour
     {
         [SerializeField] private SongClock clock;
+        [SerializeField] private CurrentSong current;
         [Tooltip("Headset audio output latency, ms. Measured on video; 0 until then.")]
         [SerializeField] private float outputLatencyMs = 0f;
         [Tooltip("How far ahead clicks are handed to the audio system, real seconds. " +
@@ -44,7 +45,6 @@ namespace PianoGlass.Transport
 
         public bool IsOn { get; private set; }
 
-        private SongData _song;
         private MetronomeSchedule _schedule;
         private readonly DspClockEstimator _dsp = new DspClockEstimator();
         private readonly List<MetronomeClick> _clicks = new List<MetronomeClick>();
@@ -59,7 +59,7 @@ namespace PianoGlass.Transport
         private void Awake()
         {
             if (clock == null) clock = FindAnyObjectByType<SongClock>();
-            _song = SongData.TwinkleTwinkleLittleStar();
+            if (current == null) current = FindAnyObjectByType<CurrentSong>();
             _schedule = new MetronomeSchedule(lookaheadSeconds, outputLatencyMs / 1000.0);
 
             _click = MakeClick("MetronomeClick", 1000f, 0.025f);
@@ -82,6 +82,24 @@ namespace PianoGlass.Transport
                       $"(DSP buffer {length} x {buffers} @ {rate} Hz = {bufferMs:0.0} ms)");
         }
 
+        private void OnEnable()
+        {
+            if (current != null) current.SongChanged += OnSongChanged;
+        }
+
+        private void OnDisable()
+        {
+            if (current != null) current.SongChanged -= OnSongChanged;
+        }
+
+        /// <summary>The clicks already handed out were for the old song.</summary>
+        private void OnSongChanged()
+        {
+            StopAll();
+            _schedule.Reset();
+            _lastSongTime = double.NegativeInfinity;
+        }
+
         public void Toggle()
         {
             IsOn = !IsOn;
@@ -98,7 +116,8 @@ namespace PianoGlass.Transport
             double real = Time.realtimeSinceStartupAsDouble;
             _dsp.Observe(real, AudioSettings.dspTime);
 
-            if (clock == null) return;
+            if (clock == null || current == null) return;
+            SongData song = current.Song;
             bool playing = clock.IsPlaying;
             double songTime = clock.SongTime;
 
@@ -135,14 +154,14 @@ namespace PianoGlass.Transport
             if (!IsOn || !playing || holding) return;
 
             // In a loop, clicks stop at its end: nothing past the wrap will be played.
-            double earliest = -clock.LeadInSeconds, latest = _song.Duration;
+            double earliest = -clock.LeadInSeconds, latest = song.Duration;
             if (clock.Loop is LoopRange loop)
             {
                 earliest = System.Math.Min(earliest, loop.WrapTo);
                 latest = loop.NotesUntil;
             }
             latest = System.Math.Min(latest, clock.HoldAt);
-            _schedule.Collect(_song.TempoMap, earliest, latest,
+            _schedule.Collect(song.TempoMap, earliest, latest,
                               songTime, clock.TempoMultiplier, _dsp.Estimate(real), _clicks);
             foreach (MetronomeClick c in _clicks)
             {
