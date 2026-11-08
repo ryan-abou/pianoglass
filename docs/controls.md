@@ -31,7 +31,13 @@ on them and none can be played by accident.
 | Restart from the top and play | left Y | A0 + A♯0 | `OvrSongTransport`, `SongTransport` | The chord works whenever calibrated, playing or not. Also how a practice loop is left |
 | Start a practice loop | right controller ray + right trigger on the results card's "Loop bars" button | — | `ResultsCard` → `PracticeLoop` | The button shows when a bar is under 75%: that bar, and a neighbour under 90% |
 | Choose bars to loop | right controller ray + right trigger on a bar pill | — | `ResultsCard`, `BarSelection` | One pill, then another for a range; the suggestion's button becomes "Loop bars 3–5". The same pill again, alone, clears it |
-| Press a results card button (Retry, More/Less info, the suggestion's button) | right controller ray + right trigger | — | `OvrUiPointer`, `GlassButton` | Stopgap until hand poke (Phase 4). The ray shows only while a button is pressable; the trigger goes to calibration unless the ray is on a button |
+| Press a results card button (Retry, Songs, More/Less info, the suggestion's button) | right controller ray + right trigger | — | `OvrUiPointer`, `GlassButton` | Stopgap until hand poke (Phase 4). The ray shows only while a button is pressable; the trigger goes to calibration unless the ray is on a button |
+| Open the song picker | right controller ray + right trigger on the results card's Songs button | — | `ResultsCard` → `SongPicker` | The picker also opens by itself at launch, once the keys are placed |
+| Choose which hand to practice | right controller ray + right trigger on the picker's Left or Right pill | — | `SongPicker` | Songs marked hands unknown ignore it and play All notes |
+| Pick a song | right controller ray + right trigger on a picker row | — | `SongPicker` → `CurrentSong` | Loads it stopped at the top; press play as usual. Greyed rows can't be pressed |
+| Next or previous page of songs | right controller ray + right trigger on Prev or Next | — | `SongPicker` | Five songs a page. Only there when there are more than five |
+| Close the picker, keeping the current song | right controller ray + right trigger on Close | — | `SongPicker` | Playing a song also hides it |
+| Switch to the other hand and restart | right controller ray + right trigger on the results card's "Switch to left hand" | — | `ResultsCard` → `CurrentSong` | Offered after a perfect run at full speed. Not offered after All notes |
 | Tempo −5% / +5% | — | hold A0, press B0 / C1 | `SongTransport` | 25–200%, only while stopped or paused, saved |
 | Metronome on/off | — | hold A0, press C♯1 | `SongTransport` → `Metronome` | Only while stopped or paused, saved |
 | Wait mode on/off | — | hold A0, press D1 | `SongTransport` | Only while stopped or paused, saved. While paused part-way it starts a new attempt from there |
@@ -40,6 +46,12 @@ on them and none can be played by accident.
 | Passthrough on/off | left stick click | — | `OvrKeyOverlayInput` | A/B test tool |
 
 Development tools that are not player controls:
+- Swap hands for a song: the *Swap hands for this song* context menu on
+  `CurrentSong`, in the Editor only. Saved per file name. No headset menu yet.
+- `MidiEditorSimulator` has *Autoplay my hand (perfect)* and *Autoplay with 3
+  mistakes* context menus, and `EditorUiPointer` lets a mouse click in the Game
+  view press glass buttons. Editor only.
+- *PianoGlass → Checks → Run song check* runs the whole song flow in Play Mode.
 - `DeviceChecklistRunner` (development builds) reads the flow's events and
   needs no input of its own.
 - `OvrAnchorSpike` (Phase 3 harness) uses both grips. It is disabled in the
@@ -57,10 +69,10 @@ values from `Assets/UI/GlassTokens.asset`):
 | Menu | Holds | Shown when |
 |---|---|---|
 | **Song panel** (F12 + F24 merged), left end of the keyboard, angled toward the player | play/pause, restart, tempo −/+ with its value, metronome toggle, wait-mode toggle, loop worst bar, song picker button, settings button | Always, collapsible to a slim strip |
-| **Results card** (F30/F32) | rank, accuracy, change vs last, timing, wrong notes, best streak, bar pills, one suggestion; buttons: retry, next song (hidden until a song list exists), more info (details panel) | When an attempt completes |
+| **Results card** (F30/F32) | rank, accuracy, change vs last, timing, wrong notes, best streak, bar pills, one suggestion; buttons: retry, songs (opens the picker), more info (details panel) | When an attempt completes |
 | **Settings** (S1, `PianoSettings`) | display mode, passthrough, hand colours (F13), due-key toggle (F18), metronome, memory fade, wait mode, auto-tempo on/off (Ryan, 2026-11-05: always on until these menus exist) | From the song panel |
 | **Calibration panel** (today's status panel, restyled) | start calibration, "looks right", Middle C fix, nudge pad (6 arrows plus yaw ⟲/⟳, held to repeat), clear nudge, measure controller tip | During setup, and from Settings → Keyboard |
-| **Song picker** (F38/F39) | song list with per-song history | From the song panel |
+| **Song picker** (F38/F39) | Left/Right switch and song list today; per-song history later | At launch and from the results card; from the song panel later |
 
 What stays off the menus, and why:
 - **The status panel goes or shrinks (Ryan, 2026-11-05).** It carries a loop's

@@ -13,6 +13,83 @@ namespace PianoGlass.Tests.EditMode
     /// </summary>
     public class ScoringTests
     {
+        private static SongData TwoHands() => new SongData("two hands", 120f, new[]
+        {
+            new SongNote(72, 0.0, 0.5, NoteHand.Right),
+            new SongNote(48, 0.0, 0.5, NoteHand.Left),
+            new SongNote(74, 1.0, 0.5, NoteHand.Right),
+            new SongNote(50, 2.0, 0.5, NoteHand.Left),
+        });
+
+        [Test]
+        public void TheOtherHandsNotesAreNeverScorable()
+        {
+            var s = new ScoringSession(TwoHands(), TimingWindows.Default, hand: PracticeHand.Right);
+            Assert.AreEqual(2, s.ScorableCount);
+            s.Advance(10.0, 1.0);
+            Assert.AreEqual(2, s.Miss, "only the right hand's two notes can be missed");
+            Assert.IsTrue(s.IsComplete);
+        }
+
+        [Test]
+        public void PressingTheOtherHandsNoteIsAWrongKey()
+        {
+            var s = new ScoringSession(TwoHands(), TimingWindows.Default, hand: PracticeHand.Right);
+            s.OnNoteOn(48, 0.0, 1.0);
+            Assert.AreEqual(0, s.NotesHit);
+            Assert.AreEqual(1, s.WrongPitchCount, "another note of yours was due at that moment");
+            Assert.AreEqual(72, s.LastWrongNote.expectedPitch);
+        }
+
+        [Test]
+        public void PressingTheOtherHandsNoteWithNothingDueIsExtra()
+        {
+            var s = new ScoringSession(TwoHands(), TimingWindows.Default, hand: PracticeHand.Right);
+            s.OnNoteOn(50, 2.0, 1.0);
+            Assert.AreEqual(1, s.ExtraCount);
+        }
+
+        [Test]
+        public void HandsGoByTheNoteNotThePitch()
+        {
+            var song = new SongData("same key", 120f, new[]
+            {
+                new SongNote(60, 0.0, 0.5, NoteHand.Left),
+                new SongNote(60, 1.0, 0.5, NoteHand.Right),
+            });
+            var s = new ScoringSession(song, TimingWindows.Default, hand: PracticeHand.Right);
+            Assert.AreEqual(1, s.ScorableCount);
+            Assert.AreEqual(1.0, s.FirstNoteTime, 1e-9);
+        }
+
+        [TestCase(PracticeHand.Left)]
+        [TestCase(PracticeHand.Right)]
+        public void ASharedNoteNeedsOnePressWhicheverHand(PracticeHand hand)
+        {
+            var song = new SongData("shared", 120f, new[] { new SongNote(60, 0.0, 0.5, NoteHand.Shared) });
+            var s = new ScoringSession(song, TimingWindows.Default, hand: hand);
+            Assert.AreEqual(1, s.ScorableCount);
+            s.OnNoteOn(60, 0.0, 1.0);
+            Assert.AreEqual(1, s.NotesHit);
+            Assert.IsTrue(s.IsComplete);
+        }
+
+        [Test]
+        public void AllNotesScoresEveryNote()
+        {
+            var s = new ScoringSession(TwoHands(), TimingWindows.Default, hand: PracticeHand.All);
+            Assert.AreEqual(4, s.ScorableCount);
+        }
+
+        [TestCase(PracticeHand.Left, "left")]
+        [TestCase(PracticeHand.Right, "right")]
+        [TestCase(PracticeHand.All, "both")]
+        public void TheAttemptRecordsItsHand(PracticeHand hand, string expected)
+        {
+            var s = new ScoringSession(TwoHands(), TimingWindows.Default, hand: hand);
+            Assert.AreEqual(expected, s.ToRecord(AttemptRecord.Completed, "a", "b", 1.0, 0.0).hand);
+        }
+
         private const int C4 = 60, D4 = 62, E4 = 64, G4 = 67, A4 = 69;
         private static readonly TimingWindows W = TimingWindows.Default; // 40 / 80 / 150 ms
 

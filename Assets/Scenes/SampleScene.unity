@@ -418,6 +418,7 @@ MonoBehaviour:
   calibration: {fileID: 2007997132}
   depthOffset: 0
   heightAboveKeys: 0.27
+  tiltDegrees: 0
   fallbackHeight: 1.2
   invalidDistance: 0.8
   invalidDrop: 0.15
@@ -443,7 +444,7 @@ MonoBehaviour:
   font: {fileID: 11400000, guid: 78fe0b7abd3366847af5e57f61dc3825, type: 2}
   textMaterial: {fileID: 2100000, guid: 9db6a86f3b7f23b46a70504a041bbd0e, type: 2}
   glassMaterial: {fileID: 2100000, guid: 12caf58afa1d3f94797270c64a710ab1, type: 2}
-  hasSongList: 0
+  picker: {fileID: 1641546231}
 --- !u!223 &257032939
 Canvas:
   m_ObjectHideFlags: 0
@@ -923,6 +924,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PianoGlass.Transport.SongTransport
   clock: {fileID: 1285217052}
   calibration: {fileID: 2007997132}
+  current: {fileID: 1643479668}
   chordNoteA: 21
   chordNoteB: 22
   slowerNote: 23
@@ -961,6 +963,7 @@ MonoBehaviour:
   clock: {fileID: 1285217052}
   transport: {fileID: 644933872}
   calibration: {fileID: 2007997132}
+  current: {fileID: 1643479668}
   metronome: {fileID: 1115035986}
   perfectMs: 40
   greatMs: 80
@@ -1444,9 +1447,11 @@ MonoBehaviour:
   calibration: {fileID: 2007997132}
   clock: {fileID: 1285217052}
   scoreKeeper: {fileID: 644933874}
+  current: {fileID: 1643479668}
   noteMaterial: {fileID: 2100000, guid: dff0fda6605ad8e499fbcb1b54937d0b, type: 2}
   fadedNoteMaterial: {fileID: 2100000, guid: 046695c57c8958e4d927a627540455e0, type: 2}
-  noteColor: {r: 0.4, g: 0.68, b: 0.95, a: 1}
+  outlineMaterial: {fileID: 2100000, guid: 8ae01830c896a484baf2b31a5c352e7c, type: 2}
+  outlineBehind: 0.0005
   slabThickness: 0.006
   widthFraction: 0.9
   noteGapMetres: 0.008
@@ -1537,6 +1542,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PianoGlass.Transport.Metronome
   clock: {fileID: 1285217052}
+  current: {fileID: 1643479668}
   outputLatencyMs: 140
   lookaheadSeconds: 0.3
   volume: 0.6
@@ -1692,6 +1698,7 @@ MonoBehaviour:
   calibration: {fileID: 2007997132}
   depthOffset: 0.05
   heightAboveKeys: 0.65
+  tiltDegrees: 0
   fallbackHeight: 1.2
   invalidDistance: 0.8
   invalidDrop: 0.15
@@ -2193,6 +2200,50 @@ MonoBehaviour:
   edgeRenderingEnabled_: 0
   edgeColor_: {r: 1, g: 1, b: 1, a: 1}
   colorMapType: 0
+--- !u!1 &1409701142
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1409701144}
+  - component: {fileID: 1409701143}
+  m_Layer: 0
+  m_Name: EditorUiPointer
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1409701143
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1409701142}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dbd42cbc95ac9994ba0dcd842e4a6eac, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PianoGlass.UI.EditorUiPointer
+--- !u!4 &1409701144
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1409701142}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1544510615
 GameObject:
   m_ObjectHideFlags: 0
@@ -2259,6 +2310,7 @@ MonoBehaviour:
   transport: {fileID: 644933872}
   scoreKeeper: {fileID: 644933874}
   resultsCard: {fileID: 257032937}
+  current: {fileID: 1643479668}
 --- !u!4 &1561689677
 Transform:
   m_ObjectHideFlags: 0
@@ -2266,6 +2318,177 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1561689675}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1641546229
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1641546234}
+  - component: {fileID: 1641546233}
+  - component: {fileID: 1641546232}
+  - component: {fileID: 1641546231}
+  - component: {fileID: 1641546230}
+  m_Layer: 0
+  m_Name: SongPicker
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1641546230
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1641546229}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9bbeec37fc0ec6a4e8ee091fe81cddbd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PianoGlass.Piano.CanvasCalibrationFollower
+  calibration: {fileID: 2007997132}
+  depthOffset: 0.433
+  heightAboveKeys: 0.5
+  tiltDegrees: 15
+  fallbackHeight: 1.2
+  invalidDistance: 0.8
+  invalidDrop: 0.15
+  invalidRefollowDegrees: 70
+--- !u!114 &1641546231
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1641546229}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2162119d5a8ff5f459d0c39bc3573474, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PianoGlass.UI.SongPicker
+  current: {fileID: 1643479668}
+  transport: {fileID: 644933872}
+  calibration: {fileID: 2007997132}
+  tip: {fileID: 2007997135}
+  tokens: {fileID: 11400000, guid: 6e1c965f1596bd0428a742c42c2ed149, type: 2}
+  font: {fileID: 11400000, guid: 78fe0b7abd3366847af5e57f61dc3825, type: 2}
+  textMaterial: {fileID: 2100000, guid: 9db6a86f3b7f23b46a70504a041bbd0e, type: 2}
+  glassMaterial: {fileID: 2100000, guid: 12caf58afa1d3f94797270c64a710ab1, type: 2}
+--- !u!114 &1641546232
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1641546229}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fc3f6d0c9c3314b41a399360d5001cd1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PianoGlass.UI.GlassPanel
+  glassMaterial: {fileID: 2100000, guid: 12caf58afa1d3f94797270c64a710ab1, type: 2}
+  tokens: {fileID: 11400000, guid: 6e1c965f1596bd0428a742c42c2ed149, type: 2}
+  style: 0
+  paddingMetres: {x: 0, y: 0}
+  depthBehindMetres: 0.002
+--- !u!223 &1641546233
+Canvas:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1641546229}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_RenderMode: 2
+  m_Camera: {fileID: 1253870631}
+  m_PlaneDistance: 100
+  m_PixelPerfect: 0
+  m_ReceivesEvents: 1
+  m_OverrideSorting: 0
+  m_OverridePixelPerfect: 0
+  m_SortingBucketNormalizedSize: 0
+  m_VertexColorAlwaysGammaSpace: 0
+  m_UseReflectionProbes: 0
+  m_AdditionalShaderChannelsFlag: 0
+  m_UpdateRectTransformForStandalone: 0
+  m_SortingLayerID: 0
+  m_SortingOrder: 0
+  m_TargetDisplay: 0
+--- !u!224 &1641546234
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1641546229}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 0.001, y: 0.001, z: 0.001}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!1 &1643479667
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1643479669}
+  - component: {fileID: 1643479668}
+  m_Layer: 0
+  m_Name: CurrentSong
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1643479668
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1643479667}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a71f393bcec6a9947ac7655b20e055fc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PianoGlass.Transport.CurrentSong
+  builtInSongs:
+  - {fileID: -6361967951951867909, guid: 473ca142268200f48ad156a3a65cbaf3, type: 3}
+  - {fileID: -6361967951951867909, guid: fb082a2fc7b519045b5966cbfb3cbe1d, type: 3}
+  - {fileID: -6361967951951867909, guid: 72deca13ab6af0b44a0255c951bf0991, type: 3}
+  palette: {fileID: 11400000, guid: 6cf6a93be9c51434ca7ba219644b5a03, type: 2}
+  resultsCard: {fileID: 257032937}
+  transport: {fileID: 644933872}
+--- !u!4 &1643479669
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1643479667}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -2552,6 +2775,7 @@ MonoBehaviour:
   calibration: {fileID: 2007997132}
   clock: {fileID: 1285217052}
   scoreKeeper: {fileID: 644933874}
+  current: {fileID: 1643479668}
   keyMaterial: {fileID: 2100000, guid: 573d3710ae164554ea3f1218a8bf61bb, type: 2}
   translucentMaterial: {fileID: 2100000, guid: 046695c57c8958e4d927a627540455e0, type: 2}
   showIdleKeys: 1
@@ -2788,3 +3012,6 @@ SceneRoots:
   - {fileID: 1115035987}
   - {fileID: 154852326}
   - {fileID: 1561689677}
+  - {fileID: 1643479669}
+  - {fileID: 1641546234}
+  - {fileID: 1409701144}

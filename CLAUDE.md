@@ -149,9 +149,10 @@ resolving it silently.
 Whenever you mention an issue, write its number and title together, like
 "#1 MIDI file loading". When you start work on an issue, move its card to Doing
 on the project board (github.com/users/ryan-abou/projects/2) with gh, and tell
-me in one line, like "Moved #1 MIDI file loading to Doing." PRs must say
-"Closes #N". When a PR is merged, tell me which issues it closed, with their
-titles, and that GitHub will move them to Done.
+me in one line, like "Moved #1 MIDI file loading to Doing." PRs that finish a
+feature or a bug from the board must say "Closes #N". Small fixes (typos,
+cleanup) don't need an issue. When a PR is merged, tell me which issues it
+closed, with their titles, and that GitHub will move them to Done.
 
 Never add Co-Authored-By lines, 'Generated with Claude Code' footers, or any
 Claude/AI attribution to commits, PR descriptions, issues, or comments.
@@ -190,7 +191,7 @@ Bad commit example:
 Implement robust MIDI file ingestion pipeline with comprehensive error handling
 ```
 
-## Current state (2026-11-07)
+## Current state (2026-11-08)
 
 Proven on device: MIDI input, the key overlay, calibration (anchored in dev
 builds), the highway (grid, note names, outcome colours), scoring, latency
@@ -198,8 +199,14 @@ compensation, results card, tempo, metronome, loops, auto-tempo, wait mode,
 memory fade. On branches: `return-settle` (holds `anchor-trio`), `press-probe`,
 `calib-bias-total`.
 
-Next: Phase 3, starting with MIDI file loading (F38): the board's To do column, top to
-bottom. When Ryan says "do Batch X", follow "How a batch runs" in `docs/history.md`.
+Merged from `midi-loading` after its headset round (`SPEC.md`): MIDI songs, three built-in
+songs, the song picker, one-hand practice with outlines, tempo and time signature changes.
+72 fps still needs reading on a release build. Next up: #11 Play songs with both hands, on
+a `both-hands` branch. Known problem: at launch the keys start about a piano width to the
+right until a recenter (`docs/history.md`).
+
+Next: the board's To do column, top to bottom. When Ryan says "do Batch X", follow
+"How a batch runs" in `docs/history.md`.
 
 Rules that stay: the song clock is a `double` of seconds with a tempo multiplier, and note
 positions come from `(noteTime − songTime)`, never frame counts. Every attempt is written

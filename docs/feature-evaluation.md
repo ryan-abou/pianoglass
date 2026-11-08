@@ -292,15 +292,23 @@ B0 (−5%) or C1 (+5%).
 
 ### Phase 3: Real songs
 
+Status 2026-11-08: steps 13 to 17 are built and passed the headset round in
+`SPEC.md`, except that 72 fps still needs reading on a release build. Both hands
+(#11) comes next, on its own branch.
+
 13. **MIDI file loading (F38).** Foundation for everything in this phase.
+    Built: reader, tempo map, the Songs folder.
 14. **Song picker (F7)**, driven by controller or piano keys for now (no
     hand tracking yet), with the logic in a Meta-free component so the
-    Phase 4 panel can drive it later.
+    Phase 4 panel can drive it later. Built, on the controller ray.
 15. **Hand colours with a fixed default pair (F13)**, then **due key in hand
-    colour (F18)**. Both need step 13.
-16. **One-hand practice (F25).** Needs step 15.
+    colour (F18)**. Both need step 13. Hand colours built, in `NotePalette`.
+    The due key keeps its colour for now, and only your hand's keys light.
+16. **One-hand practice (F25).** Needs step 15. Built: the other hand falls
+    as outlines and is never scored or waited for.
 17. **Public-domain starter library (F11).** Curation can start any time, on
-    paper; loading it needs steps 13–14.
+    paper; loading it needs steps 13–14. Built: Twinkle, Ode to Joy, Minuet
+    in G, with `Assets/Songs/SOURCES.md`.
 18. **Per-song history (F37).** Queued here: needs steps 7, 13 and 14.
 
 ### Phase 4: Hand-tracked UI and settings

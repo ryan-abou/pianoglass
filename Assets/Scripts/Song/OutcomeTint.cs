@@ -7,8 +7,9 @@ namespace PianoGlass.Song
 
     /// <summary>
     /// Outcome colours (F19/F20) and how they arrive, kept pure so the timing
-    /// is tested headlessly. The colours are reserved: hand colours (F13) may
-    /// never use them, or every note would look "hit".
+    /// is tested headlessly. The colours themselves live in NotePalette and
+    /// are reserved: hand colours (F13) may never use them, or every note
+    /// would look "hit".
     ///
     ///   * Hit: the slab tints mint over FadeSeconds (~120 ms) -- quick
     ///     enough to read as the press's result, soft enough not to flash.
@@ -18,9 +19,9 @@ namespace PianoGlass.Song
     /// </summary>
     public static class OutcomeTint
     {
-        public static readonly Color Hit = FromHex(0x3D, 0xDC, 0x97);    // mint  #3DDC97
-        public static readonly Color Missed = FromHex(0x5A, 0x63, 0x6E); // slate #5A636E
-        public static readonly Color Wrong = FromHex(0xFF, 0x6B, 0x5B);  // coral #FF6B5B
+        public static Color Hit => NotePalette.Active != null ? NotePalette.Active.hit : NotePalette.DefaultHit;
+        public static Color Missed => NotePalette.Active != null ? NotePalette.Active.missed : NotePalette.DefaultMissed;
+        public static Color Wrong => NotePalette.Active != null ? NotePalette.Active.wrong : NotePalette.DefaultWrong;
 
         public const float FadeSeconds = 0.12f;
         public const float WrongPulseSeconds = 0.35f;
@@ -97,7 +98,5 @@ namespace PianoGlass.Song
         /// <summary>The steady coral of a wrong key still held down.</summary>
         public static Color WrongHeld =>
             new Color(Wrong.r * WrongHeldBrightness, Wrong.g * WrongHeldBrightness, Wrong.b * WrongHeldBrightness, 1f);
-
-        private static Color FromHex(byte r, byte g, byte b) => new Color32(r, g, b, 255);
     }
 }

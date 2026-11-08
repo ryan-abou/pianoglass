@@ -34,6 +34,7 @@ namespace PianoGlass.Transport
         [SerializeField] private SongTransport transport;
         [SerializeField] private ScoreKeeper scoreKeeper;
         [SerializeField] private ResultsCard resultsCard;
+        [SerializeField] private CurrentSong current;
 
         /// <summary>1 for the first time through; counts up at every wrap.</summary>
         public int Pass => clock != null ? clock.LoopPass : 0;
@@ -62,17 +63,27 @@ namespace PianoGlass.Transport
             if (transport == null) transport = FindAnyObjectByType<SongTransport>();
             if (scoreKeeper == null) scoreKeeper = FindAnyObjectByType<ScoreKeeper>();
             if (resultsCard == null) resultsCard = FindAnyObjectByType<ResultsCard>();
+            if (current == null) current = FindAnyObjectByType<CurrentSong>();
         }
 
-        private void Start()
+        private void Start() => UseThisSongsFade();
+
+        /// <summary>Each song keeps its own place on the memory fade ladder.</summary>
+        private void UseThisSongsFade()
         {
             if (clock == null || transport == null || transport.Song == null) return;
             _songFadeKey = SongFadePrefsPrefix + transport.Song.Title;
             clock.SongFade = new MemoryFade(PlayerPrefs.GetInt(_songFadeKey, 0));
+            LastPassLine = null;
+            LastSongFadeLine = null;
+            _nextTempo = -1f;
+            _passPlayed = false;
+            _heldFor = 0f;
         }
 
         private void OnEnable()
         {
+            if (current != null) current.SongChanged += UseThisSongsFade;
             if (resultsCard != null) resultsCard.LoopRequested += StartLoop;
             if (scoreKeeper != null)
             {
@@ -85,6 +96,7 @@ namespace PianoGlass.Transport
 
         private void OnDisable()
         {
+            if (current != null) current.SongChanged -= UseThisSongsFade;
             if (resultsCard != null) resultsCard.LoopRequested -= StartLoop;
             if (scoreKeeper != null)
             {

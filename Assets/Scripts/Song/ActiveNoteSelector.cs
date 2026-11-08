@@ -37,16 +37,22 @@ namespace PianoGlass.Song
         /// frame, the same reasoning as not spawning GameObjects every frame.
         /// <paramref name="from"/> and <paramref name="until"/> limit it to the
         /// notes starting in that span: a practice loop's bars.
+        /// <paramref name="hand"/> limits it to the notes being practiced:
+        /// the other hand's keys never light.
         /// </summary>
         public static void CollectDueSoonPitches(
-            IEnumerable<SongNote> notes, double songTime, float lookaheadSeconds, HashSet<int> results,
-            double from = double.NegativeInfinity, double until = double.PositiveInfinity)
+            IReadOnlyList<SongNote> notes, double songTime, float lookaheadSeconds, HashSet<int> results,
+            double from = double.NegativeInfinity, double until = double.PositiveInfinity,
+            PracticeHand hand = PracticeHand.All)
         {
             results.Clear();
-            foreach (SongNote note in notes)
-                if (note.StartTime >= from - 1e-9 && note.StartTime < until - 1e-9 &&
+            for (int i = 0; i < notes.Count; i++)
+            {
+                SongNote note = notes[i];
+                if (note.BelongsTo(hand) && note.StartTime >= from - 1e-9 && note.StartTime < until - 1e-9 &&
                     IsDueSoon(note.StartTime, songTime, lookaheadSeconds))
                     results.Add(note.Pitch);
+            }
         }
     }
 }

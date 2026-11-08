@@ -133,7 +133,7 @@ namespace PianoGlass.Scoring
         /// <summary>First and last bar of a loop (F33), inclusive; -1 = no loop.</summary>
         public int loopFromBar = NoLoop;
         public int loopToBar = NoLoop;
-        /// <summary>"both" until one-hand practice exists.</summary>
+        /// <summary>"left", "right", or "both" for every note at once.</summary>
         public string hand = BothHands;
         /// <summary>Metronome (F27) clicking during the attempt.</summary>
         public bool metronome;

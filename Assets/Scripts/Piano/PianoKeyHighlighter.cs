@@ -4,6 +4,7 @@ using UnityEngine;
 using PianoGlass.Midi;
 using PianoGlass.Scoring;
 using PianoGlass.Song;
+using PianoGlass.Transport;
 
 namespace PianoGlass.Piano
 {
@@ -58,6 +59,8 @@ namespace PianoGlass.Piano
         [SerializeField] private SongClock clock;
         [Tooltip("Source of wrong-note events for the coral pulse. Optional.")]
         [SerializeField] private ScoreKeeper scoreKeeper;
+        [Tooltip("The song and hand: only that hand's due keys light.")]
+        [SerializeField] private CurrentSong current;
 
         [Header("Appearance")]
         [Tooltip("Assign a material made in the editor. Leave empty and one is " +
@@ -144,7 +147,6 @@ namespace PianoGlass.Piano
         private MaterialPropertyBlock _block;
         private Material _opaqueMaterial;
         private PianoKeyLayout _layout;
-        private SongData _song;
 
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         private static readonly int ColorId = Shader.PropertyToID("_Color");
@@ -158,12 +160,7 @@ namespace PianoGlass.Piano
             if (calibration == null) calibration = FindAnyObjectByType<KeyboardCalibration>();
             if (clock == null) clock = FindAnyObjectByType<SongClock>();
             if (scoreKeeper == null) scoreKeeper = FindAnyObjectByType<ScoreKeeper>();
-
-            // Same hard-coded song NoteHighway uses. Each reads it
-            // independently rather than sharing a reference, the same way
-            // each independently finds its own KeyboardCalibration -- there
-            // is exactly one song right now, so there is nothing to drift.
-            _song = SongData.TwinkleTwinkleLittleStar();
+            if (current == null) current = FindAnyObjectByType<CurrentSong>();
 
             // Launch in whatever mode the player last chose. Restored here,
             // before Rebuild, so the keys are built in it from the start.
@@ -223,7 +220,7 @@ namespace PianoGlass.Piano
         private void Update()
         {
             if (_renderers.Count == 0 || !PlacementValid) return;
-            if (clock != null && (displayMode == DisplayMode.ActiveKeysOnly || displayMode == DisplayMode.EdgeMarkers))
+            if (clock != null && current != null && (displayMode == DisplayMode.ActiveKeysOnly || displayMode == DisplayMode.EdgeMarkers))
                 UpdateDueKeys();
             UpdateWrongPulses();
         }
@@ -232,8 +229,8 @@ namespace PianoGlass.Piano
         {
             double from = clock.Loop?.NotesFrom ?? double.NegativeInfinity;
             double until = clock.Loop?.NotesUntil ?? double.PositiveInfinity;
-            ActiveNoteSelector.CollectDueSoonPitches(_song.Notes, clock.DisplaySongTime, activeKeyLookaheadSeconds,
-                                                     _dueSoon, from, until);
+            ActiveNoteSelector.CollectDueSoonPitches(current.Song.Notes, clock.DisplaySongTime, activeKeyLookaheadSeconds,
+                                                     _dueSoon, from, until, current.Hand);
 
             foreach (var kv in _renderers)
             {

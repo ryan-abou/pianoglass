@@ -28,6 +28,8 @@ namespace PianoGlass.Piano
         [Tooltip("Height above the key plane once calibrated, in metres. 0.65 m " +
                  "clears the top of the default 0.5 m note wall.")]
         [SerializeField] private float heightAboveKeys = 0.65f;
+        [Tooltip("Degrees the panel tips its top toward the player. 0 is upright.")]
+        [SerializeField] private float tiltDegrees = 0f;
         [Tooltip("Y position used before calibration has ever produced a layout " +
                  "-- there's no keyboard span to centre on yet, so this only sets " +
                  "height; X/Z and rotation are left at however the Canvas was " +
@@ -148,7 +150,10 @@ namespace PianoGlass.Piano
             // Canvas (identity rotation, camera looking down +Z at it from
             // behind): local +Z is set to -Forward, so local -Z is +Forward,
             // which is defined as pointing at the player.
-            Quaternion rotation = Quaternion.LookRotation(-layout.Forward, layout.Up);
+            float rad = tiltDegrees * Mathf.Deg2Rad;
+            Vector3 up = layout.Up * Mathf.Cos(rad) + layout.Forward * Mathf.Sin(rad);
+            Vector3 towardPlayer = layout.Forward * Mathf.Cos(rad) - layout.Up * Mathf.Sin(rad);
+            Quaternion rotation = Quaternion.LookRotation(-towardPlayer, up);
 
             transform.SetPositionAndRotation(pos, rotation);
         }

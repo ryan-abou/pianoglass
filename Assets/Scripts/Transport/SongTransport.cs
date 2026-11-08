@@ -46,6 +46,7 @@ namespace PianoGlass.Transport
         [Header("Wiring")]
         [SerializeField] private SongClock clock;
         [SerializeField] private KeyboardCalibration calibration;
+        [SerializeField] private CurrentSong current;
 
         [Header("MIDI restart chord")]
         [Tooltip("Both of these held together restart the song from the top and " +
@@ -74,17 +75,16 @@ namespace PianoGlass.Transport
         /// leaves alone: leaving the loop goes back to it.</summary>
         private float _chosenTempo = 1f;
         private bool _chordLatched;
-        private SongData _song;
 
-        /// <summary>The song loaded; null before Awake.</summary>
-        public SongData Song => _song;
+        /// <summary>The song loaded.</summary>
+        public SongData Song => current != null ? current.Song : null;
 
         private void Awake()
         {
             if (clock == null) clock = FindAnyObjectByType<SongClock>();
             if (calibration == null) calibration = FindAnyObjectByType<KeyboardCalibration>();
             if (metronome == null) metronome = FindAnyObjectByType<Metronome>();
-            _song = SongData.TwinkleTwinkleLittleStar();
+            if (current == null) current = FindAnyObjectByType<CurrentSong>();
             WaitMode = PlayerPrefs.GetInt(WaitPrefsKey, 0) == 1;
 
             if (clock != null)
@@ -104,7 +104,7 @@ namespace PianoGlass.Transport
             get
             {
                 if (clock == null) return State.Stopped;
-                if (_song != null && clock.SongTime >= _song.Duration) return State.Finished;
+                if (Song != null && clock.SongTime >= Song.Duration) return State.Finished;
                 if (!clock.IsPlaying) return State.Stopped;
                 return clock.SongTime < 0.0 ? State.CountingIn : State.Playing;
             }
@@ -112,6 +112,7 @@ namespace PianoGlass.Transport
 
         private void OnEnable()
         {
+            if (current != null) current.SongChanged += StopAtTop;
             if (MidiInput.Instance == null) return;
             MidiInput.Instance.NoteOn += OnNoteOn;
             MidiInput.Instance.NoteOff += OnNoteOff;
@@ -119,6 +120,7 @@ namespace PianoGlass.Transport
 
         private void OnDisable()
         {
+            if (current != null) current.SongChanged -= StopAtTop;
             if (MidiInput.Instance == null) return;
             MidiInput.Instance.NoteOn -= OnNoteOn;
             MidiInput.Instance.NoteOff -= OnNoteOff;
@@ -143,6 +145,21 @@ namespace PianoGlass.Transport
             // confirm happened this frame.
             if (calibration.AwaitingConfirmation || calibration.ConfirmedThisFrame) return;
             if (clock.IsPlaying) clock.Pause(); else clock.Play();
+        }
+
+        /// <summary>Stops the clock where it is.</summary>
+        public void Pause()
+        {
+            if (clock != null) clock.Pause();
+        }
+
+        /// <summary>A new song is loaded: stopped at the top, out of any loop.</summary>
+        private void StopAtTop()
+        {
+            if (clock == null) return;
+            if (clock.Loop.HasValue) clock.TempoMultiplier = _chosenTempo;
+            clock.Pause();
+            clock.Restart();
         }
 
         public void RestartAndPlay()
@@ -173,8 +190,8 @@ namespace PianoGlass.Transport
         /// the loop (SongClock.Restart).</summary>
         public bool StartLoop(int fromBar, int toBar)
         {
-            if (!CanAcceptInput || clock == null || _song == null) return false;
-            clock.StartLoop(LoopRange.Between(_song, fromBar, toBar));
+            if (!CanAcceptInput || clock == null || Song == null) return false;
+            clock.StartLoop(LoopRange.Between(Song, fromBar, toBar));
             clock.Play();
             return true;
         }

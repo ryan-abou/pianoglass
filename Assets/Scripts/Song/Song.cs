@@ -2,6 +2,21 @@ using System.Collections.Generic;
 
 namespace PianoGlass.Song
 {
+    /// <summary>Which hand a note in the song belongs to.</summary>
+    public enum NoteHand
+    {
+        /// <summary>A song whose hands aren't known.</summary>
+        None,
+        Left,
+        Right,
+        /// <summary>Both hands had this key at this moment. It counts as yours
+        /// whichever hand you pick, and you press it once.</summary>
+        Shared,
+    }
+
+    /// <summary>What the player chose to practice.</summary>
+    public enum PracticeHand { Left, Right, All }
+
     /// <summary>One note: which key, when it starts, how long it's held. Seconds
     /// throughout -- SongClock is what those seconds are measured against.</summary>
     public readonly struct SongNote
@@ -9,23 +24,31 @@ namespace PianoGlass.Song
         public readonly int Pitch;
         public readonly double StartTime;
         public readonly double Duration;
+        public readonly NoteHand Hand;
 
-        public SongNote(int pitch, double startTime, double duration)
+        public SongNote(int pitch, double startTime, double duration, NoteHand hand = NoteHand.None)
         {
             Pitch = pitch;
             StartTime = startTime;
             Duration = duration;
+            Hand = hand;
         }
 
         public double EndTime => StartTime + Duration;
+
+        /// <summary>Whether this note is the player's when practicing that
+        /// hand. A note with no hand is everyone's.</summary>
+        public bool BelongsTo(PracticeHand practice)
+        {
+            if (practice == PracticeHand.All || Hand == NoteHand.None || Hand == NoteHand.Shared) return true;
+            return practice == PracticeHand.Left ? Hand == NoteHand.Left : Hand == NoteHand.Right;
+        }
     }
 
     /// <summary>
-    /// A song is just a title, a tempo and a list of notes. No file format, no
-    /// parser -- MIDI file import is a later problem. Right now the highway,
-    /// hit detection and wait-mode only need (pitch, start, duration), and
-    /// hand-typing eight bars is faster and has less to get wrong than writing
-    /// and debugging a parser this early in the slice.
+    /// A song is a title, a tempo map and a list of notes. MidiSongLoader
+    /// makes these from MIDI files. The highway, hit detection and wait mode
+    /// only need (pitch, start, duration, hand).
     ///
     /// Named SongData, not Song: a type with the same name as its own
     /// namespace's last segment (PianoGlass.Song) resolves the wrong way from
@@ -45,26 +68,43 @@ namespace PianoGlass.Song
         /// of them, computed once rather than on every read.</summary>
         public double Duration { get; }
 
-        /// <summary>Beats in a bar -- 4 for everything so far. Fixed for the
-        /// whole song: no time-signature changes yet.</summary>
+        /// <summary>Where every beat and bar falls. Everything that counts
+        /// beats or bars asks this, so tempo changes work everywhere at once.</summary>
+        public TempoMap TempoMap { get; }
+
+        /// <summary>Beats in the first bar. Later bars can differ: ask the
+        /// tempo map.</summary>
         public int BeatsPerBar { get; }
 
-        /// <summary>Song seconds in one bar.</summary>
-        public double SecondsPerBar => Bpm > 0f ? 60.0 / Bpm * BeatsPerBar : 0.0;
+        /// <summary>How sure the file was about which hand plays what.</summary>
+        public HandsStatus Hands { get; }
+
+        /// <summary>Song seconds in the first bar.</summary>
+        public double SecondsPerBar => TempoMap.FirstBarSeconds;
 
         /// <summary>Bars up to the one holding the last note's end. A note
         /// ending exactly on a bar line does not start another bar.</summary>
         public int BarCount => Duration <= 0.0 ? 0 : BarOf(Duration - 1e-6);
 
         /// <summary>Song time at which a 1-based bar starts.</summary>
-        public double BarStartTime(int bar) => (bar - 1) * SecondsPerBar;
+        public double BarStartTime(int bar) => TempoMap.BarStartTime(bar);
 
+        /// <summary>One tempo and one time signature for the whole song.</summary>
         public SongData(string title, float bpm, IReadOnlyList<SongNote> notes, int beatsPerBar = 4)
+            : this(title, notes, TempoMap.Constant(bpm, beatsPerBar))
+        {
+        }
+
+        /// <summary>A song with its own tempo map. Bpm is the first tempo.</summary>
+        public SongData(string title, IReadOnlyList<SongNote> notes, TempoMap tempoMap,
+                        HandsStatus hands = HandsStatus.Unknown)
         {
             Title = title;
-            Bpm = bpm;
             Notes = notes;
-            BeatsPerBar = beatsPerBar < 1 ? 1 : beatsPerBar;
+            TempoMap = tempoMap;
+            Hands = hands;
+            Bpm = tempoMap.FirstBpm;
+            BeatsPerBar = tempoMap.FirstBeatsPerBar;
 
             double duration = 0.0;
             foreach (SongNote note in notes)
@@ -75,19 +115,13 @@ namespace PianoGlass.Song
         /// <summary>1-based bar number of a song time; anything before 0
         /// (the lead-in) is bar 1. "Bar 9 is where you fall apart" is in these
         /// units, so they match how a player counts.</summary>
-        public int BarOf(double songTime)
-        {
-            double secondsPerBar = 60.0 / Bpm * BeatsPerBar;
-            if (songTime <= 0.0 || secondsPerBar <= 0.0) return 1;
-            // A hair of tolerance so a note exactly on a barline is not put in
-            // the previous bar by rounding.
-            return (int)System.Math.Floor(songTime / secondsPerBar + 1e-9) + 1;
-        }
+        public int BarOf(double songTime) => TempoMap.BarOf(songTime);
 
         // Middle C = 60, scientific pitch notation -- matches MidiInput.NoteName.
         private const int C4 = 60, D4 = 62, E4 = 64, F4 = 65, G4 = 67, A4 = 69;
 
         /// <summary>
+        /// Test fixture only: the app's songs are MIDI files now.
         /// "Twinkle, Twinkle, Little Star" (the tune is "Ah! vous dirai-je,
         /// Maman", public domain), first eight bars, in C major at 120 BPM.
         /// Monophonic and rest-free, so every note starts exactly where the
