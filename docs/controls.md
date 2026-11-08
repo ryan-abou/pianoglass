@@ -68,12 +68,14 @@ What stays off the menus, and why:
 - **The piano chords stay.** While playing, hands are on the keys, and a
   chord is faster than reaching for a panel. Each chord gets a matching
   button, so nothing is chord-only.
-- **Calibration touches keep the controller for now.** The two-point
-  capture and the Middle C touch need the controller's tip, and that is the
-  measurement itself. A hand-tracked fingertip is not assumed to be accurate
-  enough on a Quest 2 (tip calibration measured 1.58 mm; a white key is
-  23.5 mm wide). Hands do everything else in calibration, and the two ideas
-  below get measured in the hand-tracking spike.
+- **Calibration stays on the controller (Ryan, 2026-11-07).** The
+  hand-tracking menus (#5) leave calibration out: the two-point capture,
+  Middle C fix, nudges, "looks right" and tip measuring all keep their
+  controller buttons above. The touches need the controller's tip, and that
+  is the measurement itself. A hand-tracked fingertip is not assumed to be
+  accurate enough on a Quest 2 (tip calibration measured 1.58 mm; a white
+  key is 23.5 mm wide). The calibration panel row above is for later; the
+  hand calibration ideas in `docs/calibration-rounds.md` stay unbuilt.
 - **Development tools stay on controllers:** passthrough on/off and the
   device checklist.
 
