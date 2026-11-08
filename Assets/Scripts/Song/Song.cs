@@ -2,6 +2,21 @@ using System.Collections.Generic;
 
 namespace PianoGlass.Song
 {
+    /// <summary>Which hand a note in the song belongs to.</summary>
+    public enum NoteHand
+    {
+        /// <summary>A song whose hands aren't known.</summary>
+        None,
+        Left,
+        Right,
+        /// <summary>Both hands had this key at this moment. It counts as yours
+        /// whichever hand you pick, and you press it once.</summary>
+        Shared,
+    }
+
+    /// <summary>What the player chose to practice.</summary>
+    public enum PracticeHand { Left, Right, All }
+
     /// <summary>One note: which key, when it starts, how long it's held. Seconds
     /// throughout -- SongClock is what those seconds are measured against.</summary>
     public readonly struct SongNote
@@ -9,15 +24,25 @@ namespace PianoGlass.Song
         public readonly int Pitch;
         public readonly double StartTime;
         public readonly double Duration;
+        public readonly NoteHand Hand;
 
-        public SongNote(int pitch, double startTime, double duration)
+        public SongNote(int pitch, double startTime, double duration, NoteHand hand = NoteHand.None)
         {
             Pitch = pitch;
             StartTime = startTime;
             Duration = duration;
+            Hand = hand;
         }
 
         public double EndTime => StartTime + Duration;
+
+        /// <summary>Whether this note is the player's when practicing that
+        /// hand. A note with no hand is everyone's.</summary>
+        public bool BelongsTo(PracticeHand practice)
+        {
+            if (practice == PracticeHand.All || Hand == NoteHand.None || Hand == NoteHand.Shared) return true;
+            return practice == PracticeHand.Left ? Hand == NoteHand.Left : Hand == NoteHand.Right;
+        }
     }
 
     /// <summary>
