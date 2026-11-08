@@ -133,6 +133,18 @@ namespace PianoGlass.Scoring
     {
         public const string Left = "left", Right = "right";
 
+        /// <summary>What an attempt file calls the hand practiced.</summary>
+        public static string For(PianoGlass.Song.PracticeHand hand) =>
+            hand == PianoGlass.Song.PracticeHand.Left ? Left
+            : hand == PianoGlass.Song.PracticeHand.Right ? Right
+            : AttemptRecord.BothHands;
+
+        /// <summary>The other way round: back from a file's hand value.</summary>
+        public static PianoGlass.Song.PracticeHand ToPractice(string hand) =>
+            hand == Left ? PianoGlass.Song.PracticeHand.Left
+            : hand == Right ? PianoGlass.Song.PracticeHand.Right
+            : PianoGlass.Song.PracticeHand.All;
+
         /// <summary>"left" and "right" swap; null for "both" or anything else.</summary>
         public static string Other(string hand) => hand == Left ? Right : hand == Right ? Left : null;
 

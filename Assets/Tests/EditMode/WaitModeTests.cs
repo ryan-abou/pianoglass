@@ -25,6 +25,48 @@ namespace PianoGlass.Tests.EditMode
         private static ScoringSession Wait(SongData song) =>
             new ScoringSession(song, TimingWindows.Default, pitchOnly: true);
 
+        private static ScoringSession Wait(SongData song, PracticeHand hand) =>
+            new ScoringSession(song, TimingWindows.Default, pitchOnly: true, hand: hand);
+
+        private static SongData SplitChord() => new SongData("split", 120f, new[]
+        {
+            new SongNote(G4, 0.0, 0.5, NoteHand.Right),
+            new SongNote(C4, 0.0, 0.5, NoteHand.Left),
+            new SongNote(E4, 0.5, 0.5, NoteHand.Left),
+            new SongNote(D4, 1.0, 0.5, NoteHand.Right),
+        });
+
+        [Test]
+        public void WaitModeNeverWaitsForTheOtherHand()
+        {
+            ScoringSession s = Wait(SplitChord(), PracticeHand.Right);
+            s.OnNoteOn(G4, 0.0, 1.0);
+            Assert.AreEqual(1.0, s.NextDueTime, 1e-9, "skips the left-hand note at 0.5 s");
+        }
+
+        [Test]
+        public void AChordSplitAcrossHandsWaitsOnlyForYourHand()
+        {
+            ScoringSession s = Wait(SplitChord(), PracticeHand.Left);
+            CollectionAssert.AreEqual(new[] { C4 }, s.WaitingPitches());
+            s.OnNoteOn(C4, 0.0, 1.0);
+            Assert.AreEqual(0.5, s.NextDueTime, 1e-9);
+        }
+
+        [Test]
+        public void ASharedNoteIsOnePressInWaitMode()
+        {
+            var song = new SongData("shared", 120f, new[]
+            {
+                new SongNote(C4, 0.0, 0.5, NoteHand.Shared),
+                new SongNote(D4, 1.0, 0.5, NoteHand.Left),
+            });
+            ScoringSession s = Wait(song, PracticeHand.Left);
+            s.OnNoteOn(C4, 0.0, 1.0);
+            Assert.AreEqual(1, s.Correct);
+            Assert.AreEqual(1.0, s.NextDueTime, 1e-9);
+        }
+
         [Test]
         public void TheRightKeyIsCorrectNeverPerfect()
         {

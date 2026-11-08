@@ -44,6 +44,9 @@ namespace PianoGlass.Scoring
         public int Correct { get; private set; }
         /// <summary>Wait mode: judged on pitch alone, with the clock holding.</summary>
         public bool PitchOnly { get; }
+        /// <summary>Which notes are this attempt's. The rest are never scored
+        /// or waited for, and pressing one is a wrong key like any other.</summary>
+        public PracticeHand Hand { get; }
 
         public int NotesHit => Perfect + Great + Good + Correct;
         public int NotesMissed => Miss;
@@ -95,18 +98,21 @@ namespace PianoGlass.Scoring
         /// <param name="scoreNotesUntil">Song time at and after which notes
         /// are not part of this attempt: the end of a practice loop.</param>
         /// <param name="pitchOnly">Wait mode's rules (see above).</param>
+        /// <param name="hand">Goes by each note's own hand, not its pitch.</param>
         public ScoringSession(SongData song, TimingWindows windows, Func<int, bool> isPlayable = null,
                               double scoreNotesFrom = double.NegativeInfinity,
                               double scoreNotesUntil = double.PositiveInfinity,
-                              bool pitchOnly = false)
+                              bool pitchOnly = false, PracticeHand hand = PracticeHand.All)
         {
             Song = song ?? throw new ArgumentNullException(nameof(song));
             Windows = windows;
             PitchOnly = pitchOnly;
+            Hand = hand;
             _judged = new bool[song.Notes.Count];
 
             for (int i = 0; i < song.Notes.Count; i++)
-                if ((isPlayable == null || isPlayable(song.Notes[i].Pitch)) &&
+                if (song.Notes[i].BelongsTo(hand) &&
+                    (isPlayable == null || isPlayable(song.Notes[i].Pitch)) &&
                     song.Notes[i].StartTime >= scoreNotesFrom - 1e-9 &&
                     song.Notes[i].StartTime < scoreNotesUntil - 1e-9)
                     _scorable.Add(i);
@@ -359,6 +365,7 @@ namespace PianoGlass.Scoring
                 tempo = tempo, inputOffsetMs = inputOffsetMs, windows = Windows,
                 score = Score, accuracy = Accuracy, rank = ResultRank.For(Accuracy),
                 mode = PitchOnly ? AttemptRecord.Wait : AttemptRecord.Continuous,
+                hand = AttemptHands.For(Hand),
                 bestStreak = PitchOnly ? _bestRun : StreakCalculator.Best(_results, _wrong),
                 perfect = Perfect, great = Great, good = Good, miss = Miss, correct = Correct,
                 notesHit = NotesHit, notesMissed = NotesMissed,
