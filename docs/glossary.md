@@ -9,6 +9,7 @@ project. Add a word the first time it comes up.
 - **build**: turning the Unity project into an app the headset can run. PianoGlass example: `.\build.ps1` makes the APK and takes about 6 to 12 minutes.
 - **commit**: a saved snapshot of your changes with a short note saying what changed. PianoGlass example: "Remove unused template packages" is one commit.
 - **gh**: GitHub's command-line tool, so GitHub jobs can be done from the terminal instead of the website. PianoGlass example: moving a card on the project board to Doing with `gh project item-edit`.
+- **importer**: editor code that tells Unity how to read a file type it doesn't understand on its own. PianoGlass example: the `.mid` importer turns each song file into an asset that ships inside the APK.
 - **issue**: a numbered to-do or bug report on GitHub, like a ticket. PianoGlass example: "#1 MIDI file loading" is an issue with a card on the project board.
 - **JSON**: a text format for saving data as labels and values, like a filled-in form. PianoGlass example: every attempt you play is saved on the headset as a `.json` file with your accuracy and timing.
 - **manifest.json**: the project's shopping list of packages and which version of each to get. PianoGlass example: `Packages/manifest.json` says to use Meta XR SDK version 205.0.0.
@@ -16,6 +17,12 @@ project. Add a word the first time it comes up.
 - **.meta file**: a small file Unity keeps next to every asset, like a name tag that also holds its import settings. PianoGlass example: deleting `Assets/Readme.asset` also meant deleting `Assets/Readme.asset.meta`, or Unity would complain.
 - **package**: a ready-made add-on that someone else wrote, so you don't have to. PianoGlass example: the Meta XR SDK is the package that lets the app talk to the Quest.
 - **packages-lock.json**: the receipt for the shopping list, showing exactly what Unity actually got, including the packages that other packages need. PianoGlass example: after removing two packages from `manifest.json`, Unity removed their 17 lines from this file by itself.
+- **persistentDataPath**: the app's own private folder on the headset, where it can read and write without asking permission. PianoGlass example: attempt files go there, and your own songs go in its `Songs` folder.
+- **Play Mode**: running the app inside the Unity Editor on the PC, without the headset. PianoGlass example: the song check runs in Play Mode and prints `[SongCheck] PASS` in the Console.
+- **pooling**: reusing a small set of objects over and over instead of making a new one each time, like a restaurant washing plates instead of buying new ones. PianoGlass example: the highway reuses a few dozen note slabs as notes scroll by, instead of one per note in the song.
 - **PR (pull request)**: a request on GitHub to merge a branch into `main`, where you can see every change before it goes in. PianoGlass example: a PR that says "Closes #1" closes issue #1 by itself when it is merged.
 - **tag**: a name stuck on one commit so you can find it again, like a bookmark. PianoGlass example: `milestone-slice-playable` marks the first version where a song could be played.
+- **tempo map**: the list of where every beat of a song falls in seconds, worked out once from the MIDI file. PianoGlass example: it keeps bar lines on the notes in a song that slows down part-way.
 - **test**: a small piece of code that checks another piece of code gives the right answer. PianoGlass example: 578 tests check things like the scoring and calibration maths without opening the headset.
+- **tick**: the small step of time a MIDI file counts in, a slice of one beat. PianoGlass example: the Minuet file uses 480 ticks per beat.
+- **track**: one strand of a MIDI file, usually one staff of the sheet music. PianoGlass example: the Minuet file has a "Right Hand" track and a "Left Hand" track.
