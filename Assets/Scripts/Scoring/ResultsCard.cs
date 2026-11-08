@@ -633,7 +633,7 @@ namespace PianoGlass.Scoring
             string[] names = { "Perfect", "Great", "Good", "Miss" };
             Color[] colours =
             {
-                tokens != null ? tokens.Hit : new Color(0.24f, 0.86f, 0.59f),
+                PianoGlass.Song.OutcomeTint.Hit,
                 new Color(1f, 1f, 1f, 0.9f), new Color(0.72f, 0.74f, 0.78f, 0.9f), EarlyOrange,
             };
             _noteBarLeft = left + 56f;
