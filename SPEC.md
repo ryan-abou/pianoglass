@@ -1,7 +1,9 @@
 # SPEC: MIDI songs, hands and the song picker
 
-Issues: **#1 Load songs from MIDI files** and **#2 Add 3 public domain songs**.
-Written 2026-11-07 from an interview with Ryan. No code exists for this yet.
+Issues: **#1 Load songs from MIDI files** and **#2 Add 3 public domain songs**,
+then a Both hands option (see "How the work is split").
+Written 2026-11-07 from an interview with Ryan, updated 2026-11-08. No code
+exists for this yet.
 
 ## What we're building, in one paragraph
 
@@ -9,9 +11,11 @@ PianoGlass stops using the 8-bar Twinkle typed into `Song.cs`. Instead it
 loads songs from MIDI files. Three songs come with the app (Twinkle, Ode to
 Joy, Minuet in G), and any `.mid` you copy into the app's Songs folder on the
 headset is loaded too. Every note in a file is loaded and marked left hand or
-right hand, but you practice **one hand at a time**. Your hand's notes fall as
-solid slabs. The other hand's notes fall as outlines in their own colour, and
-they are never scored or waited for. A Liquid Glass song picker, pressed with
+right hand, and you practice **one hand at a time or both together**. With one
+hand, your hand's notes fall as solid slabs. The other hand's notes fall as
+outlines in their own colour, and they are never scored or waited for. With
+Both, every note is solid in its hand's colour, and all of them are scored and
+waited for. A Liquid Glass song picker, pressed with
 the controller ray, shows at launch and from a new "Songs" button on the
 results card. Songs that change tempo or beats per bar part-way through play
 with correct bar lines.
@@ -47,7 +51,50 @@ and right after the rules run. It has no menu button yet. For now it's set with
 a context-menu item on the `CurrentSong` component in the Editor. On the
 headset it can only be changed by a later menu.
 
-### What you see while practicing one hand
+### Cleaning up notes when a file loads
+
+Real files can be messy, so a small class, `ChordTidy`, runs once on every
+song, after hands are decided and after MIDI ticks have become seconds. It
+does two things, in this order.
+
+**1. Close notes become one chord.** A note that starts within **40 ms** of a
+chord's first note joins that chord, and moves to start exactly with it.
+
+- **Why 40 ms (my default):** in a file recorded by a real person, the notes of
+  one chord land a few tens of milliseconds apart. Real fast notes are further
+  apart than that: a 32nd note at 120 BPM is 62.5 ms.
+- **Measured from the chord's first note**, not from the note before, so a fast
+  run can't chain into one giant chord.
+- **Uses the file's own seconds**, so the tempo setting doesn't change what
+  counts as a chord.
+- **Looks at both hands together**, so a chord split between the hands is one
+  chord in Both.
+- **The notes move, the scoring stays the same.** After this step, a chord's
+  notes start at exactly the same time, which is what `ScoringSession`,
+  `MemoryFade` and `WaitRecall` already check for. None of their chord code
+  has to change.
+- **The cost:** grace notes closer than 40 ms turn into a chord you can press
+  in any order.
+
+**2. The same key at the same moment becomes one note.** The note keeps the
+longest length of its copies.
+
+- Copies from one hand, or from a hands-unknown song, are simply one note.
+- Copies from two hands become one **shared** note, so neither hand loses it.
+  It counts as yours whichever hand you pick, and you press it once. With one
+  hand it's drawn in your hand's colour, with no outline copy. With Both it's
+  drawn in the right hand's colour.
+- Swap hands leaves a shared note shared.
+
+The load report counts how many notes moved and how many merged, and prints
+them on the `[Songs]` Console line. The picker shows nothing about it.
+
+Checked 2026-11-08: the Minuet has no key shared by both hands, and its closest
+notes are 250 ms apart. Twinkle and Ode have no shared keys in their note lists
+either. So this step changes nothing in the three built-in songs, and every
+note count in this spec stands.
+
+### What you see while practicing
 
 - **Your hand**: solid slabs in your hand's colour, scored, lit keys, note
   names, memory fade, wait mode: everything works as it does today.
@@ -58,6 +105,11 @@ headset it can only be changed by a later menu.
 - **All notes** (hands-unknown songs): every note is solid and scored, drawn in
   a neutral "all notes" colour, and wait mode waits for whole chords. The
   attempt's `hand` is `"both"`.
+- **Both** (songs marked hands named or hands guessed): every note is solid in
+  its own hand's colour, left in sand and right in blue. Wait mode and scoring
+  treat all notes the same, like All notes does, so a chord split between the
+  hands waits for every key. Lit keys, note names and memory fade cover every
+  note. The attempt's `hand` is `"both"`.
 
 Defaults I picked:
 - Outline notes have **no note-name label** and **don't light keys**. That
@@ -93,10 +145,10 @@ theme that breaks that rule fails the test.
   25 cm above the top of the highway, tilted toward you, and registered on the
   keyboard like every other canvas. You said menus get redesigned after hand
   tracking, so this is a placeholder spot, tuned in the headset round.
-- **What**: a **Left | Right switch at the top**, then one row per song: the
-  title, plus a small line like `3/4 · 32 bars · Hands guessed`. A song marked
-  hands unknown says **All notes** on its row and ignores the switch. (Both
-  hands, #6, adds "Both" to the switch later.) Rows that couldn't load are
+- **What**: a **Left | Right | Both switch at the top** (Both arrives with the
+  second pull request), then one row per song: the title, plus a small line
+  like `3/4 · 32 bars · Hands guessed`. A song marked hands unknown says **All
+  notes** on its row and ignores the switch. Rows that couldn't load are
   greyed out with the reason. Five rows per page, with Prev/Next pills when
   there are more. A **Close** pill keeps the current song.
 - **Pressing a row** loads that song with the switch's hand, stopped at the
@@ -105,7 +157,8 @@ theme that breaks that rule fails the test.
 - **Remembered**: the last song and hand are saved and loaded at launch. If
   that file is gone, it falls back to the first built-in song.
 - The results card's existing switch-hand button now really switches hand and
-  restarts.
+  restarts. After a Both or All notes attempt it isn't offered, because there
+  is no other hand. `AttemptHands.Other` already works that way.
 
 ### Tempo and beats-per-bar changes
 
@@ -261,10 +314,11 @@ headset.
 | `MidiFileReaderTests` | Reads tiny files **typed in byte by byte from the MIDI rules**, not made by the writer, so a shared mistake can't hide: format 0 and 1, running status, note-on with velocity 0 = note-off, variable-length numbers (1 to 4 bytes), the same key struck again before release (paired first-in-first-out), zero-length notes (kept, with a 50 ms minimum length), drum channel ignored, notes outside A0–C8 skipped and counted, junk/truncated/non-MIDI files give a clear error instead of a crash |
 | `TempoMapTests` | Ticks to seconds across tempo changes. Bars and beats across a 4/4 → 3/4 change. 6/8 beats. Lead-in beats. A mid-bar change gives the warning. A one-tempo song gives exactly what today's `Bpm` maths gives (so nothing that passed on the headset moves) |
 | `HandAssignerTests` | One test per rule (named, guessed, unknown), the "Rhythm" non-match, three tracks, format 0, and swap hands for each status |
+| `ChordTidyTests` | Two notes 39 ms apart become one chord at the first note's time, and two notes 41 ms apart stay separate. A fast run (notes 30 ms apart) doesn't chain into one chord. A chord split between the hands is one chord. The same key twice at one moment becomes one note with the longer length. Copies from two hands become one shared note, and each hand's note count stays the same. A file with no close notes comes out exactly as it went in |
 | `StarterSongTests` | **Twinkle**: every note checked (pitch, start, length, hand), and the right hand is identical to the old hard-coded melody. **Ode**: every note checked. **Minuet**: loads as 32 bars of 3/4 at 120 BPM, two tracks, hands named with 129 right and 75 left notes, and bars 1-8 right hand hold 33 notes. **Ode** bars 1-8 right hand hold 30 notes (the two study passages) |
-| `SongLibraryTests` | Built-ins plus folder files in a stable order. A broken file becomes a greyed row with its reason. The remembered song is restored, or falls back to the first built-in. Hands-unknown rows offer only All notes |
+| `SongLibraryTests` | Built-ins plus folder files in a stable order. A broken file becomes a greyed row with its reason. The remembered song is restored, or falls back to the first built-in. Hands-unknown rows offer only All notes. Second pull request: named and guessed rows offer Both too |
 | `NotePaletteTests` | Hand colours are far enough from outcome colours and from each other |
-| `ScoringTests`, `WaitModeTests` (extended) | The other hand's notes are never scorable, wait mode never waits for them, and a chord split across hands waits only for your hand's notes. All existing tests still pass |
+| `ScoringTests`, `WaitModeTests` (extended) | The other hand's notes are never scorable, wait mode never waits for them, and a chord split across hands waits only for your hand's notes. A shared note needs one press, whichever hand you picked. All existing tests still pass. Second pull request: with Both, every note is scorable and a chord split across hands waits for every key |
 
 ### 2. Play Mode check in the Editor (Unity MCP reads the Console)
 
@@ -298,14 +352,21 @@ The sequence, and the Console lines it expects:
    with its reason.
 7. Stop and play again: the last song and hand are restored.
 
+The second pull request adds one more step:
+
+8. Pick **Minuet, Both**: `[Score] attempt started ... 204 notes`. Autoplay
+   presses every note and gives 100%, and the attempt JSON has `"hand": "both"`.
+   Then turn wait mode on and autoplay only the right-hand notes: the clock
+   holds at the first left-hand note.
+
 The Unity MCP is used only to **look**: Console, hierarchy, field values.
 Entering Play Mode and running the menu item doesn't change the scene. If the
 MCP can't press Play, Ryan presses it once and I read the results.
 
-### 3. Headset round (the only one)
+### 3. Headset rounds (one for each pull request)
 
-One development build of a test branch, one install, one session. Things only
-the headset can show:
+**Songs.** One development build of `midi-loading`, one install, one session.
+Things only the headset can show:
 - The controller ray presses picker rows, the Left/Right switch, Close and the
   results card's Songs button.
 - Outline notes read as "the other hand" against passthrough. Hand colours
@@ -317,6 +378,13 @@ the headset can show:
   drag-and-drop over USB and write down whether `Android/data` was visible.
 - Both study passages at 50% tempo: the highway runs at 60 BPM, right hand
   only.
+
+**Both.** One development build of `both-hands`, one install, one session:
+- Sand and blue are easy to tell apart when both hands fall at once.
+- In wait mode, a chord split between the hands holds the clock until every
+  key is down.
+- **72 fps** on the Minuet with Both, now that all 204 notes are solid and have
+  note names. Read `VrApi FPS=` on a release build.
 
 ## End-to-end check: proof it works
 
@@ -337,8 +405,13 @@ All of these must be true. Each step names how it's checked.
    your own MuseScore file with adb, and it shows in the picker and plays with
    bar lines on the notes. Frame rate holds 72 fps. *(Ryan, checklist in the
    round)*
-5. Record **30 seconds of video** of step 4 (milestone rule) and copy the APK
-   to `Milestones/`.
+5. **Both (second pull request)**: on the Quest, pick Minuet → Both and see the
+   left hand solid sand and the right hand solid blue. With wait mode on, the
+   clock holds on a chord until both hands' keys are down. The results card
+   says "Both hands" and never offers to switch hands. Frame rate holds 72 fps.
+   *(Ryan, checklist in the round)*
+6. Record **30 seconds of video** of step 4, and of step 5 for the second pull
+   request (milestone rule), and copy each APK to `Milestones/`.
 
 ## Files involved
 
@@ -349,14 +422,17 @@ headless):
   every beat and bar.
 - `Assets/Scripts/Song/Midi/HandAssigner.cs`: the only place hands are
   decided.
-- `Assets/Scripts/Song/Midi/MidiSongLoader.cs`: puts the three together into
+- `Assets/Scripts/Song/Midi/ChordTidy.cs`: moves close notes into one chord and
+  merges the same key at the same moment.
+- `Assets/Scripts/Song/Midi/MidiSongLoader.cs`: puts those together into
   a `SongData` plus a load report (warnings, or the reason it failed).
 - `Assets/Scripts/Song/SongLibrary.cs`: the list of songs, rows, remembered
   pick.
 - `Assets/Scripts/Song/NotePalette.cs` + `Assets/UI/NotePalette.asset`.
 
 **Changed, pure logic**:
-- `Song.cs`: `SongNote` gets a `Hand`. `SongData` gets the hands status and the
+- `Song.cs`: `SongNote` gets a `Hand` (left, right, shared, or none on a
+  hands-unknown song). `SongData` gets the hands status and the
   tempo map, and bar maths goes through the tempo map. The old one-tempo
   constructor stays, so existing tests and the hard-coded Twinkle keep working.
   `TwinkleTwinkleLittleStar()` stays as a test fixture only.
@@ -404,26 +480,43 @@ headless):
   (F38, F7, F11 status), `docs/history.md` (round results), `docs/glossary.md`,
   `CLAUDE.md` (current state).
 
+**Second pull request (Both)**:
+- `SongPicker.cs`: "Both" on the switch. Hands-unknown rows still ignore it.
+- `CurrentSong.cs`: the hand can be Both, saved and restored like the others.
+- `Scoring/Core/ScoringSession.cs`: with Both, every note is yours.
+- `NoteHighway.cs`: with Both, every note is solid in its own hand's colour.
+- `PianoKeyHighlighter.cs`: with Both, every due key lights.
+- `Midi/MidiEditorSimulator.cs`: autoplay presses every note with Both.
+- `Assets/Editor/SongCheckRunner.cs`: the Both step.
+- `docs/controls.md`, `docs/feature-evaluation.md`, `docs/history.md`,
+  `CLAUDE.md`.
+
 ## How the work is split
 
-Two branches, each with its own PR:
-- `midi-loading` from `main` → PR "Closes #1": reader, tempo map, hand
-  assigner, loader, `CurrentSong`, pooling, outlines and palette, picker,
-  Songs folder, simulator autoplay, SceneSetup.
-- `starter-songs` from `midi-loading` → PR "Closes #2": the importer, the
-  writer, the three songs, `SOURCES.md`, `StarterSongTests`, the song check.
+Two pull requests, in this order. Each merges to `main` only after its own
+headset round passes.
+
+1. **Songs.** Branch `midi-loading` from `main` → PR "Closes #1, closes #2":
+   reader, tempo map, hand assigner, chord tidy, loader, `CurrentSong`, pooling,
+   outlines and palette, picker (Left | Right), Songs folder, simulator
+   autoplay, SceneSetup, the importer, the writer, the three songs,
+   `SOURCES.md`, `StarterSongTests`, the song check.
+2. **Both hands.** Branch `both-hands` from `main`, after the first PR is
+   merged: the Both option and everything under "Second pull request" in the
+   files list. This PR needs an issue of its own to close, because #6 Results
+   card shows which hand missed no longer covers it.
 
 Commits follow the logical steps, one each and pushed each time, every one
-compiling: reader + tests, tempo map + tests, hand assigner + tests, loader,
-palette, scoring by hand, `CurrentSong` swap-over, highway pooling, outline
-shader, picker, results card button, Songs folder, SceneSetup wiring, editor
-helpers, each song, docs. One integration branch `songs-test` (never merged)
-gets the headset build. Each branch merges to `main` only after the round
-passes.
+compiling: reader + tests, tempo map + tests, hand assigner + tests, chord tidy
++ tests, loader, palette, scoring by hand, `CurrentSong` swap-over, highway
+pooling, outline shader, picker, results card button, Songs folder, SceneSetup
+wiring, editor helpers, each song, docs. Then, on `both-hands`: scoring and
+highway for Both, the switch option, the song check step, docs.
 
 ## Out of scope
 
-- Playing **both hands at once**, colouring a results card by hand (#6).
+- Showing **which hand missed** on the results card (#6 Results card shows
+  which hand missed).
 - Any **sound**: the other hand isn't played for you.
 - **Smarter hand guessing** (#9), **colour themes** and any settings menu
   (#10, S1), and a menu button for swap hands.
@@ -454,3 +547,5 @@ passes.
 - Zero-length notes are kept with a 50 ms minimum length. Notes outside the 88
   keys are skipped and counted in the load report.
 - The Songs folder is re-read every time the picker opens.
+- Notes within 40 ms of a chord's first note count as that chord.
+- A note shared by both hands is drawn in the right hand's colour with Both.
