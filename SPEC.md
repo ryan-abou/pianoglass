@@ -502,9 +502,8 @@ headset round passes.
    autoplay, SceneSetup, the importer, the writer, the three songs,
    `SOURCES.md`, `StarterSongTests`, the song check.
 2. **Both hands.** Branch `both-hands` from `main`, after the first PR is
-   merged: the Both option and everything under "Second pull request" in the
-   files list. This PR needs an issue of its own to close, because #6 Results
-   card shows which hand missed no longer covers it.
+   merged → PR "Closes #11" (#11 Play songs with both hands): the Both option
+   and everything under "Second pull request" in the files list.
 
 Commits follow the logical steps, one each and pushed each time, every one
 compiling: reader + tests, tempo map + tests, hand assigner + tests, chord tidy
