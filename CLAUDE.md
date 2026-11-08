@@ -596,6 +596,45 @@ these steps exactly. Ask before force-pushing, rewriting history, or deleting a
 branch. If a merge reports a conflict, stop and explain it rather than
 resolving it silently.
 
+Never add Co-Authored-By lines, 'Generated with Claude Code' footers, or any
+Claude/AI attribution to commits, PR descriptions, issues, or comments.
+
+---
+
+## How I write on GitHub
+
+Commit messages, issues, PR descriptions, and comments should sound like me, a
+high school student, not a pro engineer or an AI.
+
+- Short and plain. Write what I'd actually type. Commit subject under 60
+  characters.
+- Simple words. Say "keys line up wrong after taking the headset off," not
+  "anchor drift degrades spatial persistence."
+- Only use a technical word if it's the actual name of the thing (MIDI,
+  calibration, passthrough, a file or class name).
+- No em dashes, no emojis, no bold, no headers in commits.
+- Don't use words like: leverage, robust, seamless, comprehensive, enhance,
+  streamline, utilize, facilitate, ensure, implement (just say "add" or "make").
+- Issues: 1 to 3 sentences about what's wrong or what I want, then a short
+  checklist if it helps. No "Summary / Background / Acceptance Criteria"
+  headings.
+- PR descriptions: a few sentences about what changed and how I tested it. No
+  long bullet lists.
+
+Good commit examples:
+
+```
+Load songs from MIDI files
+Fix keys showing up a little to the left after recalibrating
+Add Twinkle Twinkle and Ode to Joy
+```
+
+Bad commit example:
+
+```
+Implement robust MIDI file ingestion pipeline with comprehensive error handling
+```
+
 ---
 
 ## Current state and what is next
