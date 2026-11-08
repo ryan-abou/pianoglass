@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using PianoGlass.Scoring;
 using PianoGlass.Song;
 
 namespace PianoGlass.Transport
@@ -22,6 +23,9 @@ namespace PianoGlass.Transport
         [SerializeField] private MidiSongAsset[] builtInSongs = new MidiSongAsset[0];
         [Tooltip("Assets/UI/NotePalette.asset. Assigned by SceneSetup.")]
         [SerializeField] private NotePalette palette;
+        [Tooltip("Its switch-hand button is wired to this.")]
+        [SerializeField] private ResultsCard resultsCard;
+        [SerializeField] private SongTransport transport;
 
         public const string SongsFolderName = "Songs";
 
@@ -43,6 +47,8 @@ namespace PianoGlass.Transport
 
         private void Awake()
         {
+            if (resultsCard == null) resultsCard = FindAnyObjectByType<ResultsCard>();
+            if (transport == null) transport = FindAnyObjectByType<SongTransport>();
             NotePalette.Active = palette;
             if (palette == null)
             {
@@ -66,6 +72,23 @@ namespace PianoGlass.Transport
             Song = Row.Song;
             Hand = Row.HandFor(remembered);
             Debug.Log($"[Songs] restored {Describe()}");
+        }
+
+        private void OnEnable()
+        {
+            if (resultsCard != null) resultsCard.SwitchHandRequested += SwitchHand;
+        }
+
+        private void OnDisable()
+        {
+            if (resultsCard != null) resultsCard.SwitchHandRequested -= SwitchHand;
+        }
+
+        /// <summary>The results card's "Switch to left hand": the same song,
+        /// the other hand, straight from the top.</summary>
+        private void SwitchHand(string hand)
+        {
+            if (Pick(Row, AttemptHands.ToPractice(hand)) && transport != null) transport.RestartAndPlay();
         }
 
         private static void MakeSongsFolder()

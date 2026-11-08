@@ -24,10 +24,9 @@ namespace PianoGlass.Scoring
     /// The card and the status panel take turns, because they share the same
     /// space above the keys: the status panel hides while the card is up, and
     /// when calibration has instructions for the player the card steps aside
-    /// and comes back afterwards. Nudging leaves the card up.
-    ///
-    /// Not built yet, so these only raise an event and log: one-hand practice
-    /// (F25), a song list (F7).
+    /// and comes back afterwards. Nudging leaves the card up. The song picker
+    /// takes the same space, so the card and the status panel both give way
+    /// to it, and the card comes back if the picker closes with no new song.
     /// </summary>
     [RequireComponent(typeof(Canvas))]
     public class ResultsCard : MonoBehaviour
@@ -45,15 +44,16 @@ namespace PianoGlass.Scoring
         [SerializeField] private Material textMaterial;
         [Tooltip("LiquidGlass material for every surface the card builds.")]
         [SerializeField] private Material glassMaterial;
-        [Tooltip("Turn on when a song list exists: shows the Next song button.")]
-        [SerializeField] private bool hasSongList;
+        [Tooltip("Opened by the Songs button. Assigned by SceneSetup.")]
+        [SerializeField] private SongPicker picker;
 
         /// <summary>First and last bar. PracticeLoop starts it.</summary>
         public event Action<int, int> LoopRequested;
-        /// <summary>"left" or "right". TODO: restart with that hand (F25).</summary>
+        /// <summary>"left" or "right". CurrentSong switches and restarts.</summary>
         public event Action<string> SwitchHandRequested;
-        /// <summary>TODO: load the next song once a song list exists (F7).</summary>
-        public event Action NextSongRequested;
+
+        /// <summary>The "mastered" suggestion's button opens the picker.</summary>
+        private const bool HasSongs = true;
 
         // ---- Layout, mm from the card's centre ----------------------------
         private static readonly Vector2 Size = new Vector2(460f, 360f);
@@ -101,7 +101,7 @@ namespace PianoGlass.Scoring
         private TextMeshProUGUI _title, _sub, _rank, _accuracy, _accuracyLine, _suggestion;
         private readonly TextMeshProUGUI[] _stats = new TextMeshProUGUI[3];
         private GameObject _chip;
-        private GlassButton _suggestionButton, _retry, _nextSong, _moreInfo;
+        private GlassButton _suggestionButton, _retry, _songs, _moreInfo;
         private TextMeshProUGUI _suggestionButtonText, _moreInfoText;
         private RectTransform _pillRoot, _pillPercents;
         private CanvasGroup _pillPercentGroup;
@@ -128,7 +128,8 @@ namespace PianoGlass.Scoring
         /// when nothing is chosen.</summary>
         private readonly List<GameObject> _rings = new List<GameObject>();
         private bool _hasResult;
-        private bool _statusApplied;
+        private bool? _statusOn;
+        private bool _pickerWasUp;
 
         public bool IsShowing => _canvas != null && _canvas.enabled;
         public ResultsSummary Last { get; private set; }
@@ -139,6 +140,7 @@ namespace PianoGlass.Scoring
             if (transport == null) transport = FindAnyObjectByType<SongTransport>();
             if (calibration == null) calibration = FindAnyObjectByType<KeyboardCalibration>();
             if (tip == null) tip = FindAnyObjectByType<ControllerTipCalibration>();
+            if (picker == null) picker = FindAnyObjectByType<SongPicker>();
             if (font == null || glassMaterial == null)
                 Debug.LogError("[Results] font or glass material missing -- run PianoGlass/Scene/Configure Results Card.");
             EnsureBuilt();
@@ -191,7 +193,7 @@ namespace PianoGlass.Scoring
             // A loop pass: the next one is already coming, and the card would
             // cover it. The status panel shows how it went.
             if (rec.IsLoop) return;
-            Show(ResultsSummary.From(rec, LoadPrevious(path), hasSongList));
+            Show(ResultsSummary.From(rec, LoadPrevious(path), HasSongs));
         }
 
         /// <summary>One more fact for this result's line under the title.</summary>
@@ -228,9 +230,7 @@ namespace PianoGlass.Scoring
             ApplySuggestion(s.Suggestion);
             ApplyRings();
 
-            // Next song stays hidden until a song list exists.
-            if (_nextSong != null)
-                _nextSong.SetFill(s.Suggestion.Rule == SuggestionRule.Mastered ? HighlightFill : ButtonFill);
+            _songs.SetFill(s.Suggestion.Rule == SuggestionRule.Mastered ? HighlightFill : ButtonFill);
 
             FillDetails(s);
             _details.SetInstant(false);
@@ -278,8 +278,10 @@ namespace PianoGlass.Scoring
 
         private void Update()
         {
-            if (_hasResult) ApplyVisibility();
+            if (_hasResult || PickerUp != _pickerWasUp) ApplyVisibility();
         }
+
+        private bool PickerUp => picker != null && picker.IsShowing;
 
         private bool CalibrationNeedsPlayer =>
             (calibration != null && calibration.NeedsPlayer) || (tip != null && tip.IsBusy);
@@ -288,21 +290,24 @@ namespace PianoGlass.Scoring
         /// when that changes, except that closing is always safe to repeat.</summary>
         private void ApplyVisibility()
         {
-            bool card = _hasResult && !CalibrationNeedsPlayer;
+            bool pickerUp = PickerUp;
+            _pickerWasUp = pickerUp;
+            bool card = _hasResult && !CalibrationNeedsPlayer && !pickerUp;
+            bool status = !card && !pickerUp;
             if (!card)
             {
                 if (_details != null) _details.SetInstant(false);
                 ApplyMoreInfo(false);
             }
-            if (_canvas != null && _canvas.enabled == card && _statusApplied) return;
-            _statusApplied = true;
+            if (_canvas != null && _canvas.enabled == card && _statusOn == status) return;
+            _statusOn = status;
 
             if (_canvas != null) _canvas.enabled = card;
             SetGlass(card);
             if (statusCanvas != null)
             {
-                statusCanvas.enabled = !card;
-                foreach (GlassPanel g in statusCanvas.GetComponentsInChildren<GlassPanel>(true)) g.enabled = !card;
+                statusCanvas.enabled = status;
+                foreach (GlassPanel g in statusCanvas.GetComponentsInChildren<GlassPanel>(true)) g.enabled = status;
             }
         }
 
@@ -374,10 +379,9 @@ namespace PianoGlass.Scoring
             _moreInfo.SetFill(open ? SoftWhiteFill : ButtonFill);
         }
 
-        private void OnNextSong()
+        private void OnSongs()
         {
-            Debug.Log("[Results] next song requested");
-            NextSongRequested?.Invoke();
+            if (picker != null) picker.Open();
         }
 
         private void OnSuggestion()
@@ -393,12 +397,11 @@ namespace PianoGlass.Scoring
                     if (transport != null) transport.RestartAtTempo(_current.TargetTempoPercent);
                     break;
                 case SuggestionAction.SwitchHand:
-                    // TODO: restart with that hand when one-hand practice exists (F25).
                     Debug.Log($"[Results] switch to {_current.TargetHand} hand requested");
                     SwitchHandRequested?.Invoke(_current.TargetHand);
                     break;
                 case SuggestionAction.NextSong:
-                    OnNextSong();
+                    OnSongs();
                     break;
             }
         }
@@ -532,7 +535,7 @@ namespace PianoGlass.Scoring
         private void BuildButtons()
         {
             float y = -Size.y * 0.5f - ButtonGap - ButtonHeight * 0.5f;
-            int count = hasSongList ? 3 : 2;
+            const int count = 3;
             float pitch = ButtonWidth + ButtonGap;
             float x = -pitch * (count - 1) * 0.5f;
             var size = new Vector2(ButtonWidth, ButtonHeight);
@@ -540,12 +543,9 @@ namespace PianoGlass.Scoring
             _retry = Button(transform, "Retry", new Vector2(x, y), size, 0f, 20f, true, out TextMeshProUGUI retry, OnRetry);
             retry.text = "Retry";
             x += pitch;
-            if (hasSongList)
-            {
-                _nextSong = Button(transform, "NextSong", new Vector2(x, y), size, 0f, 20f, true, out TextMeshProUGUI next, OnNextSong);
-                next.text = "Next song";
-                x += pitch;
-            }
+            _songs = Button(transform, "Songs", new Vector2(x, y), size, 0f, 20f, true, out TextMeshProUGUI songs, OnSongs);
+            songs.text = "Songs";
+            x += pitch;
             _moreInfo = Button(transform, "MoreInfo", new Vector2(x, y), size, 0f, 20f, true, out _moreInfoText, OnMoreInfo);
         }
 
@@ -882,15 +882,18 @@ namespace PianoGlass.Scoring
         // data. PianoGlass/Preview/Results Card renders the same samples to
         // PNGs without entering play mode.
         [ContextMenu("Sample: 8 bars")]
-        private void Sample8() => Show(ResultsSamples.Summary(ResultsSamples.EightBars, hasSongList));
+        private void Sample8() => Show(ResultsSamples.Summary(ResultsSamples.EightBars, HasSongs));
         [ContextMenu("Sample: 32 bars")]
-        private void Sample32() => Show(ResultsSamples.Summary(ResultsSamples.ThirtyTwoBars, hasSongList));
+        private void Sample32() => Show(ResultsSamples.Summary(ResultsSamples.ThirtyTwoBars, HasSongs));
         [ContextMenu("Sample: 97 bars")]
-        private void Sample97() => Show(ResultsSamples.Summary(ResultsSamples.NinetySevenBars, hasSongList));
+        private void Sample97() => Show(ResultsSamples.Summary(ResultsSamples.NinetySevenBars, HasSongs));
         [ContextMenu("Sample: perfect, other hand next (rule d)")]
-        private void SampleD() => Show(ResultsSamples.Summary(ResultsSamples.PerfectOtherHand, hasSongList));
+        private void SampleD() => Show(ResultsSamples.Summary(ResultsSamples.PerfectOtherHand, HasSongs));
         [ContextMenu("Sample: perfect, mastered (rule e)")]
-        private void SampleE() => Show(ResultsSamples.Summary(ResultsSamples.PerfectMastered, hasSongList));
+        private void SampleE() => Show(ResultsSamples.Summary(ResultsSamples.PerfectMastered, HasSongs));
+
+        /// <summary>For the song check: the same button a player presses.</summary>
+        public void PressSongsForCheck() => _songs.Press();
 #endif
     }
 }
