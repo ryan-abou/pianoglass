@@ -78,6 +78,9 @@ namespace PianoGlass.Song
         /// tempo map.</summary>
         public int BeatsPerBar { get; }
 
+        /// <summary>How sure the file was about which hand plays what.</summary>
+        public HandsStatus Hands { get; }
+
         /// <summary>Song seconds in the first bar.</summary>
         public double SecondsPerBar => TempoMap.FirstBarSeconds;
 
@@ -95,11 +98,13 @@ namespace PianoGlass.Song
         }
 
         /// <summary>A song with its own tempo map. Bpm is the first tempo.</summary>
-        public SongData(string title, IReadOnlyList<SongNote> notes, TempoMap tempoMap)
+        public SongData(string title, IReadOnlyList<SongNote> notes, TempoMap tempoMap,
+                        HandsStatus hands = HandsStatus.Unknown)
         {
             Title = title;
             Notes = notes;
             TempoMap = tempoMap;
+            Hands = hands;
             Bpm = tempoMap.FirstBpm;
             BeatsPerBar = tempoMap.FirstBeatsPerBar;
 
