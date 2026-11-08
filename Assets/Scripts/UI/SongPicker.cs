@@ -44,7 +44,7 @@ namespace PianoGlass.UI
 
         private static readonly Color ButtonFill = new Color(0.60f, 0.65f, 0.70f, 0.22f);
         private static readonly Color RowFill = new Color(0.55f, 0.60f, 0.66f, 0.16f);
-        private static readonly Color CurrentFill = new Color(1f, 1f, 1f, 0.26f);
+        private static readonly Color CurrentFill = new Color(1f, 1f, 1f, 0.20f);
         private static readonly Color GreyedFill = new Color(0.40f, 0.42f, 0.45f, 0.10f);
 
         private sealed class RowView
@@ -153,6 +153,7 @@ namespace PianoGlass.UI
                 view.Title.text = row.Title;
                 view.Title.color = row.CanLoad ? _primary : _secondary;
                 view.Detail.text = row.Detail;
+                view.Detail.color = isCurrent ? _primary : _secondary;
                 view.Button.Button.interactable = row.CanLoad;
                 view.Button.SetFill(!row.CanLoad ? GreyedFill : isCurrent ? CurrentFill : RowFill);
             }
@@ -164,11 +165,17 @@ namespace PianoGlass.UI
             if (paged)
             {
                 _pageText.text = $"{_page + 1} of {library.PageCount}";
-                _previous.Button.interactable = _page > 0;
-                _next.Button.interactable = _page < library.PageCount - 1;
+                SetPageButton(_previous, _page > 0);
+                SetPageButton(_next, _page < library.PageCount - 1);
             }
 
             FillSwitch();
+        }
+
+        private static void SetPageButton(GlassButton button, bool usable)
+        {
+            button.Button.interactable = usable;
+            button.SetFill(usable ? ButtonFill : GreyedFill);
         }
 
         private void FillSwitch()
@@ -244,10 +251,10 @@ namespace PianoGlass.UI
 
             var view = new RowView { Button = button };
             view.Title = Text(glass.transform, "Title", 20f, _primary, TextAlignmentOptions.TopLeft,
-                              new Vector2(-Inner * 0.5f + 16f, RowHeight * 0.5f - 6f), Inner - 32f, true);
+                              new Vector2(-Inner * 0.5f + 16f, RowHeight * 0.5f - 4f), Inner - 32f, true);
             view.Title.overflowMode = TextOverflowModes.Ellipsis;
             view.Detail = Text(glass.transform, "Detail", 14f, _secondary, TextAlignmentOptions.TopLeft,
-                               new Vector2(-Inner * 0.5f + 16f, RowHeight * 0.5f - 31f), Inner - 32f);
+                               new Vector2(-Inner * 0.5f + 16f, RowHeight * 0.5f - 28f), Inner - 32f);
             view.Detail.overflowMode = TextOverflowModes.Ellipsis;
             return view;
         }
