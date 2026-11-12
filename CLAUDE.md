@@ -98,6 +98,7 @@ Full text in `docs/traps.md`.
   swap `sdk.all` for `sdk.core` + `sdk.interaction` 205.0.0.
 - Passthrough shows black if the camera clears to `Skybox`: needs `SolidColor`
   with alpha 0 **and** `RenderSettings.skybox = null`; check HDR and post too.
+  The colour must be black (`Color.clear`), or it tints the room (it was blue).
 - After a failed build, revert the extra `preloadedAssets` entry and delete
   `Assets/StreamingAssets/` and `Assets/Resources/PerformanceTestRun*` (keep
   `Assets/StreamingAssets.meta`). An IL2CPP `clang++` 0xC0000005 crash: retry once.

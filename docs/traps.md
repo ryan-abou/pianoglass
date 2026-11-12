@@ -75,7 +75,10 @@ Full text, moved out of CLAUDE.md on 2026-11-07. CLAUDE.md keeps one line per tr
   result looks exactly like passthrough silently failing rather than like a
   camera setting. Needs **both** halves: `clearFlags = SolidColor` with
   background alpha `0`, **and** `RenderSettings.skybox = null` — either one
-  alone still leaves something opaque in front of the passthrough feed. Also
+  alone still leaves something opaque in front of the passthrough feed. The
+  colour itself must be **black** too (`Color.clear`): the Quest adds a
+  see-through pixel's colour on top of passthrough, so Unity's default dark
+  blue with alpha 0 tinted the whole room blue until 2026-11-12. Also
   check the active URP asset's HDR flag and any `Global Volume` with active
   post-processing overrides before assuming the camera is the whole story:
   HDR and post-processing can each rewrite the camera's alpha channel on the
