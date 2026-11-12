@@ -141,10 +141,11 @@ namespace PianoGlass.EditorTools
             // passthrough must clear to a colour, and that colour's alpha
             // must be 0 so the compositor's passthrough layer shows through
             // instead of whatever this colour would otherwise be.
+            // The colour itself has to be black too: the Quest adds a
+            // see-through pixel's colour on top of passthrough, so Unity's
+            // default dark blue with alpha 0 tinted the whole room blue.
             cam.clearFlags = CameraClearFlags.SolidColor;
-            Color background = cam.backgroundColor;
-            background.a = 0f;
-            cam.backgroundColor = background;
+            cam.backgroundColor = Color.clear;
 
             // A Skybox clear mode draws this material even if nothing else
             // references it, so it has to go too, not just the clear flags.
