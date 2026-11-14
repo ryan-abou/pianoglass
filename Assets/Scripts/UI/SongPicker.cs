@@ -65,6 +65,12 @@ namespace PianoGlass.UI
         /// <summary>On show right now.</summary>
         public bool IsShowing => _shown;
 
+        /// <summary>The picker's glass and type, for a panel built in code that
+        /// is not in the scene (the development-build checklist), so it never
+        /// looks anything up and matches the picker exactly.</summary>
+        public (TMP_FontAsset font, Material text, Material glass, GlassTokens tokens) Style =>
+            (font, textMaterial, glassMaterial, tokens);
+
         private void Awake()
         {
             if (current == null) current = FindAnyObjectByType<CurrentSong>();
