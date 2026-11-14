@@ -1,6 +1,6 @@
 # PianoGlass
 
-Mixed-reality piano trainer for **Meta Quest 2**. Notes fall onto the keys of a
+Mixed-reality piano trainer for **Meta Quest 3**. Notes fall onto the keys of a
 real 88-key piano seen through passthrough; a USB MIDI keyboard provides
 ground-truth input. Built by one student developer, ~7 hours a week.
 
@@ -71,11 +71,16 @@ Unity, build, reopen. Never build first and change the scene afterwards.
 
 ## Hardware realities
 
+- **Quest 3** is the target and the headset for the usability study. Quest 2 is no
+  longer a target, but `quest2` stays in the manifest's supported devices: don't remove it.
 - **One USB-C port** for both the MIDI keyboard and the PC cable. What always works: build
   over USB, `adb install -r`, unplug, connect the keyboard, **App Library → Unknown Sources**.
-- **Passthrough is monochrome and low-res**: draw a legible overlay on the real keys.
-- **No depth sensor**, so no occlusion: keep the highway above and behind the keys.
-- **About half a Quest 3's GPU**: URP, no realtime shadows, unlit, 72 Hz.
+- **Passthrough is colour now** (it was monochrome on Quest 2). Still draw a legible
+  overlay on the real keys.
+- **The depth sensor exists, but we don't use it for occlusion**, on purpose: keep the
+  highway above and behind the keys.
+- **Same performance budget until measured on a Quest 3**: URP, no realtime shadows,
+  unlit, 72 Hz.
 
 ## Traps already hit — do not re-learn these
 
