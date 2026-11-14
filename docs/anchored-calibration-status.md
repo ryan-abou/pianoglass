@@ -340,15 +340,52 @@ the keys 14 mm. Nobody nudged height this round, so that is still untested.
 **Fingertips still untested against drift:** no presses after the relaunch. 423
 presses before it give the baseline: +0.5 mm along the keys, spread 3.6 mm.
 
+## Quest 3 round 1 (2026-11-13)
+
+First round on the Quest 3: a development build of `main` right after the Quest 3
+move, on a fresh install (so first-time setup). Pictures, logs and attempts are in
+`Milestones/2026-11-13-quest3-round1/`.
+
+- **Tip calibration:** 47.5 mm from the controller origin, RMS 1.32 mm over 301
+  samples (Quest 2: 1.58 mm). Ryan used his finger as the pivot.
+- **Fresh calibration:** key width 23.5 mm, span 120.0 cm (expect about 119.9).
+  Every fresh calibration still needed about +12 to +14 mm in z by eye; the saved
+  bias is (-4.5, +4.4, +13.9) mm.
+- **The finger is not the cause.** Ryan had been touching with the controller tip
+  pressed on his own finger resting on the key. A bare-tip calibration needed the
+  same z nudge. Why the touch and the eye disagree by about 14 mm in z is open:
+  the tip point found with a finger pivot, or passthrough showing the keys a little
+  off. Telling them apart: redo the tip calibration with the bare tip in a fixed dent.
+- **The Middle C fix undoes the bias (#15).** It compares the raw touch with the
+  keys on show, which already include the bias, so every fix pulls z back by about
+  the bias and Ryan nudged it straight back:
+
+| Time | Touch | Error x / y / z (mm) | Applied (mm) | Then, by eye |
+|---|---|---|---|---|
+| 22:39 | tip on finger, after a relaunch | -13.9 / -13.3 / -6.9 | -13.9, -10.0, -6.9 | Looked about 20 mm off; recalibrated |
+| 22:59:08 | bare tip, old calibration | -5.1 / -3.9 / -17.4 | -5.1, 0, -17.4 | Recalibrated |
+| 22:59:31 | bare tip, fresh calibration | +11.5 / +3.1 / -13.9 | +11.5, 0, -13.9 | z +13.8 |
+| 23:01 | bare tip, after relaunch and recenter | -10.6 / -13.4 / -12.9 | -10.6, -10.0, -12.9 | x +11.4, y +16.3, z +15.0 |
+
+  x is only where along Middle C's 23.5 mm front edge the tip landed, so one touch
+  cannot measure it well either.
+- **Launch (#17):** the keys started about a piano width to the right at both
+  relaunches (pictures at 22:38 and 23:00), with the anchor loaded fine
+  (`load status=Success`). A recenter brought them back, within about 5-10 mm by eye.
+- Drift after time away was not measured on the Quest 3 yet.
+
 ## What's next
 
-1. Measure observation 2: a seated Middle C fix with the y value written
+1. #15: take the calibration bias off a Middle C touch before working out the fix.
+2. #17: find why the keys start a piano width to the right at launch.
+3. Retest drift after time away on the Quest 3 (the `return-settle` round, #3).
+4. Measure observation 2: a seated Middle C fix with the y value written
    down (`verify error x/y/z mm` in the log). Then decide whether the
    fix's vertical part (capped at 10 mm) is enough, or whether a dedicated
    height check is needed.
-2. Fix the checklist's step 4 not advancing, before it is used again.
-3. Two-point correction (C3 + C6) for yaw/width errors a one-point fix
+5. Fix the checklist's step 4 not advancing, before it is used again.
+6. Two-point correction (C3 + C6) for yaw/width errors a one-point fix
    cannot remove — the Core maths (`SolveTwoPoint`) already exists, and the
    flow already has the states.
-4. Promote anchored calibration from development-only to release once it has
+7. Promote anchored calibration from development-only to release once it has
    survived a user-test session.
