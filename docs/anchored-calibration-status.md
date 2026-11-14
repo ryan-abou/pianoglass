@@ -376,9 +376,24 @@ move, on a fresh install (so first-time setup). Pictures, logs and attempts are 
   (`load status=Success`). A recenter brought them back, within about 5-10 mm by eye.
 - Drift after time away was not measured on the Quest 3 yet.
 
+## Batch G round 1 (2026-11-14): Middle C fix passed
+
+`batchG-middlec-bias` (#15): a Middle C touch now has the calibration bias taken
+off before the fix is worked out. Bare-tip touches all round:
+
+| Touch | Log | Result |
+|---|---|---|
+| Straight after a fresh calibration | `verify error ... total 1.7 mm, calibration bias (-4.5, +4.4, +13.9) mm taken off the touch -- keys left alone` | Pass: it read about -14 mm before the fix |
+| Keys pushed 47.6 mm sideways, then a touch | `+40.2 / -6.9 / +3.2`, applied +40.2 mm along the keys | Pass: back within 7 mm, which is where along the 23.5 mm edge the tip landed |
+
+The new bias learned from bare-tip touches: (+2.0, +4.4, +14.4) mm. The launch
+problem (#17) was caught by the new `[LaunchPose]` log: a recenter moves the anchor
+and the head by different amounts (21 and 91 deg at 13:35:43), so until the first
+recenter they are in different frames. Being measured further in the next round.
+
 ## What's next
 
-1. #15: take the calibration bias off a Middle C touch before working out the fix.
+1. ~~#15: take the calibration bias off a Middle C touch~~: done, see above.
 2. #17: find why the keys start a piano width to the right at launch.
 3. Retest drift after time away on the Quest 3 (the `return-settle` round, #3).
 4. Measure observation 2: a seated Middle C fix with the y value written

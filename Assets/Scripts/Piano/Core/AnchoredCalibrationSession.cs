@@ -337,9 +337,10 @@ namespace PianoGlass.Piano
 
         /// <summary>
         /// The trigger while Correcting: <paramref name="tipWorld"/> is where
-        /// the controller tip touched Middle C's front edge. Measures it
-        /// against the front edge the layout on show says Middle C has
-        /// (nudge included), and applies the offset as a rigid shift of the
+        /// the controller tip touched Middle C's front edge. Takes the
+        /// calibration bias off the touch, measures it against the front edge
+        /// the layout on show says Middle C has (nudge included), and applies
+        /// the offset as a rigid shift of the
         /// anchor-local geometry -- vertical capped, anything over
         /// AnchoredKeyboard.MovedMetres refused with nothing written.
         /// </summary>
@@ -353,12 +354,21 @@ namespace PianoGlass.Piano
 
             PianoKeyLayout layout = BuildLayout();
             Vector3 expected = layout.FrontEdgeCenter(AnchoredKeyboard.MiddleC);
-            OnePointCorrection c = AnchoredKeyboard.CorrectOnePoint(expected, tipWorld);
 
-            Vector3 rawMm = AnchoredKeyboard.NudgeToKeyboardMm(tipWorld - expected, layout.Right, layout.Up, layout.Forward);
+            // A touch lands the calibration bias away from where the player
+            // sees the key: the same steady offset a fresh calibration starts
+            // from. Without taking it off, every fix pulled the keys back by
+            // the bias and the player nudged them straight back (#15, about
+            // 14 mm on the Quest 3, 2026-11-13).
+            Vector3 biasMm = TouchBiasMm();
+            Vector3 seen = tipWorld + AnchoredKeyboard.NudgeToWorld(biasMm, layout.Right, layout.Up, layout.Forward);
+            OnePointCorrection c = AnchoredKeyboard.CorrectOnePoint(expected, seen);
+
+            Vector3 rawMm = AnchoredKeyboard.NudgeToKeyboardMm(seen - expected, layout.Right, layout.Up, layout.Forward);
             LastVerifyErrorMm = rawMm;
             string error = $"verify error x/y/z mm = {rawMm.x:+0.0;-0.0;0} / {rawMm.y:+0.0;-0.0;0} / {rawMm.z:+0.0;-0.0;0} " +
-                           $"(total {rawMm.magnitude:0.0} mm)";
+                           $"(total {rawMm.magnitude:0.0} mm" +
+                           (biasMm != Vector3.zero ? $", calibration bias {Mm(biasMm)} taken off the touch)" : ")");
 
             if (!c.Accepted)
             {
@@ -797,6 +807,15 @@ namespace PianoGlass.Piano
             Log($"released anchor {Anchor.Id} (not erased)");
             Anchor = null;
             PlacementChanged?.Invoke();
+        }
+
+        /// <summary>How far a touch lands from where the player sees the key:
+        /// the calibration bias, used only once the tip is measured, exactly
+        /// as a fresh calibration uses it. Zero otherwise.</summary>
+        private Vector3 TouchBiasMm()
+        {
+            PianoProfileStore store = _serializer.Load().Store;
+            return store != null && store.hasTipOffset ? store.calibrationBiasMm : Vector3.zero;
         }
 
         /// <summary>The store as it is on disk right now, for a
