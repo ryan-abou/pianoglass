@@ -857,11 +857,14 @@ namespace PianoGlass.EditorTools
         /// 60 fps phone video of Twinkle at 120 bpm had the clicks about 170 ms
         /// after the beat line reached the key line (5 beats by eye, 130 to
         /// 195 ms), so 140 + 170 (#16). The log there reads "DSP buffer 512 x 4
-        /// @ 24000 Hz". Quest 2, 2026-11-03: 141 ms (median 140, sd 11, 8 bars),
-        /// then 17 ms early on a retest. A clap video put the phone's own
-        /// audio/video offset within one 30 fps frame, so it is not corrected
-        /// for.</summary>
-        private const float MetronomeOutputLatencyMs = 310f;
+        /// @ 24000 Hz". Then with 310 ms set, two more videos (2026-11-14,
+        /// 3 bar clicks each by eye) both had the clicks early: about 60 to 130
+        /// and 100 to 150 ms. The two that agree win, so 310 - 110 = 200. Each
+        /// phone recording has its own sound/picture gap (0, 43 and 178 ms
+        /// audio start offsets), so one video is only good to about 100 ms.
+        /// Quest 2, 2026-11-03: 141 ms (median 140, sd 11, 8 bars), then 17 ms
+        /// early on a retest.</summary>
+        private const float MetronomeOutputLatencyMs = 200f;
 
         /// <summary>
         /// The metronome (Batch B3, F27): a Metronome on its own object, its
