@@ -52,8 +52,6 @@ Development tools that are not player controls:
   mistakes* context menus, and `EditorUiPointer` lets a mouse click in the Game
   view press glass buttons. Editor only.
 - *PianoGlass → Checks → Run song check* runs the whole song flow in Play Mode.
-- `DeviceChecklistRunner` (development builds) reads the flow's events and
-  needs no input of its own.
 - `OvrAnchorSpike` (Phase 3 harness) uses both grips. It is disabled in the
   scene and must stay disabled alongside the anchored-calibration flow.
 
