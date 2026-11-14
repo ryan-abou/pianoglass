@@ -20,7 +20,10 @@ namespace PianoGlass.Piano
     /// </summary>
     public sealed class LaunchResync : MonoBehaviour
     {
-        public const string PromptLine = "Hold the Meta button to line up the keys";
+        /// <summary>Both ways to recenter: the Meta button on a controller, or,
+        /// with hands, looking at a palm and pinching and holding (#5).</summary>
+        public const string PromptLine =
+            "Hold the Meta button, or look at your palm and pinch and hold, to line up the keys";
 
         /// <summary>Show <see cref="PromptLine"/> now.</summary>
         public static bool WaitingForRecenter { get; private set; }
