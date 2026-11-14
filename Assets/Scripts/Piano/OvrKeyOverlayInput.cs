@@ -66,7 +66,8 @@ namespace PianoGlass.Piano
                 TogglePassthrough();
         }
 
-        private void TogglePassthrough()
+        /// <summary>Also the settings panel's Passthrough button (#5, development builds).</summary>
+        public void TogglePassthrough()
         {
             if (passthroughLayer == null)
             {

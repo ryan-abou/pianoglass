@@ -65,6 +65,32 @@ Development tools that are not player controls:
 - `OvrAnchorSpike` (Phase 3 harness) uses both grips. It is disabled in the
   scene and must stay disabled alongside the anchored-calibration flow.
 
+### Without controllers (#5, built 2026-11-14)
+
+Put the controllers down and the Quest tracks your hands. Every glass button
+(song panel, settings, song picker, results card, checklist) is pressed by
+**poking it with an index fingertip** (`HandPokePointer`, `PokeDetector`): hover
+within 4 cm, press as the fingertip pushes through the face, then pull back
+1.5 cm to press again. The controller ray keeps working alongside.
+
+| Control | Without controllers | Where |
+|---|---|---|
+| Play / pause, restart | Song panel buttons (left end of the keyboard) | `SongPanel` |
+| Tempo −/+, metronome, wait mode, memory fade | Song panel buttons, only while stopped or paused, or the piano chords as before | `SongPanel` |
+| Songs, hand switch | Song panel "Songs", then poke the picker | `SongPanel`, `SongPicker` |
+| Settings | Song panel "Settings": shown in the song panel's place | `SettingsPanel` |
+| Calibrate | Settings "Calibrate with hands", then press A0 and C8 with one index finger | `HandCalibration` |
+| Looks right | Settings "Looks right" | `SettingsPanel` |
+| Middle C fix | Settings "Middle C fix", then press Middle C with one index finger | `HandCalibration` |
+| Nudge, turn, clear nudge | Settings nudge pad: 2 mm or 0.2 deg per poke, saved each time | `SettingsPanel` |
+| Display mode | Settings "Display" | `SettingsPanel` |
+| Recenter (the keys a piano width off at launch, #17) | Look at your palm, pinch and hold | Quest system gesture |
+| Passthrough, test checklist, recording mode (development builds) | Settings buttons | `SettingsPanel` |
+
+A key press only counts as a calibration touch while hands are tracked, so a
+controller tip that presses a key never counts twice. Hand touches learn their
+own calibration bias, kept apart from the controller tip's.
+
 ### Target: hand-tracked Liquid Glass menus (Phase 4)
 
 Every menu below is Liquid Glass (`GlassPanel` + `LiquidGlass.shader`,
@@ -88,6 +114,10 @@ What stays off the menus, and why:
 - **The piano chords stay.** While playing, hands are on the keys, and a
   chord is faster than reaching for a panel. Each chord gets a matching
   button, so nothing is chord-only.
+- **Calibration by hand too (Ryan, 2026-11-14: everything without
+  controllers).** Built as key presses, not fingertip touches: MIDI says which
+  key and when, the fingertip says where (accurate along the keys, 328 presses).
+  The controller-tip way below stays. What 2026-11-07 said:
 - **Calibration stays on the controller (Ryan, 2026-11-07).** The
   hand-tracking menus (#5) leave calibration out: the two-point capture,
   Middle C fix, nudges, "looks right" and tip measuring all keep their

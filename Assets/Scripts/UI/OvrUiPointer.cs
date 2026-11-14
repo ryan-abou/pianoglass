@@ -40,7 +40,7 @@ namespace PianoGlass.UI
                 foreach (GlassButton b in GlassButton.All)
                 {
                     if (!b.IsPressable) continue;
-                    anyPressable = true;
+                    if (!b.AlwaysShown) anyPressable = true;
                     if (b.TryHit(ray, out float d) && d < nearest)
                     {
                         nearest = d;
@@ -59,8 +59,9 @@ namespace PianoGlass.UI
 
             if (line != null)
             {
-                line.enabled = anyPressable;
-                if (anyPressable)
+                bool show = anyPressable || hit != null;
+                line.enabled = show;
+                if (show)
                 {
                     line.SetPosition(0, ray.origin);
                     line.SetPosition(1, ray.GetPoint(hit != null ? nearest : reach));

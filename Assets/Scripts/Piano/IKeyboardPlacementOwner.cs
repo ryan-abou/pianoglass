@@ -58,5 +58,10 @@ namespace PianoGlass.Piano
         /// <summary>The capture button pressed while placed, with the tip's
         /// world position -- a Middle C touch, if one is in progress.</summary>
         void OnTriggerWhilePlaced(Vector3 tipWorld);
+
+        /// <summary>Whether the touches handed over next come from a fingertip
+        /// pressing a key (#5) or the controller tip: each has its own
+        /// calibration bias.</summary>
+        void SetTouchSource(bool byHand);
     }
 }

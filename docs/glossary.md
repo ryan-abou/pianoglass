@@ -18,6 +18,7 @@ project. Add a word the first time it comes up.
 - **development build**: a build with extra debugging and test tools turned on, a bit slower. PianoGlass example: `.\build.ps1 -Development` turns on anchored calibration and the in-headset checklist, and runs about 69 to 72 fps.
 - **EditMode tests**: tests that run inside the Unity editor without pressing Play or using the headset. PianoGlass example: 727 of them run in about a minute while the editor window is closed.
 - **gh**: GitHub's command-line tool, so GitHub jobs can be done from the terminal instead of the website. PianoGlass example: moving a card on the project board to Doing with `gh project item-edit`.
+- **hand tracking**: the headset's cameras following your hands and fingers, so you can use the app without holding controllers. PianoGlass example: with the controllers down, your index fingertip pokes the song panel's buttons and presses A0 and C8 to calibrate.
 - **importer**: editor code that tells Unity how to read a file type it doesn't understand on its own. PianoGlass example: the `.mid` importer turns each song file into an asset that ships inside the APK.
 - **issue**: a numbered to-do or bug report on GitHub, like a ticket. PianoGlass example: "#1 MIDI file loading" is an issue with a card on the project board.
 - **JSON**: a text format for saving data as labels and values, like a filled-in form. PianoGlass example: every attempt you play is saved on the headset as a `.json` file with your accuracy and timing.
@@ -31,6 +32,7 @@ project. Add a word the first time it comes up.
 - **passthrough**: the headset's cameras showing you the real room, so virtual things can sit on top of it. PianoGlass example: you see your real piano through passthrough, in colour on the Quest 3 and black and white on the Quest 2.
 - **persistentDataPath**: the app's own private folder on the headset, where it can read and write without asking permission. PianoGlass example: attempt files go there, and your own songs go in its `Songs` folder.
 - **Play Mode**: running the app inside the Unity Editor on the PC, without the headset. PianoGlass example: the song check runs in Play Mode and prints `[SongCheck] PASS` in the Console.
+- **poke**: pressing a button that floats in the air by pushing a fingertip through it. PianoGlass example: poking "Play" on the song panel starts the song.
 - **pooling**: reusing a small set of objects over and over instead of making a new one each time, like a restaurant washing plates instead of buying new ones. PianoGlass example: the highway reuses a few dozen note slabs as notes scroll by, instead of one per note in the song.
 - **PR (pull request)**: a request on GitHub to merge a branch into `main`, where you can see every change before it goes in. PianoGlass example: a PR that says "Closes #1" closes issue #1 by itself when it is merged.
 - **recenter**: holding the Meta button so the headset resets which way is "forward". PianoGlass example: a recenter moves the room's coordinates, and the anchor brings the keys back onto the piano.
