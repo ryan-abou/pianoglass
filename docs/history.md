@@ -2,6 +2,14 @@
 
 Batch plans, round results and the state of the project as CLAUDE.md said it, moved out word for word on 2026-11-07. Calibration rounds are in `docs/calibration-rounds.md`.
 
+## Moved to Quest 3 (`move-to-quest-3`, 2026-11-13)
+
+Ryan got a Meta Quest 3 and the usability study will use it, so Quest 3 is the
+target now and Quest 2 isn't. The app keeps its name. `quest2` stays in the
+manifest's supported devices. Calibration results so far were measured on the
+Quest 2 and need a retest on the Quest 3. The performance budget stays the same
+until it is measured on a Quest 3.
+
 ## MIDI songs (`midi-loading`, built 2026-11-08)
 
 Built from `SPEC.md`. At the desk: 727 EditMode tests pass (578 before), and
