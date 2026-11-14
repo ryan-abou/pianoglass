@@ -28,8 +28,9 @@ namespace PianoGlass.Song
     /// draws, and the bar lines are the accented clicks. The lead-in counts
     /// (song time from -leadIn to 0) -- the count-in, by request.
     ///
-    /// Each frame, every beat due within the next LookaheadSeconds of real
-    /// time that has not been scheduled yet is mapped from song time to the
+    /// Each frame, every beat due within the next LookaheadSeconds plus the
+    /// output latency of real time that has not been scheduled yet is
+    /// mapped from song time to the
     /// DSP clock: dspNow + (beat - songNow) / tempo - outputLatency. Taking
     /// the latency off means the sound leaves the speaker on the beat, not
     /// one buffer later. A beat whose start would already be in the past is
@@ -62,7 +63,12 @@ namespace PianoGlass.Song
             into.Clear();
             if (tempo <= 0.0) return 0;
 
-            BeatGrid.CollectVisible(map, earliest, latest, songTime, LookaheadSeconds * tempo, _beats);
+            // Look ahead by the latency too: a click starts that much before
+            // its beat. With 310 ms of latency (Quest 3) and only the 300 ms
+            // lookahead, every beat came into view already too late to start
+            // and was skipped, so the metronome went silent (2026-11-14).
+            BeatGrid.CollectVisible(map, earliest, latest, songTime,
+                                    (LookaheadSeconds + Math.Max(0.0, OutputLatencySeconds)) * tempo, _beats);
             foreach (BeatLine b in _beats)
             {
                 if (b.Time <= _lastScheduled + 1e-9) continue;
