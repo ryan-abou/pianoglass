@@ -49,6 +49,17 @@ namespace PianoGlass.Tests.EditMode
         }
 
         [Test]
+        public void BothColoursEachNoteByItsOwnHand()
+        {
+            Assert.AreEqual(_palette.leftHand, _palette.SolidColor(PracticeHand.Both, NoteHand.Left));
+            Assert.AreEqual(_palette.rightHand, _palette.SolidColor(PracticeHand.Both, NoteHand.Right));
+            Assert.AreEqual(_palette.allNotes, _palette.SolidColor(PracticeHand.Both, NoteHand.Shared),
+                            "a key both hands share is neither hand's");
+            Assert.AreEqual(_palette.rightHand, _palette.SolidColor(PracticeHand.Right, NoteHand.Left),
+                            "one hand: the practiced hand's colour, as before");
+        }
+
+        [Test]
         public void OutcomeTintReadsTheActivePalette()
         {
             _palette.hit = Color.magenta;

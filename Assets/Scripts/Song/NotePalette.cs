@@ -43,6 +43,13 @@ namespace PianoGlass.Song
         public Color SolidColor(PracticeHand hand) =>
             hand == PracticeHand.Left ? leftHand : hand == PracticeHand.Right ? rightHand : allNotes;
 
+        /// <summary>The colour of one practiced note: with Both, its own hand's
+        /// (a note both hands share, or one without a hand, gets the all-notes
+        /// colour); otherwise the practiced hand's.</summary>
+        public Color SolidColor(PracticeHand practice, NoteHand note) =>
+            practice != PracticeHand.Both ? SolidColor(practice)
+            : note == NoteHand.Left ? leftHand : note == NoteHand.Right ? rightHand : allNotes;
+
         /// <summary>The colour of an outline note, which is the other hand's.</summary>
         public Color OutlineColor(NoteHand hand) => hand == NoteHand.Left ? leftHand : rightHand;
 
