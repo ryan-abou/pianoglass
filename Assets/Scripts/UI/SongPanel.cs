@@ -116,7 +116,9 @@ namespace PianoGlass.UI
         private void LateUpdate()
         {
             bool placed = _calibration.IsPlacementValid && _calibration.Layout != null;
-            if (_canvas.gameObject.activeSelf != placed) _canvas.gameObject.SetActive(placed);
+            // Settings takes this spot while it is open.
+            bool show = placed && !SettingsPanel.IsOpen;
+            if (_canvas.gameObject.activeSelf != show) _canvas.gameObject.SetActive(show);
             if (!placed) return;
 
             PianoKeyLayout layout = _calibration.Layout;
@@ -125,7 +127,7 @@ namespace PianoGlass.UI
                 _placedFor = layout;
                 Place(layout);
             }
-            Refresh();
+            if (show) Refresh();
         }
 
         private void Place(PianoKeyLayout layout)
@@ -136,6 +138,15 @@ namespace PianoGlass.UI
             Vector3 pos = layout.LowFrontEdge - layout.Right * Leftward + layout.Up * Above + layout.Forward * Nearer;
             // A canvas is read from behind its +Z: +Z points away from the player.
             _canvas.SetPositionAndRotation(pos, Quaternion.LookRotation(-towardPlayer, up));
+        }
+
+        /// <summary>Puts another panel in this one's place: same tilt, bottom
+        /// edges level, so a taller panel grows upward, away from the keys.</summary>
+        public void PlaceLike(Transform other, float otherHeightMm)
+        {
+            if (_placedFor == null) return;
+            Vector3 up = _canvas.up;
+            other.SetPositionAndRotation(_canvas.position + up * ((otherHeightMm - Size.y) * 0.5f * 0.001f), _canvas.rotation);
         }
 
         /// <summary>Labels and which buttons work, only when something changed:
