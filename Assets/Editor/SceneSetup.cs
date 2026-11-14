@@ -853,18 +853,19 @@ namespace PianoGlass.EditorTools
         }
 
         /// <summary>Headset audio output latency, ms: scheduled clip start to
-        /// sound out of the speaker. Quest 3, 2026-11-13: with 140 ms set, a
-        /// 60 fps phone video of Twinkle at 120 bpm had the clicks about 170 ms
-        /// after the beat line reached the key line (5 beats by eye, 130 to
-        /// 195 ms), so 140 + 170 (#16). The log there reads "DSP buffer 512 x 4
-        /// @ 24000 Hz". Then with 310 ms set, two more videos (2026-11-14,
-        /// 3 bar clicks each by eye) both had the clicks early: about 60 to 130
-        /// and 100 to 150 ms. The two that agree win, so 310 - 110 = 200. Each
-        /// phone recording has its own sound/picture gap (0, 43 and 178 ms
-        /// audio start offsets), so one video is only good to about 100 ms.
-        /// Quest 2, 2026-11-03: 141 ms (median 140, sd 11, 8 bars), then 17 ms
-        /// early on a retest.</summary>
-        private const float MetronomeOutputLatencyMs = 200f;
+        /// sound out of the speaker. Quest 3 (#16), measured on 60 fps phone
+        /// videos of Twinkle at 120 bpm the way the Quest 2's was: for every
+        /// beat, the moment its line reaches the key line, from one pixel
+        /// column of every frame laid side by side (a falling line is then a
+        /// straight stripe; Tools/metronome-video/). Click minus line:
+        ///   2026-11-14, 200 ms set: +38 ms late (15 beats, sd 6)  -> 238
+        ///   2026-11-14, 310 ms set: -62 ms early (4 clean beats)  -> 248
+        ///   2026-11-13, 140 ms set: +150 ms late (30 beats)       -> 290
+        /// The two from the same day agree, so 240. The first readings, by eye
+        /// from contact sheets of 3 beats, gave 310 and then 200: too coarse.
+        /// The log reads "DSP buffer 512 x 4 @ 24000 Hz". Quest 2, 2026-11-03:
+        /// 141 ms (median 140, sd 11, 8 bars), then 17 ms early on a retest.</summary>
+        private const float MetronomeOutputLatencyMs = 240f;
 
         /// <summary>
         /// The metronome (Batch B3, F27): a Metronome on its own object, its
