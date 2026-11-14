@@ -2,6 +2,17 @@
 
 Batch plans, round results and the state of the project as CLAUDE.md said it, moved out word for word on 2026-11-07. Calibration rounds are in `docs/calibration-rounds.md`.
 
+## Metronome on the Quest 3 (#16, `batchG-metronome-q3`, 2026-11-14): passed
+
+Two fixes. The schedule only looked 300 ms ahead, so once the latency was over 300
+ms every click came into view too late and the metronome went silent; it now looks
+ahead by the latency too (a test covers 310 ms). And the latency is now 240 ms,
+measured the way the Quest 2's was: every beat, the moment its line reaches the key
+line, from one pixel column of every frame (`Tools/metronome-video/`). Two videos
+the same day said 238 and 248 ms. The first tries, by eye from contact sheets of
+3 beats, said 310 and then 200: too coarse. The check at 240 ms, six beats while
+the phone was still: -9, +1, +3, +7, 0 and -4 ms.
+
 ## Quest 3 round 1 (2026-11-13)
 
 A development build of `main` right after the Quest 3 move. The black background
