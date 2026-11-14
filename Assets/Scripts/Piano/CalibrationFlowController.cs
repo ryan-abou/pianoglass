@@ -168,6 +168,11 @@ namespace PianoGlass.Piano
 
         public void ToggleCorrection() => Run(Session.ToggleCorrectionAsync());
 
+        public void SetTouchSource(bool byHand)
+        {
+            if (Session != null) Session.TouchesByHand = byHand;
+        }
+
         public void OnTriggerWhilePlaced(Vector3 tipWorld)
         {
             if (Session.Flow.State == FlowState.Correcting) Run(Session.OnMiddleCTouchedAsync(tipWorld));

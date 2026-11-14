@@ -47,6 +47,14 @@ namespace PianoGlass.Piano
         public Stage CurrentStage { get; private set; } = Stage.Idle;
         public PianoKeyLayout Layout { get; private set; }
 
+        /// <summary>The keys a calibration touches first and second.</summary>
+        public int LowestNote => lowestNote;
+        public int HighestNote => highestNote;
+
+        /// <summary>The controllers are down and hands are tracked: prompts
+        /// say press a key, not touch it with the tip (#5).</summary>
+        private static bool HandsInUse => TrackedHands.Instance != null && TrackedHands.Instance.AnyTracked;
+
         /// <summary>The transform whose position is captured. Exposed so
         /// ControllerTipCalibration can move it onto the real plastic tip.</summary>
         public Transform PointerTip => pointerTip;
@@ -76,8 +84,12 @@ namespace PianoGlass.Piano
         /// <summary>Short line to show the user during setup.</summary>
         public string Prompt => CurrentStage switch
         {
-            Stage.AwaitingLowest  => $"Touch the front edge of the LOWEST key ({NoteName(lowestNote)}) and pull the trigger",
-            Stage.AwaitingHighest => $"Now the HIGHEST key ({NoteName(highestNote)})",
+            Stage.AwaitingLowest  => HandsInUse
+                ? $"Press the LOWEST key ({NoteName(lowestNote)}) with one index finger"
+                : $"Touch the front edge of the LOWEST key ({NoteName(lowestNote)}) and pull the trigger",
+            Stage.AwaitingHighest => HandsInUse
+                ? $"Now press the HIGHEST key ({NoteName(highestNote)}) with one index finger"
+                : $"Now the HIGHEST key ({NoteName(highestNote)})",
             Stage.Calibrated      => _owner?.PlacedPrompt ??
                                      "Calibrated.  sticks = nudge   left stick L/R = yaw   B = redo   stick click = clear nudge",
             Stage.Waiting         => _owner != null ? _owner.WaitingPrompt : "",
@@ -235,13 +247,14 @@ namespace PianoGlass.Piano
                 Debug.LogError("[Calibration] pointerTip is not assigned.");
                 return;
             }
-            CapturePointAt(pointerTip.position);
+            CapturePointAt(pointerTip.position, byHand: false);
         }
 
         /// <summary>The same as the controller's capture, at any point: the
         /// fingertip that pressed the key, when calibrating with hands (#5).</summary>
-        public void CapturePointAt(Vector3 point)
+        public void CapturePointAt(Vector3 point, bool byHand = false)
         {
+            _owner?.SetTouchSource(byHand);
             switch (CurrentStage)
             {
                 case Stage.Idle:
