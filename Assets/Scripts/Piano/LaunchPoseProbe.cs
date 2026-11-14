@@ -37,10 +37,17 @@ namespace PianoGlass.Piano
 
         private struct Snapshot
         {
-            public bool HasHead, HasRig, HasAnchor, AnchorTracked, HasLayout;
-            public Pose Head, Rig, Anchor;
+            public bool HasHead, HasRig, HasAnchor, AnchorTracked, HasLayout, HasOvrHead, HasRawAnchor;
+            public Pose Head, Rig, Anchor, OvrHead, RawAnchor;
             public Vector3 A0, C8;
         }
+
+        // Round 2 (2026-11-14): a recenter moves the anchor (21 deg) and the
+        // head (91 deg) by different amounts, so before it they are in two
+        // different frames. These say which: Meta's own head pose and the
+        // anchor's raw pose, both in Meta's tracking space, next to Unity's.
+        private OVRSpatialAnchor _rawSource;
+        private string _rawSourceId;
 
         private readonly List<XRInputSubsystem> _inputs = new List<XRInputSubsystem>();
         private PianoAnchorManager _anchors;
@@ -156,7 +163,20 @@ namespace PianoGlass.Piano
                 s.HasAnchor = true;
                 s.Anchor = anchor.Pose;
                 s.AnchorTracked = anchor.IsTracked;
+
+                OVRSpatialAnchor raw = RawSource(anchor.Id);
+                if (raw != null &&
+                    OVRPlugin.TryLocateSpace(raw.Space, OVRPlugin.GetTrackingOriginType(), out OVRPlugin.Posef located))
+                {
+                    OVRPose p = located.ToOVRPose();
+                    s.HasRawAnchor = true;
+                    s.RawAnchor = new Pose(p.position, p.orientation);
+                }
             }
+
+            OVRPose head = OVRPlugin.GetNodePose(OVRPlugin.Node.EyeCenter, OVRPlugin.Step.Render).ToOVRPose();
+            s.HasOvrHead = true;
+            s.OvrHead = new Pose(head.position, head.orientation);
 
             PianoKeyLayout layout = _calibration != null ? _calibration.Layout : null;
             if (layout != null)
@@ -186,7 +206,25 @@ namespace PianoGlass.Piano
                 keys = $"A0 {V(s.A0)} C8 {V(s.C8)}";
                 if (s.HasHead) keys += $" A0 fromHead {V(Quaternion.Inverse(s.Head.rotation) * (s.A0 - s.Head.position))}";
             }
-            Debug.Log($"[LaunchPose] {why} t={t:0.00}s | head {head} | rig {rig} | anchor {anchor} | keys {keys} | {Origins()}");
+            string meta = s.HasOvrHead ? $"ovrHead {P(s.OvrHead)}" : "ovrHead none";
+            if (s.HasRawAnchor)
+            {
+                meta += $" rawAnchor {P(s.RawAnchor)}";
+                if (s.HasOvrHead) meta += $" rawFromOvrHead {P(Relative(s.OvrHead, s.RawAnchor))}";
+            }
+            Debug.Log($"[LaunchPose] {why} t={t:0.00}s | head {head} | rig {rig} | anchor {anchor} | keys {keys} | " +
+                      $"{meta} | {Origins()} ovrOrigin={OVRPlugin.GetTrackingOriginType()}");
+        }
+
+        /// <summary>The OVRSpatialAnchor behind the bound handle, found once per anchor.</summary>
+        private OVRSpatialAnchor RawSource(string id)
+        {
+            if (_rawSourceId == id && _rawSource != null) return _rawSource;
+            _rawSourceId = id;
+            _rawSource = null;
+            foreach (OVRSpatialAnchor a in FindObjectsByType<OVRSpatialAnchor>(FindObjectsSortMode.None))
+                if (a.Uuid.ToString("D") == id) _rawSource = a;
+            return _rawSource;
         }
 
         /// <summary><paramref name="child"/> in <paramref name="parent"/>'s frame.</summary>
