@@ -70,10 +70,6 @@ namespace PianoGlass.Piano
             if (metronome == null) metronome = FindAnyObjectByType<Metronome>();
             if (loop == null) loop = FindAnyObjectByType<PracticeLoop>();
             _glass = GetComponentInParent<PianoGlass.UI.GlassPanel>();
-
-            // Development builds: the headset test checklist, beside this panel.
-            if (Debug.isDebugBuild && flow != null && text != null)
-                gameObject.AddComponent<DeviceChecklistRunner>().Init(flow, transport, text);
         }
 
         private void Update()
