@@ -38,7 +38,9 @@ namespace PianoGlass.Transport
             if (OVRInput.GetDown(OVRInput.Button.One, OVRInput.Controller.RTouch))
                 _transport.TogglePlayPause();
 
-            if (OVRInput.GetDown(OVRInput.Button.Two, OVRInput.Controller.LTouch))
+            // Left grip + Y is the development recording-mode toggle.
+            if (OVRInput.GetDown(OVRInput.Button.Two, OVRInput.Controller.LTouch) &&
+                !PianoGlass.DevTools.DevOverlays.ModifierHeld)
                 _transport.RestartAndPlay();
         }
     }
