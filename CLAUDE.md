@@ -141,9 +141,12 @@ and they keep their original commit dates.
 3. **Push at the end of every session, even if nothing works yet.** First push
    of a branch: `git push -u origin <short-name>`; after that, `git push`.
    This is the only off-machine backup.
-4. **Merge only after the headset test passes:** `git checkout main`,
-   `git pull`, `git merge <short-name>`, `git push`. Keep the branch. If the
-   test fails, stay on the branch, fix, retest.
+4. **Merge only after the headset test passes, through a PR.** `main` is
+   protected (since 2026-11-13): a PR is required, with 0 approvals, and a
+   direct push to `main` is rejected. `gh pr create`, then
+   `gh pr merge <N> --merge` (a merge commit, like the earlier merges), then
+   `git checkout main`, `git pull`. Keep the branch. If the test fails, stay on
+   the branch, fix, retest.
 5. **Record the result** in `docs/anchored-calibration-status.md` (or the
    relevant status doc) in the same commit as the merge or just before it.
 
@@ -197,19 +200,20 @@ Bad commit example:
 Implement robust MIDI file ingestion pipeline with comprehensive error handling
 ```
 
-## Current state (2026-11-08)
+## Current state (2026-11-13)
 
-Proven on device: MIDI input, the key overlay, calibration (anchored in dev
-builds), the highway (grid, note names, outcome colours), scoring, latency
-compensation, results card, tempo, metronome, loops, auto-tempo, wait mode,
-memory fade. On branches: `return-settle` (holds `anchor-trio`), `press-probe`,
-`calib-bias-total`.
+Proven on device (Quest 2, and retested on the Quest 3 on 2026-11-13 unless noted):
+MIDI input, the key overlay, calibration (anchored in dev builds), the highway (grid,
+note names, outcome colours), scoring, latency compensation, results card, tempo,
+metronome, loops, auto-tempo, wait mode, memory fade, MIDI songs and the song picker.
+On branches: `return-settle` (holds `anchor-trio`), `press-probe`, `calib-bias-total`
+(all Quest 2 era, waiting on #3 Time-box the calibration drift work).
 
-Merged from `midi-loading` after its headset round (`SPEC.md`): MIDI songs, three built-in
-songs, the song picker, one-hand practice with outlines, tempo and time signature changes.
-72 fps still needs reading on a release build. Next up: #11 Play songs with both hands, on
-a `both-hands` branch. Known problem: at launch the keys start about a piano width to the
-right until a recenter (`docs/history.md`).
+Quest 3 round 1 (`docs/history.md`, `docs/anchored-calibration-status.md`) found three
+problems, now issues: #15 Middle C fix undoes the calibration bias, #16 Metronome clicks
+about 150 ms late on Quest 3 (measured about 170 ms; needs about 310 ms), #17 Keys start
+a piano width to the right at launch. 72 fps still needs reading on a release build.
+Next feature on the board: #11 Play songs with both hands, on a `both-hands` branch.
 
 Next: the board's To do column, top to bottom. When Ryan says "do Batch X", follow
 "How a batch runs" in `docs/history.md`.
