@@ -115,7 +115,9 @@ starting state; `AnchoredCalibrationSession` — `Confirm`,
 grip, `SongTransport` leaves the confirming A alone, `CalibrationPanel`
 highlights the banner and shows the applied fix. No scene change.
 
-**In-headset checklist.** Development builds show the ten device-test
+**In-headset checklist** (removed 2026-11-14, with #8: the Phase 5 column is
+gone, and every test round now uses the file-based checklist panel in
+`docs/building.md`). Development builds showed the ten device-test
 steps in a column to the right of the calibration panel
 (`DeviceChecklist` in Core, tested; `DeviceChecklistRunner` added at
 runtime by `CalibrationPanel`, no scene change). Each step ticks itself
@@ -374,16 +376,32 @@ move, on a fresh install (so first-time setup). Pictures, logs and attempts are 
   (`load status=Success`). A recenter brought them back, within about 5-10 mm by eye.
 - Drift after time away was not measured on the Quest 3 yet.
 
+## Batch G round 1 (2026-11-14): Middle C fix passed
+
+`batchG-middlec-bias` (#15): a Middle C touch now has the calibration bias taken
+off before the fix is worked out. Bare-tip touches all round:
+
+| Touch | Log | Result |
+|---|---|---|
+| Straight after a fresh calibration | `verify error ... total 1.7 mm, calibration bias (-4.5, +4.4, +13.9) mm taken off the touch -- keys left alone` | Pass: it read about -14 mm before the fix |
+| Keys pushed 47.6 mm sideways, then a touch | `+40.2 / -6.9 / +3.2`, applied +40.2 mm along the keys | Pass: back within 7 mm, which is where along the 23.5 mm edge the tip landed |
+
+The new bias learned from bare-tip touches: (+2.0, +4.4, +14.4) mm. The launch
+problem (#17) was caught by the new `[LaunchPose]` log: a recenter moves the anchor
+and the head by different amounts (21 and 91 deg at 13:35:43), so until the first
+recenter they are in different frames. Being measured further in the next round.
+
 ## What's next
 
-1. #15: take the calibration bias off a Middle C touch before working out the fix.
+1. ~~#15: take the calibration bias off a Middle C touch~~: done, see above.
 2. #17: find why the keys start a piano width to the right at launch.
 3. Retest drift after time away on the Quest 3 (the `return-settle` round, #3).
 4. Measure observation 2: a seated Middle C fix with the y value written
    down (`verify error x/y/z mm` in the log). Then decide whether the
    fix's vertical part (capped at 10 mm) is enough, or whether a dedicated
    height check is needed.
-5. Fix the checklist's step 4 not advancing, before it is used again.
+5. ~~Fix the checklist's step 4 not advancing~~: the Phase 5 checklist was
+   removed on 2026-11-14 (#8).
 6. Two-point correction (C3 + C6) for yaw/width errors a one-point fix
    cannot remove — the Core maths (`SolveTwoPoint`) already exists, and the
    flow already has the states.
