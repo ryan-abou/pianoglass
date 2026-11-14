@@ -853,12 +853,15 @@ namespace PianoGlass.EditorTools
         }
 
         /// <summary>Headset audio output latency, ms: scheduled clip start to
-        /// sound out of the speaker. Measured 2026-11-03 from a 60 fps phone
-        /// video of the Batch B build: accented clicks landed 141 ms (median
-        /// 140, sd 11, 8 bars) after their bar line reached the key line. A
-        /// clap video put the phone's own audio/video offset within one
-        /// 30 fps frame, so it is not corrected for.</summary>
-        private const float MetronomeOutputLatencyMs = 140f;
+        /// sound out of the speaker. Quest 3, 2026-11-13: with 140 ms set, a
+        /// 60 fps phone video of Twinkle at 120 bpm had the clicks about 170 ms
+        /// after the beat line reached the key line (5 beats by eye, 130 to
+        /// 195 ms), so 140 + 170 (#16). The log there reads "DSP buffer 512 x 4
+        /// @ 24000 Hz". Quest 2, 2026-11-03: 141 ms (median 140, sd 11, 8 bars),
+        /// then 17 ms early on a retest. A clap video put the phone's own
+        /// audio/video offset within one 30 fps frame, so it is not corrected
+        /// for.</summary>
+        private const float MetronomeOutputLatencyMs = 310f;
 
         /// <summary>
         /// The metronome (Batch B3, F27): a Metronome on its own object, its
