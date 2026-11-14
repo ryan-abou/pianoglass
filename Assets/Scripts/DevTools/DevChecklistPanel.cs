@@ -92,6 +92,8 @@ namespace PianoGlass.DevTools
             return panel;
         }
 
+        /// <summary>Opens it; null <paramref name="head"/> leaves it where it
+        /// was (back after recording mode).</summary>
         public void Show(Transform head)
         {
             Reload();

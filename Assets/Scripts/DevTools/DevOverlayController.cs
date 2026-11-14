@@ -41,6 +41,9 @@ namespace PianoGlass.DevTools
         private DevChecklistPanel _checklist;
         private float _gripSince = -1f;
         private bool _recording;
+        /// <summary>The checklist was open when recording mode started: it
+        /// comes back, where it was, when recording mode ends.</summary>
+        private bool _checklistBeforeRecording;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AddInDevelopmentBuilds()
@@ -114,7 +117,17 @@ namespace PianoGlass.DevTools
         private void Apply()
         {
             if (_statusPanel != null) _statusPanel.SetActive(!_recording);
-            if (_recording && _checklist != null) _checklist.Hide();
+            if (_checklist == null) return;
+            if (_recording)
+            {
+                _checklistBeforeRecording = _checklist.IsShown;
+                _checklist.Hide();
+            }
+            else if (_checklistBeforeRecording)
+            {
+                _checklistBeforeRecording = false;
+                _checklist.Show(null);
+            }
         }
     }
 }
