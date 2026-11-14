@@ -115,7 +115,9 @@ starting state; `AnchoredCalibrationSession` — `Confirm`,
 grip, `SongTransport` leaves the confirming A alone, `CalibrationPanel`
 highlights the banner and shows the applied fix. No scene change.
 
-**In-headset checklist.** Development builds show the ten device-test
+**In-headset checklist** (removed 2026-11-14, with #8: the Phase 5 column is
+gone, and every test round now uses the file-based checklist panel in
+`docs/building.md`). Development builds showed the ten device-test
 steps in a column to the right of the calibration panel
 (`DeviceChecklist` in Core, tested; `DeviceChecklistRunner` added at
 runtime by `CalibrationPanel`, no scene change). Each step ticks itself
@@ -398,7 +400,8 @@ recenter they are in different frames. Being measured further in the next round.
    down (`verify error x/y/z mm` in the log). Then decide whether the
    fix's vertical part (capped at 10 mm) is enough, or whether a dedicated
    height check is needed.
-5. Fix the checklist's step 4 not advancing, before it is used again.
+5. ~~Fix the checklist's step 4 not advancing~~: the Phase 5 checklist was
+   removed on 2026-11-14 (#8).
 6. Two-point correction (C3 + C6) for yaw/width errors a one-point fix
    cannot remove — the Core maths (`SolveTwoPoint`) already exists, and the
    flow already has the states.
