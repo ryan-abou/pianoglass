@@ -46,7 +46,7 @@ on them and none can be played by accident.
 | Passthrough on/off | left stick click | — | `OvrKeyOverlayInput` | A/B test tool |
 
 Development builds only (compiled out of release; `DevOverlayController`, 2026-11-14).
-The left grip is used by nothing else, and has to be held 0.4 s before X or Y count,
+The left grip is used by nothing else, and has to be held 0.3 s before X or Y count (a press made sooner is remembered),
 so it does not happen by accident with the controllers set down on the piano:
 
 | Control | Controller | Notes |

@@ -16,7 +16,9 @@ namespace PianoGlass.DevTools
     {
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
         /// <summary>How far the left grip must be squeezed to count as held.</summary>
-        public const float GripThreshold = 0.7f;
+        /// <remarks>Half a squeeze: at 0.7 a grip pressed together with X was
+        /// often still on its way up when X arrived (2026-11-14).</remarks>
+        public const float GripThreshold = 0.5f;
 
         /// <summary>Left grip held: X and Y belong to the overlays right now.
         /// Read live, so it does not matter which script updates first.</summary>
