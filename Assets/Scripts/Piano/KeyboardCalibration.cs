@@ -235,7 +235,13 @@ namespace PianoGlass.Piano
                 Debug.LogError("[Calibration] pointerTip is not assigned.");
                 return;
             }
+            CapturePointAt(pointerTip.position);
+        }
 
+        /// <summary>The same as the controller's capture, at any point: the
+        /// fingertip that pressed the key, when calibrating with hands (#5).</summary>
+        public void CapturePointAt(Vector3 point)
+        {
             switch (CurrentStage)
             {
                 case Stage.Idle:
@@ -247,11 +253,11 @@ namespace PianoGlass.Piano
                     break;
 
                 case Stage.Calibrated:
-                    _owner?.OnTriggerWhilePlaced(pointerTip.position);
+                    _owner?.OnTriggerWhilePlaced(point);
                     break;
 
                 case Stage.AwaitingLowest:
-                    _lowPoint = pointerTip.position;
+                    _lowPoint = point;
                     CurrentStage = Stage.AwaitingHighest;
                     Debug.Log($"[Calibration] lowest key at {_lowPoint}");
                     break;
@@ -259,10 +265,10 @@ namespace PianoGlass.Piano
                 case Stage.AwaitingHighest:
                     if (_owner != null)
                     {
-                        HandOverCapture(_lowPoint, pointerTip.position);
+                        HandOverCapture(_lowPoint, point);
                         break;
                     }
-                    Apply(_lowPoint, pointerTip.position);
+                    Apply(_lowPoint, point);
                     Save();
                     break;
             }
