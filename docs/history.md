@@ -2,6 +2,20 @@
 
 Batch plans, round results and the state of the project as CLAUDE.md said it, moved out word for word on 2026-11-07. Calibration rounds are in `docs/calibration-rounds.md`.
 
+## Quest 3 round 1 (2026-11-13)
+
+A development build of `main` right after the Quest 3 move. The black background
+passed (no blue tint), every Touch Plus button worked, and the Minuet scored 82.5%
+then 89.3%. During songs 91% of `VrApi FPS=` readings were 70-73, with two short
+dips to about 60, on a development build. Calibration results are in
+`docs/anchored-calibration-status.md`: the Middle C fix undoes the calibration
+bias (#15), and the keys still start a piano width to the right at launch (#17).
+
+**Metronome (#16):** with the same 140 ms setting the click is about 170 ms late on
+the Quest 3 (5 beats by eye from a 60 fps phone video: 130 to 195 ms), where the
+Quest 2 was 17 ms early. The Quest 3 needs about 310 ms. Evidence is in
+`Milestones/2026-11-13-quest3-round1/`.
+
 ## Moved to Quest 3 (`move-to-quest-3`, 2026-11-13)
 
 Ryan got a Meta Quest 3 and the usability study will use it, so Quest 3 is the
