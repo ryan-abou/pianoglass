@@ -20,7 +20,7 @@ namespace PianoGlass.DevTools
     ///
     /// Recording mode is for milestone videos: it switches off -- not fades --
     /// every debug overlay: the status panel (MIDI bridge, calibration
-    /// readout, and the old Phase 5 checklist column on it) and this
+    /// readout) and this
     /// checklist. What is left is what a player sees of the product: the
     /// highway, the key overlay, the results card, the song picker. It is
     /// remembered across launches, so a relaunch mid-recording stays clean.

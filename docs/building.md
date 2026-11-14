@@ -62,8 +62,8 @@ lines, so they sit on the logcat timeline next to everything else. Start the tic
 over: `adb shell rm /sdcard/Android/data/com.ryanabourjeili.pianoglass/files/checklist_ticks.json`.
 
 **Recording mode** (hold the left grip, then press Y) switches off every debug
-overlay for milestone videos: the status panel (MIDI bridge, calibration readout,
-the Phase 5 checklist column) and this checklist. It is remembered across launches,
+overlay for milestone videos: the status panel (MIDI bridge, calibration readout)
+and this checklist. It is remembered across launches,
 so check you have turned it off before a test round: the calibration prompts are on
 the status panel. Unity's "Development Build" watermark does not show in the headset.
 
