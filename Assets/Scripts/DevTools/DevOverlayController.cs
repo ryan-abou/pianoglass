@@ -33,13 +33,16 @@ namespace PianoGlass.DevTools
     /// </summary>
     public sealed class DevOverlayController : MonoBehaviour
     {
-        /// <summary>The left grip is held this long before X or Y count.</summary>
-        public const float HoldSeconds = 0.4f;
+        /// <summary>The left grip is held this long before X or Y count. A press
+        /// that comes sooner is remembered and acted on then (2026-11-14: grip
+        /// and X squeezed together needed a second press).</summary>
+        public const float HoldSeconds = 0.3f;
         private const string RecordingKey = "dev.recordingMode";
 
         private GameObject _statusPanel;
         private DevChecklistPanel _checklist;
         private float _gripSince = -1f;
+        private bool _pendingX, _pendingY;
         private bool _recording;
         /// <summary>The checklist was open when recording mode started: it
         /// comes back, where it was, when recording mode ends.</summary>
@@ -73,14 +76,18 @@ namespace PianoGlass.DevTools
         {
             if (!DevOverlays.ModifierHeld)
             {
+                // Let go before the hold was up: forget the press.
                 _gripSince = -1f;
+                _pendingX = _pendingY = false;
                 return;
             }
             if (_gripSince < 0f) _gripSince = Time.unscaledTime;
+            if (OVRInput.GetDown(OVRInput.Button.One, OVRInput.Controller.LTouch)) _pendingX = true;
+            if (OVRInput.GetDown(OVRInput.Button.Two, OVRInput.Controller.LTouch)) _pendingY = true;
             if (Time.unscaledTime - _gripSince < HoldSeconds) return;
 
-            if (OVRInput.GetDown(OVRInput.Button.One, OVRInput.Controller.LTouch)) ToggleChecklist();
-            if (OVRInput.GetDown(OVRInput.Button.Two, OVRInput.Controller.LTouch)) ToggleRecording();
+            if (_pendingX) { _pendingX = false; ToggleChecklist(); }
+            if (_pendingY) { _pendingY = false; ToggleRecording(); }
         }
 
         private void ToggleChecklist()
