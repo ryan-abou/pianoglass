@@ -373,10 +373,11 @@ namespace PianoGlass.Tests.EditMode
         /// recenter with that error, nudged back by eye and confirmed, so the
         /// calibration bias is -touchMm and the keys on show are right.
         /// Returns the touch error in world metres.</summary>
-        private Vector3 CalibratedWithTouchBias(out AnchoredCalibrationSession s, Vector3 touchMm)
+        private Vector3 CalibratedWithTouchBias(out AnchoredCalibrationSession s, Vector3 touchMm, bool byHand = false)
         {
             s = CalibratedWithError(Vector3.zero);
             MarkTipMeasured();
+            s.TouchesByHand = byHand;
             PianoKeyLayout real = PianoKeyLayout.WithFacing(World(Low), World(High), Lowest, Highest,
                                                             Recenter.rotation * Toward, Depth);
             Vector3 touch = AnchoredKeyboard.NudgeToWorld(touchMm, real.Right, real.Up, real.Forward);
@@ -387,7 +388,7 @@ namespace PianoGlass.Tests.EditMode
             s.Nudge(-touchMm * 0.001f);
             s.Confirm();
 
-            Near(-touchMm, OnDisk().calibrationBiasMm, 1e-3f, "bias learned");
+            Near(-touchMm, byHand ? OnDisk().handCalibrationBiasMm : OnDisk().calibrationBiasMm, 1e-3f, "bias learned");
             Near(RealMiddleC(), s.BuildLayout().FrontEdgeCenter(60), 1e-4f, "the keys look right");
             return touch;
         }
@@ -422,6 +423,33 @@ namespace PianoGlass.Tests.EditMode
 
             Near(new Vector3(-8f, 0f, 6f), s.LastVerifyErrorMm, 0.01f, "only the drift is measured");
             Near(RealMiddleC(), s.BuildLayout().FrontEdgeCenter(60), 1e-4f, "Middle C back on the real key");
+        }
+
+        [Test]
+        public void AHandCalibrationLearnsItsOwnBias()
+        {
+            // A fingertip lands 20 mm away from the player's view of the key: its
+            // bias is kept apart from the controller tip's, which stays zero.
+            CalibratedWithTouchBias(out AnchoredCalibrationSession s, new Vector3(0f, 0f, -20f), byHand: true);
+            Near(new Vector3(0f, 0f, 20f), OnDisk().handCalibrationBiasMm, 1e-3f, "hand bias");
+            Near(Vector3.zero, OnDisk().calibrationBiasMm, 1e-3f, "controller bias untouched");
+
+            s.TouchesByHand = false;
+            Recalibrated(s);
+            Assert.AreEqual(Vector3.zero, s.NudgeMm, "a controller calibration starts from the controller's bias");
+        }
+
+        [Test]
+        public void AMiddleCPressByHandTakesTheHandBiasOff()
+        {
+            Vector3 touch = CalibratedWithTouchBias(out AnchoredCalibrationSession s, new Vector3(4f, 0f, -20f), byHand: true);
+            Vector3 before = s.BuildLayout().FrontEdgeCenter(60);
+            StartCorrecting(s);
+
+            Run(s.OnMiddleCTouchedAsync(RealMiddleC() + touch));
+
+            Near(Vector3.zero, s.LastVerifyErrorMm, 0.01f, "the hand bias, not the controller's, is taken off");
+            Near(before, s.BuildLayout().FrontEdgeCenter(60), 1e-5f, "keys left alone");
         }
 
         [Test]
