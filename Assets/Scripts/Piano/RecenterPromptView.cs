@@ -26,7 +26,7 @@ namespace PianoGlass.Piano
         /// enough to stay in view, slow enough not to feel glued to the face.</summary>
         private const float Follow = 5f;
 
-        private static readonly Vector2 Size = new Vector2(560f, 120f);
+        private static readonly Vector2 Size = new Vector2(600f, 150f); // three short lines
 
         private Transform _head;
         private bool _placed;
@@ -59,7 +59,7 @@ namespace PianoGlass.Piano
             if (font != null) t.font = font;
             if (textMaterial != null) t.fontSharedMaterial = textMaterial;
             t.text = text;
-            t.fontSize = 34f;
+            t.fontSize = 30f;
             t.fontStyle = FontStyles.Bold;
             t.alignment = TextAlignmentOptions.Center;
             t.textWrappingMode = TextWrappingModes.Normal;
