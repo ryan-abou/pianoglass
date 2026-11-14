@@ -36,6 +36,40 @@ adb install -r Builds\PianoGlass.apk
 adb logcat -s PianoGlassMidi Unity
 ```
 
+## The in-headset test checklist (development builds)
+
+Every post-build test checklist is also a file the headset shows on a Liquid Glass
+panel, so it never has to be memorised. 5-8 items, most important first. Push a new
+one at any time; no rebuild, and an open panel picks it up within a second:
+
+```powershell
+adb push checklist.md /sdcard/Android/data/com.ryanabourjeili.pianoglass/files/checklist.md
+```
+
+The file is plain Markdown. The first `#` line is the title; each `- ` (or `1. `)
+line is an item, and text after ` | ` is what pass looks like, drawn smaller:
+
+```markdown
+# Batch G round
+- Launch, don't recenter for 15 s, screenshot | keys on the piano?
+- Middle C fix with the bare tip | keys stay put, no nudge after
+```
+
+Hold the left grip, then press X to open or close it (it opens in front of you and
+always starts hidden). Tick a row with the right controller ray and right trigger.
+Ticks survive a relaunch (`checklist_ticks.json`) and are logged as `[Checklist]`
+lines, so they sit on the logcat timeline next to everything else. Start the ticks
+over: `adb shell rm /sdcard/Android/data/com.ryanabourjeili.pianoglass/files/checklist_ticks.json`.
+
+**Recording mode** (hold the left grip, then press Y) switches off every debug
+overlay for milestone videos: the status panel (MIDI bridge, calibration readout,
+the Phase 5 checklist column) and this checklist. It is remembered across launches,
+so check you have turned it off before a test round: the calibration prompts are on
+the status panel. Unity's "Development Build" watermark does not show in the headset.
+
+All of it is compiled out of release builds (`#if DEVELOPMENT_BUILD || UNITY_EDITOR`
+in `Assets/Scripts/DevTools/`), so it can never reach a study participant.
+
 ---
 
 ## Two ways to reach Unity — and they cannot both be live

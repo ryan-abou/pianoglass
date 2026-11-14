@@ -64,6 +64,11 @@ $null = $p.Handle; $p.WaitForExit()
 
 A SceneSetup method: same command, `-quit -executeMethod PianoGlass.EditorTools.SceneSetup.<Method>`.
 
+**Every post-build test checklist** (5-8 items, most important first) is also written
+as a `checklist.md` and pushed to the headset, where development builds show it on a
+panel (left grip + X; left grip + Y is recording mode). Format and the `adb push`
+command: `docs/building.md`.
+
 **Unity MCP needs the editor open; `build.ps1` needs it closed.** Use the MCP to
 look (Console, hierarchy, field values), never to change: scene changes go
 through `Assets/Editor/SceneSetup.cs`. A task that needs both: inspect, close
