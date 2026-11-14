@@ -28,7 +28,7 @@ on them and none can be played by accident.
 | "Looks right" in Verifying | A | — | `OvrCalibrationInput` | Anchored mode; that A does not reach play/pause. Asked after launch, calibration, and 3 s or more away |
 | Middle C fix: start / cancel | right grip | — | `OvrCalibrationInput` | Anchored mode; then touch Middle C and pull the right trigger |
 | Play / pause | A | — | `OvrSongTransport` | |
-| Restart from the top and play | left Y | A0 + A♯0 | `OvrSongTransport`, `SongTransport` | The chord works whenever calibrated, playing or not. Also how a practice loop is left |
+| Restart from the top and play | left Y | A0 + A♯0 | `OvrSongTransport`, `SongTransport` | The chord works whenever calibrated, playing or not. Also how a practice loop is left. Not while the left grip is held (that Y is recording mode's) |
 | Start a practice loop | right controller ray + right trigger on the results card's "Loop bars" button | — | `ResultsCard` → `PracticeLoop` | The button shows when a bar is under 75%: that bar, and a neighbour under 90% |
 | Choose bars to loop | right controller ray + right trigger on a bar pill | — | `ResultsCard`, `BarSelection` | One pill, then another for a range; the suggestion's button becomes "Loop bars 3–5". The same pill again, alone, clears it |
 | Press a results card button (Retry, Songs, More/Less info, the suggestion's button) | right controller ray + right trigger | — | `OvrUiPointer`, `GlassButton` | Stopgap until hand poke (Phase 4). The ray shows only while a button is pressable; the trigger goes to calibration unless the ray is on a button |
@@ -42,8 +42,18 @@ on them and none can be played by accident.
 | Metronome on/off | — | hold A0, press C♯1 | `SongTransport` → `Metronome` | Only while stopped or paused, saved |
 | Wait mode on/off | — | hold A0, press D1 | `SongTransport` | Only while stopped or paused, saved. While paused part-way it starts a new attempt from there |
 | Memory fade on/off | — | hold A0, press D♯1 | `SongTransport` | Only while stopped or paused, saved. Works on whole songs and in loops |
-| Display mode (cycle) | left X | — | `OvrKeyOverlayInput` | FullOverlay / Translucent / ActiveKeysOnly / EdgeMarkers, saved |
+| Display mode (cycle) | left X | — | `OvrKeyOverlayInput` | FullOverlay / Translucent / ActiveKeysOnly / EdgeMarkers, saved. Not while the left grip is held (that X is the checklist's) |
 | Passthrough on/off | left stick click | — | `OvrKeyOverlayInput` | A/B test tool |
+
+Development builds only (compiled out of release; `DevOverlayController`, 2026-11-14).
+The left grip is used by nothing else, and has to be held 0.4 s before X or Y count,
+so it does not happen by accident with the controllers set down on the piano:
+
+| Control | Controller | Notes |
+|---|---|---|
+| Test checklist panel on/off | hold left grip, then left X | Opens in front of you, stays put in the room. Always starts hidden. Format and push command: `docs/building.md` |
+| Tick a checklist item | right controller ray + right trigger on the row | Saved, survives a relaunch, logged as `[Checklist]` |
+| Recording mode on/off | hold left grip, then left Y | Switches off every debug overlay (status panel, checklist) for milestone videos. Remembered across launches |
 
 Development tools that are not player controls:
 - Swap hands for a song: the *Swap hands for this song* context menu on
