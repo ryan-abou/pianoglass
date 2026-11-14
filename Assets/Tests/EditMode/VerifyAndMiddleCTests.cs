@@ -368,6 +368,62 @@ namespace PianoGlass.Tests.EditMode
             Assert.AreEqual(Vector3.zero, s.NudgeMm);
         }
 
+        /// <summary>Every touch lands <paramref name="touchMm"/> (keyboard
+        /// frame) from where the player sees the key. Calibrated after the
+        /// recenter with that error, nudged back by eye and confirmed, so the
+        /// calibration bias is -touchMm and the keys on show are right.
+        /// Returns the touch error in world metres.</summary>
+        private Vector3 CalibratedWithTouchBias(out AnchoredCalibrationSession s, Vector3 touchMm)
+        {
+            s = CalibratedWithError(Vector3.zero);
+            MarkTipMeasured();
+            PianoKeyLayout real = PianoKeyLayout.WithFacing(World(Low), World(High), Lowest, Highest,
+                                                            Recenter.rotation * Toward, Depth);
+            Vector3 touch = AnchoredKeyboard.NudgeToWorld(touchMm, real.Right, real.Up, real.Forward);
+
+            Run(s.RecalibrateAsync());
+            Run(s.OnCapturedAsync(World(Low) + touch, World(High) + touch, Recenter.rotation * Toward,
+                                  Lowest, Highest, Depth));
+            s.Nudge(-touchMm * 0.001f);
+            s.Confirm();
+
+            Near(-touchMm, OnDisk().calibrationBiasMm, 1e-3f, "bias learned");
+            Near(RealMiddleC(), s.BuildLayout().FrontEdgeCenter(60), 1e-4f, "the keys look right");
+            return touch;
+        }
+
+        [Test]
+        public void AMiddleCTouchTakesTheCalibrationBiasOff()
+        {
+            // Quest 3, 2026-11-13: touches land 14 mm further from the player
+            // than the eye sees the keys, and the bias holds +14 mm toward them.
+            Vector3 touch = CalibratedWithTouchBias(out AnchoredCalibrationSession s, new Vector3(0f, 0f, -14f));
+            Vector3 before = s.BuildLayout().FrontEdgeCenter(60);
+            StartCorrecting(s);
+
+            Run(s.OnMiddleCTouchedAsync(RealMiddleC() + touch));
+
+            Near(Vector3.zero, s.LastVerifyErrorMm, 0.01f, "no error once the bias is off");
+            Near(before, s.BuildLayout().FrontEdgeCenter(60), 1e-5f, "keys not pulled back by the bias");
+            StringAssert.Contains("left alone", s.CorrectionNote);
+        }
+
+        [Test]
+        public void AMiddleCFixWithABiasStillCorrectsRealDrift()
+        {
+            Vector3 touch = CalibratedWithTouchBias(out AnchoredCalibrationSession s, new Vector3(3f, 0f, -14f));
+            // The anchor drifted: drawn 8 mm right and 6 mm away, 10 mm in all,
+            // well past AlreadyRightMetres (6 mm).
+            s.Nudge(new Vector3(0.008f, 0f, -0.006f));
+            s.Persist();
+            StartCorrecting(s);
+
+            Run(s.OnMiddleCTouchedAsync(RealMiddleC() + touch));
+
+            Near(new Vector3(-8f, 0f, 6f), s.LastVerifyErrorMm, 0.01f, "only the drift is measured");
+            Near(RealMiddleC(), s.BuildLayout().FrontEdgeCenter(60), 1e-4f, "Middle C back on the real key");
+        }
+
         [Test]
         public void AHugeNudgeIsNotKeptAsABias()
         {
