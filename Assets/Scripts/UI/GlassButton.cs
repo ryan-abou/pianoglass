@@ -36,6 +36,11 @@ namespace PianoGlass.UI
 
         public Button Button => _button;
 
+        /// <summary>On a panel that is always up (the song panel): it doesn't
+        /// switch the controller ray on by itself being pressable, or the ray
+        /// would never go away. The ray still shows when it points at it.</summary>
+        public bool AlwaysShown { get; set; }
+
         /// <summary>For buttons built in code: straight after AddComponent.</summary>
         public void Init(Color fill)
         {
