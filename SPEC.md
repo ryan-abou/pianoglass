@@ -192,7 +192,7 @@ beats-per-bar changes come almost free, so they're supported too.
   adb push "My Song.mid" /sdcard/Android/data/com.ryanabourjeili.pianoglass/files/Songs/
   ```
 - **By dragging over USB**: plug the Quest into the PC, put on the headset and
-  allow file access. Then in File Explorer open *Quest 2 → Internal shared
+  allow file access. Then in File Explorer open *Quest 3 → Internal shared
   storage → Android → data → com.ryanabourjeili.pianoglass → files → Songs*
   and drag the `.mid` in. Newer Quest software sometimes hides `Android/data`
   over USB. If the folder isn't there, use adb. The headset round checks which

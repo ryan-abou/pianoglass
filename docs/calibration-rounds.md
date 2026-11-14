@@ -1,5 +1,7 @@
 # Calibration rounds
 
+Nov 13, 2026: measured on Quest 2, retest on Quest 3.
+
 Moved out of CLAUDE.md on 2026-11-07, word for word. Per-phase device results, drift measurements and ideas 1-4 are in `docs/anchored-calibration-status.md`; this file holds what CLAUDE.md said about calibration.
 
 ## Anchored calibration (development builds)

@@ -1,7 +1,7 @@
 # PianoGlass — MIDI bridge and keyboard calibration
 
 Drop-in scripts for days 3 and 4 of the week-one spike. Target: Unity 6, Meta
-Quest 2, Meta XR All-in-One SDK.
+Quest 3, Meta XR All-in-One SDK.
 
 ## Files and where they go
 

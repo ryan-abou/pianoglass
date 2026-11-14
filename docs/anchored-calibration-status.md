@@ -1,5 +1,7 @@
 # Anchored calibration — status
 
+Nov 13, 2026: measured on Quest 2, retest on Quest 3.
+
 Keeping the virtual keyboard on the real piano across relaunches, recenters
 and reboots, by storing the keyboard relative to a Meta spatial anchor instead
 of in tracking space (which the runtime re-bases on every recenter).

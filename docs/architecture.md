@@ -4,7 +4,7 @@ Moved out of CLAUDE.md on 2026-11-07, word for word. Controls are in `docs/contr
 
 ## What PianoGlass is
 
-Mixed-reality piano trainer for **Meta Quest 2**. Notes fall onto the keys of a
+Mixed-reality piano trainer for **Meta Quest 3**. Notes fall onto the keys of a
 real 88-key piano seen through passthrough; a USB MIDI keyboard provides
 ground-truth input. Built by one student developer, ~7 hours a week.
 
@@ -26,7 +26,10 @@ is in **`docs/feature-evaluation.md`** (decided 2026-10-30).
 
 ## Hardware realities that shape the design
 
-**The Quest 2 has one USB-C port.** The MIDI keyboard and the PC cable compete
+**The Quest 3 is the target and the usability study headset.** Quest 2 is no
+longer a target, but `quest2` stays in the manifest's supported devices.
+
+**The Quest 3 has one USB-C port.** The MIDI keyboard and the PC cable compete
 for it. Wireless adb (`adb tcpip 5555`, then `adb connect <ip>:5555`) is the
 workaround but it drops whenever the headset sleeps and does not survive a
 reboot; as of this writing it also times out, probably because the PC and
@@ -34,17 +37,18 @@ headset are on different subnets. The loop that always works: build over USB,
 `adb install -r`, unplug, connect the keyboard, launch from **App Library →
 Unknown Sources**.
 
-**Quest 2 passthrough is monochrome and low-resolution.** You cannot rely on the
-player seeing their real keys clearly. Published MR piano work hit the same wall
-and fell back to rendering virtual keys. Design for a legible virtual overlay
-registered on the real keyboard, not for a clear view of the keyboard itself.
+**Quest 3 passthrough is in colour.** On the Quest 2 it was monochrome and
+low-resolution, and you could not rely on the player seeing their real keys
+clearly. Published MR piano work hit the same wall and fell back to rendering
+virtual keys. The design stays a legible virtual overlay registered on the real
+keyboard, not a clear view of the keyboard itself.
 
-**No depth sensor**, so no real occlusion — hands cannot correctly hide virtual
-geometry. Keep the note highway above and behind the key plane so hands rarely
-overlap it.
+**The Quest 3 has a depth sensor, but PianoGlass does not use it for
+occlusion, on purpose.** So hands still cannot hide virtual geometry. Keep the
+note highway above and behind the key plane so hands rarely overlap it.
 
-**Roughly half a Quest 3's GPU.** URP, no realtime shadows, unlit materials,
-target 72 Hz.
+**Same performance budget until measured on a Quest 3.** URP, no realtime
+shadows, unlit materials, target 72 Hz.
 
 ---
 
@@ -192,7 +196,7 @@ Translucent mode (`Assets/KeyOverlayTranslucent.mat`), and adds
 | `ActiveKeysOnly` (default) | nothing | only a key whose note is due within `activeKeyLookaheadSeconds` (0.5 s) or is actually held lights up, at `activeKeysAlpha` (0.55) so a hand shows through |
 | `EdgeMarkers` | nothing | same "only when relevant" rule as `ActiveKeysOnly`, but each key shows as a thin bar across its far portion (`edgeMarkerDepthFraction` of key depth) instead of the full key, clear of where a resting finger touches |
 
-The Quest 2 has no depth sensor, so *any* virtual slab over a key draws on
+PianoGlass does not use the Quest 3's depth sensor for occlusion, so *any* virtual slab over a key draws on
 top of the player's hand regardless of passthrough. `FullOverlay` painting
 all 88 keys at rest is what made a tester unable to see their own hands even
 once passthrough is on — `ActiveKeysOnly`/`EdgeMarkers` exist to paint only
