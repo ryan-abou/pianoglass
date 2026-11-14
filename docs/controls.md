@@ -33,7 +33,7 @@ on them and none can be played by accident.
 | Choose bars to loop | right controller ray + right trigger on a bar pill | — | `ResultsCard`, `BarSelection` | One pill, then another for a range; the suggestion's button becomes "Loop bars 3–5". The same pill again, alone, clears it |
 | Press a results card button (Retry, Songs, More/Less info, the suggestion's button) | right controller ray + right trigger | — | `OvrUiPointer`, `GlassButton` | Stopgap until hand poke (Phase 4). The ray shows only while a button is pressable; the trigger goes to calibration unless the ray is on a button |
 | Open the song picker | right controller ray + right trigger on the results card's Songs button | — | `ResultsCard` → `SongPicker` | The picker also opens by itself at launch, once the keys are placed |
-| Choose which hand to practice | right controller ray + right trigger on the picker's Left or Right pill | — | `SongPicker` | Songs marked hands unknown ignore it and play All notes |
+| Choose which hand to practice | right controller ray + right trigger on the picker's Left, Right or Both pill | — | `SongPicker` | Both: every note scored, each in its own hand's colour (#11). Songs marked hands unknown ignore it and play All notes |
 | Pick a song | right controller ray + right trigger on a picker row | — | `SongPicker` → `CurrentSong` | Loads it stopped at the top; press play as usual. Greyed rows can't be pressed |
 | Next or previous page of songs | right controller ray + right trigger on Prev or Next | — | `SongPicker` | Five songs a page. Only there when there are more than five |
 | Close the picker, keeping the current song | right controller ray + right trigger on Close | — | `SongPicker` | Playing a song also hides it |

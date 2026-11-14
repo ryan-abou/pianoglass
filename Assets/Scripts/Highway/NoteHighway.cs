@@ -467,7 +467,8 @@ namespace PianoGlass.Highway
                 }
 
                 Color color = mine
-                    ? OutcomeTint.FadedSlab(handColor, _outcome[index], now - _judgedAt[index],
+                    ? OutcomeTint.FadedSlab(_hand == PracticeHand.Both ? current.Palette.SolidColor(_hand, note.Hand) : handColor,
+                                            _outcome[index], now - _judgedAt[index],
                                             OutcomeTint.Hit, OutcomeTint.Missed, opacity)
                     : current.Palette.OutlineColor(note.Hand);
                 if (color != slab.Applied) SetSlabColor(slab, color);

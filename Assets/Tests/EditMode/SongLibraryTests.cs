@@ -109,6 +109,14 @@ namespace PianoGlass.Tests.EditMode
             Assert.AreEqual(PracticeHand.Left, row.HandFor(PracticeHand.Left));
             Assert.AreEqual(PracticeHand.Right, row.HandFor(PracticeHand.Right));
             Assert.AreEqual(PracticeHand.Right, row.HandFor(PracticeHand.All), "no All notes on a song with hands");
+            Assert.AreEqual(PracticeHand.Both, row.HandFor(PracticeHand.Both));
+        }
+
+        [Test]
+        public void BothOnASongWithoutHandsIsAllNotes()
+        {
+            SongRow row = Build(Unknown("u.mid")).Rows[2];
+            Assert.AreEqual(PracticeHand.All, row.HandFor(PracticeHand.Both));
         }
 
         [Test]
