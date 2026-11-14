@@ -59,6 +59,8 @@ namespace PianoGlass.DevTools
 
         private void Awake()
         {
+            _instance = this;
+
             // Found once, while still active: switched off, it can't be found again.
             var calibrationPanel = FindAnyObjectByType<CalibrationPanel>();
             Canvas canvas = calibrationPanel != null ? calibrationPanel.GetComponentInParent<Canvas>() : null;
@@ -89,6 +91,14 @@ namespace PianoGlass.DevTools
             if (_pendingX) { _pendingX = false; ToggleChecklist(); }
             if (_pendingY) { _pendingY = false; ToggleRecording(); }
         }
+
+        private static DevOverlayController _instance;
+
+        /// <summary>The settings panel's buttons (#5): the same toggles as left
+        /// grip + X and left grip + Y, without controllers.</summary>
+        public static void ToggleChecklistFromMenu() { if (_instance != null) _instance.ToggleChecklist(); }
+        public static void ToggleRecordingFromMenu() { if (_instance != null) _instance.ToggleRecording(); }
+        public static bool RecordingOn => _instance != null && _instance._recording;
 
         private void ToggleChecklist()
         {
