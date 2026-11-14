@@ -36,7 +36,8 @@ namespace PianoGlass.DevTools
 
         // ---- Layout, mm ------------------------------------------------------
         private const float Width = 460f, Inner = 420f, Pad = 20f;
-        private const float RowPlain = 36f, RowWithDetail = 52f, RowGap = 6f;
+        /// <summary>Shortest row; rows grow with their wrapped text.</summary>
+        private const float RowPlain = 36f, RowGap = 6f;
         private const float PanelDepth = 0.002f, RowDepth = 0.0014f, DotDepth = 0.001f;
         private const int OrderPanel = -6, OrderRow = -5, OrderDot = -3;
 
@@ -96,9 +97,10 @@ namespace PianoGlass.DevTools
         /// was (back after recording mode).</summary>
         public void Show(Transform head)
         {
+            // Active first: rows wrap, and their heights are measured as they are built.
+            gameObject.SetActive(true);
             Reload();
             if (head != null) PlaceInFrontOf(head);
-            gameObject.SetActive(true);
             Debug.Log($"[Checklist] shown: '{_list.Title}', {_list.TickedCount}/{_list.Items.Count} ticked");
         }
 
@@ -207,66 +209,88 @@ namespace PianoGlass.DevTools
             _rows.Clear();
 
             const float header = 34f, hint = 22f;
-            float rows = 0f;
-            foreach (HeadsetChecklist.Item item in _list.Items)
-                rows += (item.Detail.Length > 0 ? RowWithDetail : RowPlain) + RowGap;
             bool footer = missing || _list.Items.Count == 0 || _list.Overflow > 0;
-            float height = Pad + header + hint + rows + (footer ? 26f : 0f) + Pad;
-            ((RectTransform)transform).sizeDelta = new Vector2(Width, height);
 
-            float top = height * 0.5f - Pad;
-            Place(_title, -Inner * 0.5f, top);
-            Place(_count, Inner * 0.5f - 80f, top);
-            _title.text = _list.Title;
-
+            // Rows go down from the Rows root's origin; each one wraps its text
+            // onto as many lines as it needs and is as tall as that (2026-11-14:
+            // one line with an ellipsis cut tasks off in the headset).
             TextMeshProUGUI hintText = Text(_rowsRoot, "Hint", 13f, _secondary, TextAlignmentOptions.TopLeft, Inner);
-            Place(hintText, -Inner * 0.5f, top - header);
+            Place(hintText, -Inner * 0.5f, hint);
             hintText.text = "Ray + right trigger: tick     Left grip + X: hide";
 
-            float y = top - header - hint;
+            float y = 0f;
             for (int i = 0; i < _list.Items.Count; i++)
             {
-                HeadsetChecklist.Item item = _list.Items[i];
-                float h = item.Detail.Length > 0 ? RowWithDetail : RowPlain;
-                _rows.Add(BuildRow(i, item, y - h * 0.5f, h));
+                _rows.Add(BuildRow(i, _list.Items[i], y, out float h));
                 y -= h + RowGap;
             }
 
             if (footer)
             {
-                TextMeshProUGUI note = Text(_rowsRoot, "Footer", 14f, _secondary, TextAlignmentOptions.TopLeft, Inner);
-                Place(note, -Inner * 0.5f, y - 4f);
+                TextMeshProUGUI note = Text(_rowsRoot, "Footer", 14f, _secondary, TextAlignmentOptions.TopLeft, Inner, wrap: true);
                 note.text = missing ? "No checklist on the headset yet: push checklist.md with adb."
                           : _list.Items.Count == 0 ? "The checklist has no items (lines starting with \"- \")."
                           : $"{_list.Overflow} more not shown: keep checklists to 5-8 items.";
+                Place(note, -Inner * 0.5f, y - 4f);
+                y -= 8f + Fit(note, Inner);
             }
+
+            float height = Pad + header + hint - y + Pad;
+            ((RectTransform)transform).sizeDelta = new Vector2(Width, height);
+            float top = height * 0.5f - Pad;
+            Place(_title, -Inner * 0.5f, top);
+            Place(_count, Inner * 0.5f - 80f, top);
+            _title.text = _list.Title;
+            ((RectTransform)_rowsRoot).anchoredPosition = new Vector2(0f, top - header - hint);
             Paint();
         }
 
-        private RowView BuildRow(int index, HeadsetChecklist.Item item, float centreY, float height)
+        /// <summary>A row whose top edge is at <paramref name="top"/> (Rows root
+        /// units), sized to its wrapped text; its height comes back out.</summary>
+        private RowView BuildRow(int index, HeadsetChecklist.Item item, float top, out float height)
         {
-            GlassPanel row = Glass(_rowsRoot, $"Row_{index}", GlassStyle.Row, new Vector2(0f, centreY),
-                                   new Vector2(Inner, height), RowDepth, OrderRow);
+            GlassPanel row = Glass(_rowsRoot, $"Row_{index}", GlassStyle.Row, Vector2.zero, new Vector2(Inner, RowPlain),
+                                   RowDepth, OrderRow);
             var button = row.gameObject.AddComponent<Button>();
             button.onClick.AddListener(() => OnRow(index));
-            row.gameObject.AddComponent<GlassButton>().Init(RowFill);
 
+            const float padTop = 8f, padBottom = 9f, gap = 3f;
+            float textLeft = -Inner * 0.5f + 40f, textWidth = Inner - 52f;
             var view = new RowView
             {
-                Dot = Glass(row.transform, "Dot", GlassStyle.Pill, new Vector2(-Inner * 0.5f + 20f, height * 0.5f - 18f),
-                            new Vector2(16f, 16f), DotDepth, OrderDot),
+                Text = Text(row.transform, "Text", 17f, _primary, TextAlignmentOptions.TopLeft, textWidth, true, wrap: true),
             };
-            float textLeft = -Inner * 0.5f + 40f, textWidth = Inner - 52f;
-            view.Text = Text(row.transform, "Text", 17f, _primary, TextAlignmentOptions.TopLeft, textWidth, true);
-            Place(view.Text, textLeft, height * 0.5f - 7f);
             view.Text.text = $"{index + 1}. {item.Text}";
+            float textHeight = Fit(view.Text, textWidth);
+            float detailHeight = 0f;
             if (item.Detail.Length > 0)
             {
-                view.Detail = Text(row.transform, "Detail", 13f, _secondary, TextAlignmentOptions.TopLeft, textWidth);
-                Place(view.Detail, textLeft, height * 0.5f - 29f);
+                view.Detail = Text(row.transform, "Detail", 13f, _secondary, TextAlignmentOptions.TopLeft, textWidth, wrap: true);
                 view.Detail.text = item.Detail;
+                detailHeight = gap + Fit(view.Detail, textWidth);
             }
+
+            height = Mathf.Max(RowPlain, padTop + textHeight + detailHeight + padBottom);
+            var rt = (RectTransform)row.transform;
+            rt.sizeDelta = new Vector2(Inner, height);
+            rt.anchoredPosition = new Vector2(0f, top - height * 0.5f);
+            Place(view.Text, textLeft, height * 0.5f - padTop);
+            if (view.Detail != null) Place(view.Detail, textLeft, height * 0.5f - padTop - textHeight - gap);
+
+            // On the first line of the text.
+            view.Dot = Glass(row.transform, "Dot", GlassStyle.Pill, new Vector2(-Inner * 0.5f + 20f, height * 0.5f - padTop - 11f),
+                             new Vector2(16f, 16f), DotDepth, OrderDot);
+            // After the size is final: the button keeps its rest position from Init.
+            row.gameObject.AddComponent<GlassButton>().Init(RowFill);
             return view;
+        }
+
+        /// <summary>Wrapped height of a text at <paramref name="width"/>, and its rect set to match.</summary>
+        private static float Fit(TextMeshProUGUI t, float width)
+        {
+            float h = Mathf.Ceil(t.GetPreferredValues(t.text, width, 0f).y);
+            ((RectTransform)t.transform).sizeDelta = new Vector2(width, h);
+            return h;
         }
 
         /// <summary>Ticked rows: a green dot and dimmer text.</summary>
@@ -310,7 +334,7 @@ namespace PianoGlass.DevTools
         }
 
         private TextMeshProUGUI Text(Transform parent, string name, float size, Color colour,
-                                     TextAlignmentOptions align, float width, bool bold = false)
+                                     TextAlignmentOptions align, float width, bool bold = false, bool wrap = false)
         {
             var go = new GameObject(name, typeof(RectTransform));
             var rt = (RectTransform)go.transform;
@@ -324,8 +348,8 @@ namespace PianoGlass.DevTools
             t.fontSize = size;
             t.color = colour;
             t.alignment = align;
-            t.textWrappingMode = TextWrappingModes.NoWrap;
-            t.overflowMode = TextOverflowModes.Ellipsis;
+            t.textWrappingMode = wrap ? TextWrappingModes.Normal : TextWrappingModes.NoWrap;
+            t.overflowMode = wrap ? TextOverflowModes.Overflow : TextOverflowModes.Ellipsis;
             t.raycastTarget = false;
             if (bold) t.fontStyle = FontStyles.Bold;
             return t;
