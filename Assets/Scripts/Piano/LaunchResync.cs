@@ -1,59 +1,56 @@
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.XR;
 
 namespace PianoGlass.Piano
 {
     /// <summary>
-    /// #17: asks the headset for a recenter once the saved anchor has loaded
-    /// at launch (LaunchResyncPolicy says when), because until a recenter the
+    /// #17: after the saved anchor loads at launch, asks the player to recenter
+    /// (hold the Meta button) until they do, because until a recenter the
     /// anchor and the head are in different frames and the keys show up about
-    /// a piano width off. Meta's OVRDisplay.RecenterPose first; if the runtime
-    /// reports no recenter within <see cref="WaitSeconds"/>, Unity's
-    /// XRInputSubsystem.TryRecenter. Every step is logged as "[LaunchResync]",
-    /// so a round shows whether the Quest 3 honours an app-asked recenter.
+    /// a piano width off. LaunchRecenterPrompt decides; this feeds it the head
+    /// pose at the load and every frame's head step, and CalibrationPanel shows
+    /// <see cref="PromptLine"/> while <see cref="WaitingForRecenter"/>.
     ///
-    /// Only does anything while the anchored calibration flow is active.
-    /// Adds itself after the scene loads; no scene change.
+    /// The app cannot recenter by itself: on the Quest 3, OVRDisplay
+    /// .RecenterPose fires the recentered events but moves nothing (round 3,
+    /// 2026-11-14), so it is not called. Logs as "[LaunchResync]".
+    ///
+    /// Only while the anchored calibration flow is active. Adds itself after
+    /// the scene loads; no scene change.
     /// </summary>
     public sealed class LaunchResync : MonoBehaviour
     {
-        /// <summary>How long to wait for the runtime to report a recenter.</summary>
-        public const float WaitSeconds = 1.5f;
+        public const string PromptLine = "Hold the Meta button to line up the keys";
 
-        private readonly LaunchResyncPolicy _policy = new LaunchResyncPolicy();
-        private readonly List<XRInputSubsystem> _inputs = new List<XRInputSubsystem>();
+        /// <summary>Show <see cref="PromptLine"/> now.</summary>
+        public static bool WaitingForRecenter { get; private set; }
+
+        private readonly LaunchRecenterPrompt _prompt = new LaunchRecenterPrompt();
         private CalibrationFlowController _flow;
         private AnchoredCalibrationSession _session;
-        private float _askedAt = -1f;
-        private int _attempt;
-        private bool _recentered;
+        private Transform _head;
+        private Pose _lastHead;
+        private bool _hasLastHead;
+        private float _askedAt;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Add()
         {
+            WaitingForRecenter = false;
             if (Application.isEditor) return; // the editor's anchors are fake
             var go = new GameObject(nameof(LaunchResync));
             DontDestroyOnLoad(go);
             go.AddComponent<LaunchResync>();
         }
 
-        private void Start()
-        {
-            _flow = FindAnyObjectByType<CalibrationFlowController>();
-            SubsystemManager.GetSubsystems(_inputs);
-            foreach (XRInputSubsystem s in _inputs) s.trackingOriginUpdated += OnOriginUpdated;
-            if (OVRManager.display != null) OVRManager.display.RecenteredPose += OnRecentered;
-        }
+        private void Start() => _flow = FindAnyObjectByType<CalibrationFlowController>();
 
         private void OnDestroy()
         {
             if (_session != null) _session.Transitioned -= OnTransitioned;
-            foreach (XRInputSubsystem s in _inputs) s.trackingOriginUpdated -= OnOriginUpdated;
-            if (OVRManager.display != null) OVRManager.display.RecenteredPose -= OnRecentered;
+            WaitingForRecenter = false;
         }
 
-        private void Update()
+        private void LateUpdate()
         {
             if (_flow == null || !_flow.Active)
             {
@@ -61,6 +58,10 @@ namespace PianoGlass.Piano
                 if (Time.realtimeSinceStartup > 10f) enabled = false;
                 return;
             }
+
+            if (_head == null && Camera.main != null) _head = Camera.main.transform;
+            if (_head == null) return;
+            var head = new Pose(_head.localPosition, _head.localRotation); // tracking space
 
             if (_session == null && _flow.Session != null)
             {
@@ -70,52 +71,37 @@ namespace PianoGlass.Piano
                 // anchor already showing in Verifying can only be the saved one.
                 if (_session.Anchor != null && _session.Flow.State == FlowState.Verifying &&
                     Time.realtimeSinceStartup < 10f)
-                    _policy.OnFlowEvent(FlowEvent.LocalizeSucceeded, Time.realtimeSinceStartupAsDouble);
+                    OnLaunchLoad(head);
             }
 
-            if (_policy.Due(Time.realtimeSinceStartupAsDouble)) Ask();
-
-            if (_askedAt >= 0f && !_recentered && Time.realtimeSinceStartup - _askedAt > WaitSeconds)
+            if (_hasLastHead && WaitingForRecenter &&
+                _prompt.OnHeadStep((head.position - _lastHead.position).magnitude,
+                                   Mathf.DeltaAngle(_lastHead.rotation.eulerAngles.y, head.rotation.eulerAngles.y)))
             {
-                if (_attempt == 1) Ask();
-                else
-                {
-                    Debug.LogWarning("[LaunchResync] the runtime did not recenter on request; " +
-                                     "the keys stay off until the player recenters (hold the Meta button)");
-                    _askedAt = -1f;
-                }
+                WaitingForRecenter = false;
+                Debug.Log($"[LaunchResync] recentered {Time.realtimeSinceStartup - _askedAt:0.0} s after asking: " +
+                          "prompt cleared, the keys line up now");
             }
+
+            _lastHead = head;
+            _hasLastHead = true;
         }
 
-        private void OnTransitioned(FlowEvent e, FlowTransition t) =>
-            _policy.OnFlowEvent(e, Time.realtimeSinceStartupAsDouble);
-
-        private void Ask()
+        private void OnTransitioned(FlowEvent e, FlowTransition t)
         {
-            _attempt++;
+            if (e == FlowEvent.LocalizeSucceeded && _head != null)
+                OnLaunchLoad(new Pose(_head.localPosition, _head.localRotation));
+        }
+
+        private void OnLaunchLoad(Pose head)
+        {
+            _prompt.OnLaunchLoad(head.position.x, head.position.z, head.rotation.eulerAngles.y);
+            if (!_prompt.Waiting || WaitingForRecenter) return;
+            WaitingForRecenter = true;
             _askedAt = Time.realtimeSinceStartup;
-            if (_attempt == 1)
-            {
-                if (OVRManager.display != null) OVRManager.display.RecenterPose();
-                Debug.Log("[LaunchResync] saved anchor loaded: asked Meta for a recenter (OVRDisplay.RecenterPose)");
-            }
-            else
-            {
-                bool any = false;
-                foreach (XRInputSubsystem s in _inputs) any |= s.TryRecenter();
-                Debug.Log($"[LaunchResync] no recenter after {WaitSeconds} s; asked Unity (TryRecenter) = {any}");
-            }
-        }
-
-        private void OnRecentered() => Note("OVR recentered");
-        private void OnOriginUpdated(XRInputSubsystem _) => Note("XR tracking origin updated");
-
-        private void Note(string what)
-        {
-            if (_askedAt < 0f || _recentered) return;
-            _recentered = true;
-            Debug.Log($"[LaunchResync] {what} {Time.realtimeSinceStartup - _askedAt:0.00} s after asking " +
-                      $"(attempt {_attempt}): the anchor and head are in one frame now");
+            Debug.Log($"[LaunchResync] saved anchor loaded with the head " +
+                      $"{new Vector2(head.position.x, head.position.z).magnitude:0.00} m / " +
+                      $"{head.rotation.eulerAngles.y:0} deg from the origin: asking the player to recenter");
         }
     }
 }

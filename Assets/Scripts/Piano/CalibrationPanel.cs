@@ -94,6 +94,11 @@ namespace PianoGlass.Piano
                 return;
             }
 
+            // #17: until the first recenter after launch the keys are about a
+            // piano width off, and only the player can recenter.
+            if (LaunchResync.WaitingForRecenter)
+                _sb.AppendLine($"<b><color=#E8D48A>{LaunchResync.PromptLine}</color></b>");
+
             // The Verifying banner is the prompt line; make it the thing the
             // eye lands on.
             if (flow != null && flow.Active && flow.Status == AnchorPanelStatus.Verifying)
