@@ -1,3 +1,4 @@
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
 using System.Collections.Generic;
 
 namespace PianoGlass.UI
@@ -145,3 +146,4 @@ namespace PianoGlass.UI
         private static string Clean(string s) => s.Replace("**", "").Replace("`", "").Trim();
     }
 }
+#endif
