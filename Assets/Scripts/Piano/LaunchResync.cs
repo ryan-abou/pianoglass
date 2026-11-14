@@ -7,8 +7,9 @@ namespace PianoGlass.Piano
     /// (hold the Meta button) until they do, because until a recenter the
     /// anchor and the head are in different frames and the keys show up about
     /// a piano width off. LaunchRecenterPrompt decides; this feeds it the head
-    /// pose at the load and every frame's head step, and CalibrationPanel shows
-    /// <see cref="PromptLine"/> while <see cref="WaitingForRecenter"/>.
+    /// pose at the load and every frame's head step, and a RecenterPromptView
+    /// shows <see cref="PromptLine"/> in the middle of the player's view while
+    /// <see cref="WaitingForRecenter"/>.
     ///
     /// The app cannot recenter by itself: on the Quest 3, OVRDisplay
     /// .RecenterPose fires the recentered events but moves nothing (round 3,
@@ -31,6 +32,7 @@ namespace PianoGlass.Piano
         private Pose _lastHead;
         private bool _hasLastHead;
         private float _askedAt;
+        private RecenterPromptView _view;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Add()
@@ -48,6 +50,7 @@ namespace PianoGlass.Piano
         {
             if (_session != null) _session.Transitioned -= OnTransitioned;
             WaitingForRecenter = false;
+            if (_view != null) Destroy(_view.gameObject);
         }
 
         private void LateUpdate()
@@ -79,6 +82,7 @@ namespace PianoGlass.Piano
                                    Mathf.DeltaAngle(_lastHead.rotation.eulerAngles.y, head.rotation.eulerAngles.y)))
             {
                 WaitingForRecenter = false;
+                if (_view != null) _view.Hide();
                 Debug.Log($"[LaunchResync] recentered {Time.realtimeSinceStartup - _askedAt:0.0} s after asking: " +
                           "prompt cleared, the keys line up now");
             }
@@ -99,6 +103,11 @@ namespace PianoGlass.Piano
             if (!_prompt.Waiting || WaitingForRecenter) return;
             WaitingForRecenter = true;
             _askedAt = Time.realtimeSinceStartup;
+            if (_view == null)
+                _view = RecenterPromptView.Create(FindAnyObjectByType<PianoGlass.UI.SongPicker>(FindObjectsInactive.Include),
+                                                  PromptLine);
+            if (_view != null) _view.Show();
+            else Debug.LogWarning("[LaunchResync] no song picker to borrow the glass from: no banner, only this log");
             Debug.Log($"[LaunchResync] saved anchor loaded with the head " +
                       $"{new Vector2(head.position.x, head.position.z).magnitude:0.00} m / " +
                       $"{head.rotation.eulerAngles.y:0} deg from the origin: asking the player to recenter");
