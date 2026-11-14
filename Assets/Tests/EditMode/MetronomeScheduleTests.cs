@@ -88,6 +88,18 @@ namespace PianoGlass.Tests.EditMode
         }
 
         [Test]
+        public void ALatencyLongerThanTheLookaheadStillClicks()
+        {
+            // Quest 3: 310 ms of latency, 300 ms of lookahead. The beat at 1.0 s
+            // has to be handed out while it is still more than 310 ms away.
+            var s = new MetronomeSchedule(0.3, outputLatencySeconds: 0.31);
+            Collect(s, songTime: 0.45);
+            Assert.AreEqual(1, _out.Count, "silent before 2026-11-14: every beat came into view too late");
+            Assert.AreEqual(1.0, _out[0].SongTime, 1e-9);
+            Assert.AreEqual(100.24, _out[0].DspTime, 1e-9, "0.55 s away minus 0.31 s of latency");
+        }
+
+        [Test]
         public void AClickAlreadyInThePastIsSkipped()
         {
             // 80 ms latency, beat only 50 ms away: it cannot start on time.
