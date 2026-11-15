@@ -23,7 +23,7 @@ namespace PianoGlass.DevTools
         /// <summary>Left grip held: X and Y belong to the overlays right now.
         /// Read live, so it does not matter which script updates first.</summary>
         public static bool ModifierHeld =>
-            Debug.isDebugBuild &&
+            Debug.isDebugBuild && !PianoGlass.Piano.ControllerInput.Ignored &&
             OVRInput.Get(OVRInput.Axis1D.PrimaryHandTrigger, OVRInput.Controller.LTouch) >= GripThreshold;
 #else
         public static bool ModifierHeld => false;

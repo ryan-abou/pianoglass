@@ -76,7 +76,8 @@ namespace PianoGlass.Piano
             // lower one (the other hand in the lap is lower, 2026-11-14).
             PressingFinger.Tip[] tips = hands.PressTips();
             Vector3? last = null;
-            PianoKeyLayout layout = _calibration.Layout;
+            // While capturing, Layout is cleared: where the keys were before it.
+            PianoKeyLayout layout = _calibration.Layout ?? _calibration.PreviousLayout;
             if (layout != null && layout.TryGetKey(note, out PianoKey key)) last = key.Center;
             int i = PressingFinger.Choose(tips, last);
             string seen = Describe(tips);

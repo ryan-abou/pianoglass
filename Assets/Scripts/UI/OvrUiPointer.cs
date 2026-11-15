@@ -33,7 +33,9 @@ namespace PianoGlass.UI
             bool anyPressable = false;
             Ray ray = default;
 
-            if (rig != null && rig.rightControllerAnchor != null &&
+            // Hands tracked: the hand ray (PanelGrabber) is the pointer, and a
+            // pinch would read as this trigger.
+            if (rig != null && rig.rightControllerAnchor != null && !PianoGlass.Piano.ControllerInput.Ignored &&
                 OVRInput.IsControllerConnected(OVRInput.Controller.RTouch))
             {
                 ray = new Ray(rig.rightControllerAnchor.position, rig.rightControllerAnchor.forward);

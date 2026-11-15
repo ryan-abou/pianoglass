@@ -47,6 +47,11 @@ namespace PianoGlass.Piano
         public Stage CurrentStage { get; private set; } = Stage.Idle;
         public PianoKeyLayout Layout { get; private set; }
 
+        /// <summary>The layout before the calibration now under way (anchored
+        /// mode clears <see cref="Layout"/> while capturing): where each key was
+        /// last time, and its white key width, for touches by hand (#5).</summary>
+        public PianoKeyLayout PreviousLayout { get; private set; }
+
         /// <summary>The keys a calibration touches first and second.</summary>
         public int LowestNote => lowestNote;
         public int HighestNote => highestNote;
@@ -132,6 +137,7 @@ namespace PianoGlass.Piano
         public void ToggleCorrection() => _owner?.ToggleCorrection();
 
         private Vector3 _lowPoint;
+        private bool _lowByHand;
         private Vector3 _highPoint;
 
         /// <summary>World-space correction applied to both captured points.
@@ -196,6 +202,7 @@ namespace PianoGlass.Piano
         /// <summary>The owner wants two fresh touches. Hides everything.</summary>
         public void BeginExternalCapture()
         {
+            if (Layout != null) PreviousLayout = Layout;
             Layout = null;
             CurrentStage = Stage.AwaitingLowest;
             SetPlacementValid(false);
@@ -271,6 +278,7 @@ namespace PianoGlass.Piano
 
                 case Stage.AwaitingLowest:
                     _lowPoint = point;
+                    _lowByHand = byHand;
                     CurrentStage = Stage.AwaitingHighest;
                     Debug.Log($"[Calibration] lowest key at {_lowPoint}");
                     break;
@@ -278,7 +286,7 @@ namespace PianoGlass.Piano
                 case Stage.AwaitingHighest:
                     if (_owner != null)
                     {
-                        HandOverCapture(_lowPoint, point);
+                        HandOverCapture(_lowPoint, point, _lowByHand && byHand);
                         break;
                     }
                     Apply(_lowPoint, point);
@@ -290,7 +298,7 @@ namespace PianoGlass.Piano
         /// <summary>Anchored mode's end of capture: the raw layout goes to the
         /// owner, which creates and saves the anchor. Nothing is shown here --
         /// placement becomes valid only once that anchor exists.</summary>
-        private void HandOverCapture(Vector3 low, Vector3 high)
+        private void HandOverCapture(Vector3 low, Vector3 high, bool byHand)
         {
             float span = Vector3.Distance(low, high);
             if (span < 0.10f)
@@ -305,6 +313,16 @@ namespace PianoGlass.Piano
             var captured = new PianoKeyLayout(low, high, lowestNote, highestNote, head, whiteKeyDepth);
             if (captured.Warning != null) Debug.LogWarning("[Calibration] " + captured.Warning);
             Debug.Log($"[Calibration] highest key at {high}; white key width {captured.WhiteKeySpacing * 1000f:0.0} mm");
+
+            // Hand tracking measures the span a little short: the keyboard is
+            // the size it was last time (HandSpan).
+            if (byHand && PreviousLayout != null &&
+                HandSpan.KeepSpacing(ref low, ref high, captured.WhiteKeySpacing, PreviousLayout.WhiteKeySpacing))
+            {
+                captured = new PianoKeyLayout(low, high, lowestNote, highestNote, head, whiteKeyDepth);
+                Debug.Log($"[Calibration] by hand: white key width kept at last time's " +
+                          $"{captured.WhiteKeySpacing * 1000f:0.0} mm, evenly about the middle");
+            }
 
             CurrentStage = Stage.Waiting;
             _owner.OnPointsCaptured(captured);

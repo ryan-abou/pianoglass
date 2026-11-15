@@ -8,14 +8,16 @@ namespace PianoGlass.UI
     /// tracking flickers between pinched and open for a frame or two, which
     /// pressed Songs twice and picked the checklist up while its rows were
     /// being poked (2026-11-14). A hand that arrives already pinched (for a
-    /// key, or the Meta menu) never counts. A hold ends when the fingers open,
-    /// or once tracking has been lost for <see cref="LostSeconds"/> (a short
-    /// drop-out keeps hold). Pure, so it is tested without a headset.
+    /// key, or the Meta menu) never counts. A hold ends once the fingers have
+    /// been open for <see cref="ReleaseSeconds"/> (the same flicker dropped
+    /// panels mid-move, 2026-11-14), or tracking has been lost for
+    /// <see cref="LostSeconds"/>. Pure, so it is tested without a headset.
     /// </summary>
     public sealed class PinchGrab
     {
         public const float OpenSeconds = 0.1f;
         public const float CloseSeconds = 0.05f;
+        public const float ReleaseSeconds = 0.12f;
         public const float LostSeconds = 0.3f;
 
         public enum Step { None, Start, Hold, End }
@@ -53,11 +55,17 @@ namespace PianoGlass.UI
                 _wasPinching = false;
                 _armed = false;
                 if (!Holding) return Step.None;
+                if (_openFor < ReleaseSeconds) return Step.Hold;
                 Holding = false;
                 return Step.End;
             }
 
-            if (Holding) return Step.Hold;
+            if (Holding)
+            {
+                // Closed again: the next open starts its count from zero.
+                _wasPinching = true;
+                return Step.Hold;
+            }
 
             if (!_wasPinching)
             {

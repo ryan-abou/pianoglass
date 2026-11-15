@@ -131,8 +131,11 @@ namespace PianoGlass.UI
                        PianoGlass.DevTools.DevOverlayController.ToggleRecordingFromMenu, out _, 13f);
             }
 #endif
-            // Its usual spot is the song panel's, set every frame below.
-            _grab = GrabbablePanel.Add(_canvas.gameObject, "Settings", _calibration);
+            // It shares the song panel's spot (Ryan, 2026-11-14): always placed
+            // like it below, and moving it moves the song panel. No spot of its own.
+            _grab = GrabbablePanel.Add(_canvas.gameObject, null, _calibration);
+            _grab.Released += _ => { if (SongPanel.Instance != null) SongPanel.Instance.TakePlaceFrom(_canvas, Size.y); };
+            PlayerPrefs.DeleteKey("panel.Settings"); // its own saved spot from before
         }
 
         /// <summary>Short enough for a half-width button.</summary>
@@ -175,10 +178,10 @@ namespace PianoGlass.UI
             if (!show) return;
 
             // In the song panel's place: same spot, same tilt. Not while it is
-            // held or has been put somewhere: that put it back every frame and
-            // it never reached the hand (2026-11-14).
-            bool own = _grab != null && (_grab.Held || _grab.HasSaved);
-            if (!own && SongPanel.Instance != null) SongPanel.Instance.PlaceLike(_canvas, Size.y);
+            // held: that put it back every frame and it never reached the hand
+            // (2026-11-14).
+            bool held = _grab != null && _grab.Held;
+            if (!held && SongPanel.Instance != null) SongPanel.Instance.PlaceLike(_canvas, Size.y);
             Refresh();
         }
 

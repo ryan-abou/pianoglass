@@ -42,6 +42,9 @@ namespace PianoGlass.UI
         private bool _anyGlass;
 
         public bool Held { get; private set; }
+
+        /// <summary>Let go of: where it was put is final (settings hands it to the song panel).</summary>
+        public event System.Action<GrabbablePanel> Released;
         /// <summary>It has a spot of its own: whoever places it by default leaves it alone.</summary>
         public bool HasSaved => _hasSaved;
         public string Key => _key;
@@ -175,6 +178,19 @@ namespace PianoGlass.UI
         {
             if (!Held) return;
             Held = false;
+            Save();
+            Released?.Invoke(this);
+        }
+
+        /// <summary>Puts it at <paramref name="world"/> and keeps it there, as if moved by hand.</summary>
+        public void PutAt(Pose world)
+        {
+            transform.SetPositionAndRotation(world.position, world.rotation);
+            Save();
+        }
+
+        private void Save()
+        {
             if (_key == null || !TryKeyboard(out Pose frame)) return;
             _saved = PanelPose.ToFrame(frame, Current);
             _hasSaved = true;
@@ -196,8 +212,8 @@ namespace PianoGlass.UI
             transform.SetPositionAndRotation(saved.position, saved.rotation);
         }
 
-        /// <summary>The keyboard's frame: A0's front edge, facing the player.</summary>
-        private bool TryKeyboard(out Pose frame)
+        /// <summary>The keyboard's frame: A0's front edge, +Z toward the player.</summary>
+        public bool TryKeyboard(out Pose frame)
         {
             frame = default;
             if (_calibration == null || !_calibration.IsPlacementValid) return false;

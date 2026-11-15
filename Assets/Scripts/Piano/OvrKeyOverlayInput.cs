@@ -53,6 +53,7 @@ namespace PianoGlass.Piano
         private void Update()
         {
             if (highlighter == null) return;
+            if (ControllerInput.Ignored) return; // a pinch is not a button press
 
             // Left grip + X is the development checklist's toggle.
             if (OVRInput.GetDown(OVRInput.Button.One, OVRInput.Controller.LTouch) &&
