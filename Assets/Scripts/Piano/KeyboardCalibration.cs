@@ -90,10 +90,10 @@ namespace PianoGlass.Piano
         public string Prompt => CurrentStage switch
         {
             Stage.AwaitingLowest  => HandsInUse
-                ? $"Press the LOWEST key ({NoteName(lowestNote)}) with one index finger, other hand still"
+                ? $"Press the LOWEST key ({NoteName(lowestNote)}) at its front edge with one index finger, other hand still"
                 : $"Touch the front edge of the LOWEST key ({NoteName(lowestNote)}) and pull the trigger",
             Stage.AwaitingHighest => HandsInUse
-                ? $"Now press the HIGHEST key ({NoteName(highestNote)}) with one index finger, other hand still"
+                ? $"Now press the HIGHEST key ({NoteName(highestNote)}) at its front edge, the same way"
                 : $"Now the HIGHEST key ({NoteName(highestNote)})",
             Stage.Calibrated      => _owner?.PlacedPrompt ??
                                      "Calibrated.  sticks = nudge   left stick L/R = yaw   B = redo   stick click = clear nudge",
@@ -314,14 +314,21 @@ namespace PianoGlass.Piano
             if (captured.Warning != null) Debug.LogWarning("[Calibration] " + captured.Warning);
             Debug.Log($"[Calibration] highest key at {high}; white key width {captured.WhiteKeySpacing * 1000f:0.0} mm");
 
-            // Hand tracking measures the span a little short: the keyboard is
-            // the size it was last time (HandSpan).
-            if (byHand && PreviousLayout != null &&
-                HandSpan.KeepSpacing(ref low, ref high, captured.WhiteKeySpacing, PreviousLayout.WhiteKeySpacing))
+            // Hand tracking measures the span a little short, and two presses at
+            // different depths turn the keyboard: the keyboard is the size, and
+            // turned the way, it was last time (HandSpan).
+            if (byHand && PreviousLayout != null)
             {
-                captured = new PianoKeyLayout(low, high, lowestNote, highestNote, head, whiteKeyDepth);
-                Debug.Log($"[Calibration] by hand: white key width kept at last time's " +
-                          $"{captured.WhiteKeySpacing * 1000f:0.0} mm, evenly about the middle");
+                bool turned = HandSpan.KeepTurn(ref low, ref high, PreviousLayout.Right, Vector3.up);
+                bool sized = HandSpan.KeepSpacing(ref low, ref high, captured.WhiteKeySpacing, PreviousLayout.WhiteKeySpacing);
+                if (turned || sized)
+                {
+                    captured = new PianoKeyLayout(low, high, lowestNote, highestNote, head, whiteKeyDepth);
+                    Debug.Log($"[Calibration] by hand: kept last time's " +
+                              (turned ? "turn" : "") + (turned && sized ? " and " : "") +
+                              (sized ? $"white key width ({captured.WhiteKeySpacing * 1000f:0.0} mm)" : "") +
+                              ", about the middle");
+                }
             }
 
             CurrentStage = Stage.Waiting;
