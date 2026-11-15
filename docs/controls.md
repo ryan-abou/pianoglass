@@ -52,7 +52,7 @@ so it does not happen by accident with the controllers set down on the piano:
 | Control | Controller | Notes |
 |---|---|---|
 | Test checklist panel on/off | hold left grip, then left X | Opens in front of you, or where you last put it. Open or closed after a relaunch the way you left it. Format and push command: `docs/building.md` |
-| Tick a checklist item | right controller ray + right trigger on the row | Saved, survives a relaunch, logged as `[Checklist]` |
+| Pass or fail a checklist item | right controller ray + right trigger on the row's Pass or Fail (or poke it, or pinch it with the hand ray) | The same button again clears it. Saved, survives a relaunch, logged as `[Checklist] PASS` / `FAIL` |
 | Recording mode on/off | hold left grip, then left Y | Switches off every debug overlay (status panel, checklist) for milestone videos. Turning it off brings back whatever was showing. Remembered across launches |
 
 Development tools that are not player controls:

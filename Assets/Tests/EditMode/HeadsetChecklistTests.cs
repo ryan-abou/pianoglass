@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using PianoGlass.UI;
+using Mark = PianoGlass.UI.HeadsetChecklist.Mark;
 
 namespace PianoGlass.Tests.EditMode
 {
@@ -60,45 +61,66 @@ namespace PianoGlass.Tests.EditMode
         }
 
         [Test]
-        public void TicksSurviveTheSameListPushedAgain()
+        public void MarksSurviveTheSameListPushedAgain()
         {
             HeadsetChecklist first = HeadsetChecklist.Parse(Batch);
-            Assert.IsTrue(first.Toggle(0));
-            first.Toggle(2);
-            Assert.AreEqual(2, first.TickedCount);
+            Assert.AreEqual(Mark.Pass, first.Press(0, Mark.Pass));
+            Assert.AreEqual(Mark.Fail, first.Press(2, Mark.Fail));
+            Assert.AreEqual(1, first.PassedCount);
+            Assert.AreEqual(1, first.FailedCount);
+            Assert.AreEqual(2, first.MarkedCount);
 
             HeadsetChecklist again = HeadsetChecklist.Parse(Batch);
-            again.ApplyTicks(first.TickedKeys());
+            again.ApplyMarks(first.Keys(Mark.Pass), first.Keys(Mark.Fail));
 
-            Assert.IsTrue(again.Items[0].Ticked);
-            Assert.IsFalse(again.Items[1].Ticked);
-            Assert.IsTrue(again.Items[2].Ticked);
+            Assert.AreEqual(Mark.Pass, again.Items[0].Mark);
+            Assert.AreEqual(Mark.None, again.Items[1].Mark);
+            Assert.AreEqual(Mark.Fail, again.Items[2].Mark);
         }
 
         [Test]
-        public void AnEditedItemOrANewListStartsUnticked()
+        public void AnEditedItemOrANewListStartsOver()
         {
             HeadsetChecklist first = HeadsetChecklist.Parse(Batch);
-            first.Toggle(0);
-            first.Toggle(1);
+            first.Press(0, Mark.Pass);
+            first.Press(1, Mark.Fail);
 
             HeadsetChecklist edited = HeadsetChecklist.Parse(Batch.Replace("* Recenter", "* Recenter twice"));
-            edited.ApplyTicks(first.TickedKeys());
-            Assert.IsTrue(edited.Items[0].Ticked, "unchanged item keeps its tick");
-            Assert.IsFalse(edited.Items[1].Ticked, "edited item starts over");
+            edited.ApplyMarks(first.Keys(Mark.Pass), first.Keys(Mark.Fail));
+            Assert.AreEqual(Mark.Pass, edited.Items[0].Mark, "unchanged item keeps its mark");
+            Assert.AreEqual(Mark.None, edited.Items[1].Mark, "edited item starts over");
 
             HeadsetChecklist other = HeadsetChecklist.Parse(Batch.Replace("# Batch G round", "# Batch H round"));
-            other.ApplyTicks(first.TickedKeys());
-            Assert.AreEqual(0, other.TickedCount, "a new list starts over");
+            other.ApplyMarks(first.Keys(Mark.Pass), first.Keys(Mark.Fail));
+            Assert.AreEqual(0, other.MarkedCount, "a new list starts over");
         }
 
         [Test]
-        public void ToggleTwiceUnticks()
+        public void PressingTheSameButtonAgainClearsIt()
         {
             HeadsetChecklist c = HeadsetChecklist.Parse(Batch);
-            c.Toggle(3);
-            Assert.IsFalse(c.Toggle(3));
-            Assert.AreEqual(0, c.TickedCount);
+            c.Press(3, Mark.Pass);
+            Assert.AreEqual(Mark.None, c.Press(3, Mark.Pass));
+            Assert.AreEqual(0, c.MarkedCount);
+        }
+
+        [Test]
+        public void TheOtherButtonSwitchesTheMark()
+        {
+            HeadsetChecklist c = HeadsetChecklist.Parse(Batch);
+            c.Press(3, Mark.Pass);
+            Assert.AreEqual(Mark.Fail, c.Press(3, Mark.Fail));
+            Assert.AreEqual(0, c.PassedCount);
+            Assert.AreEqual(1, c.FailedCount);
+        }
+
+        [Test]
+        public void OldTicksComeInAsPasses()
+        {
+            HeadsetChecklist c = HeadsetChecklist.Parse(Batch);
+            c.ApplyMarks(new[] { c.Items[1].Key }, null);
+            Assert.AreEqual(Mark.Pass, c.Items[1].Mark);
+            Assert.AreEqual(1, c.MarkedCount);
         }
     }
 }

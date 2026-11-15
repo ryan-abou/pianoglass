@@ -19,8 +19,9 @@ namespace PianoGlass.UI
     /// like), drawn smaller. Anything else is ignored. "**" and "`" are
     /// dropped, since the panel shows text, not Markdown.
     ///
-    /// Ticks are keyed by title and item text, so pushing the same list again
-    /// keeps them and an edited item starts unticked.
+    /// Each item is marked pass or fail (2026-11-14, Ryan: two buttons per
+    /// item; it was one tick). Marks are keyed by title and item text, so
+    /// pushing the same list again keeps them and an edited item starts over.
     /// </summary>
     public sealed class HeadsetChecklist
     {
@@ -29,12 +30,14 @@ namespace PianoGlass.UI
         /// 10); the rest are counted in <see cref="Overflow"/>.</summary>
         public const int MaxItems = 16;
 
+        public enum Mark { None, Pass, Fail }
+
         public sealed class Item
         {
             public string Text { get; }
             public string Detail { get; }
             public string Key { get; }
-            public bool Ticked { get; internal set; }
+            public Mark Mark { get; internal set; }
 
             internal Item(string text, string detail, string key)
             {
@@ -52,14 +55,16 @@ namespace PianoGlass.UI
         /// <summary>Items past <see cref="MaxItems"/>, left out.</summary>
         public int Overflow { get; private set; }
 
-        public int TickedCount
+        public int PassedCount => Count(Mark.Pass);
+        public int FailedCount => Count(Mark.Fail);
+        /// <summary>Items with either mark: done.</summary>
+        public int MarkedCount => PassedCount + FailedCount;
+
+        private int Count(Mark m)
         {
-            get
-            {
-                int n = 0;
-                foreach (Item i in _items) if (i.Ticked) n++;
-                return n;
-            }
+            int n = 0;
+            foreach (Item i in _items) if (i.Mark == m) n++;
+            return n;
         }
 
         private HeadsetChecklist(string title) => Title = title;
@@ -104,27 +109,30 @@ namespace PianoGlass.UI
             return list;
         }
 
-        /// <summary>Flips one item; returns its new state.</summary>
-        public bool Toggle(int index)
+        /// <summary>The Pass or Fail button of one item was pressed: it is
+        /// marked that, or cleared if it already was. Returns its new mark.</summary>
+        public Mark Press(int index, Mark button)
         {
             Item item = _items[index];
-            item.Ticked = !item.Ticked;
-            return item.Ticked;
+            item.Mark = item.Mark == button ? Mark.None : button;
+            return item.Mark;
         }
 
-        /// <summary>Ticks every item whose key is saved. Keys from another
-        /// list or an edited item match nothing.</summary>
-        public void ApplyTicks(IEnumerable<string> keys)
+        /// <summary>Marks every item whose key is saved. Keys from another list
+        /// or an edited item match nothing. Ticks saved before pass and fail
+        /// existed come in as <paramref name="passed"/>.</summary>
+        public void ApplyMarks(IEnumerable<string> passed, IEnumerable<string> failed)
         {
-            if (keys == null) return;
-            var saved = new HashSet<string>(keys);
-            foreach (Item i in _items) i.Ticked = saved.Contains(i.Key);
+            var pass = new HashSet<string>(passed ?? new string[0]);
+            var fail = new HashSet<string>(failed ?? new string[0]);
+            foreach (Item i in _items)
+                i.Mark = fail.Contains(i.Key) ? Mark.Fail : pass.Contains(i.Key) ? Mark.Pass : Mark.None;
         }
 
-        public List<string> TickedKeys()
+        public List<string> Keys(Mark m)
         {
             var keys = new List<string>();
-            foreach (Item i in _items) if (i.Ticked) keys.Add(i.Key);
+            foreach (Item i in _items) if (i.Mark == m) keys.Add(i.Key);
             return keys;
         }
 
