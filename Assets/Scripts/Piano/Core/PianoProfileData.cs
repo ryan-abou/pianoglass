@@ -43,6 +43,12 @@ namespace PianoGlass.Piano
         /// files, which read it as zero.</summary>
         public Vector3 handCalibrationBiasMm;
 
+        /// <summary>How many hand calibrations <see cref="handCalibrationBiasMm"/>
+        /// is the average of. Absent in older files, which read it as zero: the
+        /// next one then replaces the bias, which suits the settled touches
+        /// that came in with it (2026-11-15).</summary>
+        public int handBiasSamples;
+
         /// <summary>Set by pivot calibration. When false, tipOffsetController
         /// is meaningless and PointerTip stays where the scene put it.</summary>
         public bool hasTipOffset;
