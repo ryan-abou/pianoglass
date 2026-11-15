@@ -76,6 +76,9 @@ namespace PianoGlass.Piano
                  "have hit too, just one step later.")]
         [SerializeField] private Material translucentMaterial;
 
+        /// <summary>The see-through material, lent to the panels' snap guide.</summary>
+        public Material TranslucentMaterial => translucentMaterial;
+
         [Tooltip("Draw every key faintly so you can see whether the calibration " +
                  "still lines up with the real keyboard. Only affects " +
                  "FullOverlay/Translucent -- ActiveKeysOnly/EdgeMarkers never " +

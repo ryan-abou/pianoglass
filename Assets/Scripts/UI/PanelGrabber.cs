@@ -99,7 +99,8 @@ namespace PianoGlass.UI
             OvrUiPointer pointer = FindAnyObjectByType<OvrUiPointer>(FindObjectsInactive.Include);
             if (pointer != null) template = pointer.GetComponentInChildren<LineRenderer>(true);
             for (int h = 0; h < 2; h++) _hands[h].Line = MakeLine(template, h);
-            _guide = SnapGuide.Create(transform, template);
+            var keys = FindAnyObjectByType<PianoGlass.Piano.PianoKeyHighlighter>(FindObjectsInactive.Include);
+            _guide = SnapGuide.Create(transform, keys != null ? keys.TranslucentMaterial : null);
         }
 
         private LineRenderer MakeLine(LineRenderer template, int h)
