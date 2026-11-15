@@ -47,6 +47,7 @@ namespace PianoGlass.UI
         private TextMeshProUGUI _status, _playLabel;
         private GlassButton _play, _restart, _songs, _slower, _faster, _metro, _wait, _fade, _settings;
         private PianoKeyLayout _placedFor;
+        private GrabbablePanel _grab;
         private string _shown;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -111,8 +112,8 @@ namespace PianoGlass.UI
 
             foreach (GlassButton b in new[] { _play, _restart, _songs, _slower, _faster, _metro, _wait, _fade, _settings })
                 b.AlwaysShown = true;
-            GrabbablePanel.Add(_canvas.gameObject, "SongPanel", _calibration,
-                               () => { if (_placedFor != null) Place(_placedFor); });
+            _grab = GrabbablePanel.Add(_canvas.gameObject, "SongPanel", _calibration,
+                                       () => { if (_placedFor != null) Place(_placedFor); });
         }
 
         private void LateUpdate()
@@ -150,6 +151,16 @@ namespace PianoGlass.UI
             if (_placedFor == null) return;
             Vector3 up = _canvas.up;
             other.SetPositionAndRotation(_canvas.position + up * ((otherHeightMm - Size.y) * 0.5f * 0.001f), _canvas.rotation);
+        }
+
+        /// <summary>Settings was moved: this panel takes the same spot (bottom
+        /// edges level, as in <see cref="PlaceLike"/>), so the two always share
+        /// one place (Ryan, 2026-11-14).</summary>
+        public void TakePlaceFrom(Transform other, float otherHeightMm)
+        {
+            if (_grab == null) return;
+            Vector3 position = other.position - other.up * ((otherHeightMm - Size.y) * 0.5f * 0.001f);
+            _grab.PutAt(new Pose(position, other.rotation));
         }
 
         /// <summary>Labels and which buttons work, only when something changed:
