@@ -40,42 +40,74 @@ namespace PianoGlass.UI
             return new Pose(origin, Quaternion.LookRotation(direction, up));
         }
 
+        /// <summary>Which straight lines a held panel is snapped to right now.</summary>
+        public struct Snap
+        {
+            /// <summary>Standing straight up: no tip back or forward.</summary>
+            public bool Upright;
+            /// <summary>Square to the keys: no turn left or right.</summary>
+            public bool Square;
+        }
+
+        /// <summary>Degrees: a panel snaps to straight once this close, and
+        /// stays snapped until it is <see cref="SnapOutDegrees"/> away, so a
+        /// hand shaking at the edge doesn't flick it in and out (2026-11-15:
+        /// one 5 degree edge for both felt uncertain).</summary>
+        public const float SnapInDegrees = 4f, SnapOutDegrees = 9f;
+
         /// <summary>
         /// A held panel's turn with no sideways lean (roll): panels always
         /// stay upright (Ryan, 2026-11-14). Its tip back or forward (pitch) and
-        /// its turn left or right (yaw) are kept, but each snaps to 0 within
-        /// <paramref name="snapDegrees"/>, so a panel is easy to set straight
-        /// up and square to the keys. <paramref name="straight"/> is the way a
-        /// panel's +Z points when square to the keys (away from the player);
-        /// null, no yaw snap. <paramref name="up"/> is the world's up.
+        /// its turn left or right (yaw) are kept, but each snaps to 0 (see
+        /// <see cref="SnapInDegrees"/>), so a panel is easy to set straight up
+        /// and square to the keys. <paramref name="snap"/> carries what is
+        /// snapped from one frame to the next. <paramref name="straight"/> is
+        /// the way a panel's +Z points when square to the keys (away from the
+        /// player); null, no yaw snap. <paramref name="up"/> is the world's up.
         /// </summary>
-        public static Quaternion Upright(Quaternion rotation, Vector3 up, Vector3? straight, float snapDegrees)
+        public static Quaternion Upright(Quaternion rotation, Vector3 up, Vector3? straight, ref Snap snap)
         {
             up = up.normalized;
             Vector3 f = rotation * Vector3.forward;
             Vector3 flat = Vector3.ProjectOnPlane(f, up);
             // Lying flat, face up or down: there is no lean to take out.
-            if (flat.sqrMagnitude < 1e-4f) return rotation;
+            if (flat.sqrMagnitude < 1e-4f)
+            {
+                snap = default;
+                return rotation;
+            }
             flat.Normalize();
 
+            bool squareWas = snap.Square;
+            snap.Square = false;
             if (straight.HasValue)
             {
                 Vector3 square = Vector3.ProjectOnPlane(straight.Value, up);
                 if (square.sqrMagnitude > 1e-4f)
                 {
                     float yaw = Vector3.SignedAngle(square, flat, up);
-                    if (Mathf.Abs(yaw) <= snapDegrees)
+                    float limit = squareWas ? SnapOutDegrees : SnapInDegrees;
+                    if (Mathf.Abs(yaw) <= limit)
                     {
                         Quaternion back = Quaternion.AngleAxis(-yaw, up);
                         flat = back * flat;
                         f = back * f;
+                        snap.Square = true;
                     }
                 }
             }
 
             float pitch = Vector3.Angle(flat, f);
-            if (pitch <= snapDegrees) f = flat;
+            snap.Upright = pitch <= (snap.Upright ? SnapOutDegrees : SnapInDegrees);
+            if (snap.Upright) f = flat;
             return Quaternion.LookRotation(f, up);
+        }
+
+        /// <summary>The same, starting unsnapped (a single frame).</summary>
+        public static Quaternion Upright(Quaternion rotation, Vector3 up, Vector3? straight)
+        {
+            var snap = new Snap();
+            return Upright(rotation, up, straight, ref snap);
         }
 
         /// <summary>"x,y,z,qx,qy,qz,qw", the same on every language setting.</summary>
