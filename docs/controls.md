@@ -73,6 +73,20 @@ Put the controllers down and the Quest tracks your hands. Every glass button
 within 4 cm, press as the fingertip pushes through the face, then pull back
 1.5 cm to press again. The controller ray keeps working alongside.
 
+Every panel (song panel, settings, song picker, results card, status panel,
+checklist) can be **pinched and moved** (`PanelGrabber`, `GrabbablePanel`,
+2026-11-14). Pinch its glass or edge and it stays in your hand the way you hold
+it, so turning the wrist tilts it. A panel out of reach shows a ray from your
+hand when you point at it: pinch with the ray on a button to press it, or on
+the glass to move the panel, pulling your hand back to bring it closer. Where
+you put a panel is saved relative to the keys, so it comes back there after a
+relaunch and moves with the keys when they are nudged. Off while a song plays,
+so a thumb passing under can't grab anything.
+
+Until the launch recenter is done (#17), no panel shows at all, only the
+recenter banner: before it they would all be a piano width off. A checklist
+asked for while waiting opens in front of you after the recenter.
+
 | Control | Without controllers | Where |
 |---|---|---|
 | Play / pause, restart | Song panel buttons (left end of the keyboard) | `SongPanel` |
@@ -84,6 +98,9 @@ within 4 cm, press as the fingertip pushes through the face, then pull back
 | Middle C fix | Settings "Middle C fix", then press Middle C with one index finger | `HandCalibration` |
 | Nudge, turn, clear nudge | Settings nudge pad: 2 mm or 0.2 deg per poke, saved each time | `SettingsPanel` |
 | Display mode | Settings "Display" | `SettingsPanel` |
+| Move or tilt a panel | Pinch it and move your hand, or point at it from afar and pinch its glass | `PanelGrabber` |
+| Press a button out of reach | Point at it (a ray shows) and pinch | `PanelGrabber` |
+| Put every panel back | Settings "Reset panels" | `GrabbablePanel` |
 | Recenter (the keys a piano width off at launch, #17) | Look at your palm, pinch and hold | Quest system gesture |
 | Passthrough, test checklist, recording mode (development builds) | Settings buttons | `SettingsPanel` |
 

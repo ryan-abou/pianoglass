@@ -111,13 +111,16 @@ namespace PianoGlass.UI
 
             foreach (GlassButton b in new[] { _play, _restart, _songs, _slower, _faster, _metro, _wait, _fade, _settings })
                 b.AlwaysShown = true;
+            GrabbablePanel.Add(_canvas.gameObject, "SongPanel", _calibration,
+                               () => { if (_placedFor != null) Place(_placedFor); });
         }
 
         private void LateUpdate()
         {
             bool placed = _calibration.IsPlacementValid && _calibration.Layout != null;
-            // Settings takes this spot while it is open.
-            bool show = placed && !SettingsPanel.IsOpen;
+            // Settings takes this spot while it is open. Nothing shows before a
+            // launch recenter (#17): until then it would be a piano width off.
+            bool show = placed && !SettingsPanel.IsOpen && !LaunchResync.WaitingForRecenter;
             if (_canvas.gameObject.activeSelf != show) _canvas.gameObject.SetActive(show);
             if (!placed) return;
 

@@ -38,7 +38,8 @@ namespace PianoGlass.UI
             TrackedHands hands = TrackedHands.Instance;
             for (int h = 0; h < 2; h++)
             {
-                if (hands == null || !hands.TryIndexTip(h, out Vector3 tip))
+                // A hand holding a panel (PanelGrabber) moves it, it doesn't poke.
+                if (hands == null || PanelGrabber.Holding(h) || !hands.TryIndexTip(h, out Vector3 tip))
                 {
                     Forget(h);
                     continue;

@@ -90,6 +90,8 @@ namespace PianoGlass.DevTools
 
             var panel = go.AddComponent<DevChecklistPanel>();
             panel.Build(styleSource.Style);
+            // Pinch to move it (#5); not saved, it opens in front of you each time.
+            GrabbablePanel.Add(go, null, null);
             return panel;
         }
 

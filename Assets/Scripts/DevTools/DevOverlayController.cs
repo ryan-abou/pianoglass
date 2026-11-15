@@ -47,6 +47,10 @@ namespace PianoGlass.DevTools
         /// <summary>The checklist was open when recording mode started: it
         /// comes back, where it was, when recording mode ends.</summary>
         private bool _checklistBeforeRecording;
+        /// <summary>Asked for, or open, before a launch recenter (#17): it opens
+        /// in front of you once you recenter, not a piano width off before.</summary>
+        private bool _checklistAfterRecenter;
+        private bool _waitingWas;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AddInDevelopmentBuilds()
@@ -76,6 +80,7 @@ namespace PianoGlass.DevTools
 
         private void Update()
         {
+            FollowRecenter();
             if (!DevOverlays.ModifierHeld)
             {
                 // Let go before the hold was up: forget the press.
@@ -92,6 +97,27 @@ namespace PianoGlass.DevTools
             if (_pendingY) { _pendingY = false; ToggleRecording(); }
         }
 
+        private void FollowRecenter()
+        {
+            bool waiting = LaunchResync.WaitingForRecenter;
+            if (waiting == _waitingWas) return;
+            _waitingWas = waiting;
+            if (waiting)
+            {
+                if (_checklist != null && _checklist.IsShown)
+                {
+                    _checklistAfterRecenter = true;
+                    _checklist.Hide();
+                }
+            }
+            else if (_checklistAfterRecenter)
+            {
+                _checklistAfterRecenter = false;
+                if (!_recording && _checklist != null)
+                    _checklist.Show(Camera.main != null ? Camera.main.transform : null);
+            }
+        }
+
         private static DevOverlayController _instance;
 
         /// <summary>The settings panel's buttons (#5): the same toggles as left
@@ -105,6 +131,16 @@ namespace PianoGlass.DevTools
             if (_recording)
             {
                 Debug.Log("[DevOverlays] recording mode is on: the checklist stays hidden (left grip + Y ends it)");
+                return;
+            }
+
+            if (LaunchResync.WaitingForRecenter)
+            {
+                _checklistAfterRecenter = !_checklistAfterRecenter;
+                Debug.Log(_checklistAfterRecenter ? "[DevOverlays] checklist opens once you recenter"
+                                                  : "[DevOverlays] checklist won't open after the recenter");
+                if (_checklist == null) _checklist = DevChecklistPanel.Create(
+                    FindAnyObjectByType<SongPicker>(FindObjectsInactive.Include));
                 return;
             }
 
