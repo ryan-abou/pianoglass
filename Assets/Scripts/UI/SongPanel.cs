@@ -118,8 +118,9 @@ namespace PianoGlass.UI
         private void LateUpdate()
         {
             bool placed = _calibration.IsPlacementValid && _calibration.Layout != null;
-            // Settings takes this spot while it is open.
-            bool show = placed && !SettingsPanel.IsOpen;
+            // Settings takes this spot while it is open. Nothing shows before a
+            // launch recenter (#17): until then it would be a piano width off.
+            bool show = placed && !SettingsPanel.IsOpen && !LaunchResync.WaitingForRecenter;
             if (_canvas.gameObject.activeSelf != show) _canvas.gameObject.SetActive(show);
             if (!placed) return;
 

@@ -169,7 +169,7 @@ namespace PianoGlass.UI
 
         private void LateUpdate()
         {
-            bool show = IsOpen && _calibration.Layout != null;
+            bool show = IsOpen && _calibration.Layout != null && !LaunchResync.WaitingForRecenter;
             if (_canvas.gameObject.activeSelf != show) _canvas.gameObject.SetActive(show);
             if (!show) return;
 

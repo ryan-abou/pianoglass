@@ -114,7 +114,8 @@ namespace PianoGlass.UI
         {
             if (SongPlaying) _wantOpen = false;
 
-            bool show = _wantOpen && !CalibrationNeedsPlayer;
+            // Not before a launch recenter (#17): it would show a piano width off.
+            bool show = _wantOpen && !CalibrationNeedsPlayer && !LaunchResync.WaitingForRecenter;
             if (show == _shown) return;
 
             if (show) Refresh();
