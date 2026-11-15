@@ -31,6 +31,7 @@ namespace PianoGlass.UI
         private OvrKeyOverlayInput _overlayInput;
 
         private RectTransform _canvas;
+        private GrabbablePanel _grab;
         private TextMeshProUGUI _prompt, _middleLabel, _displayLabel;
         private GlassButton _confirm, _middle;
         private readonly System.Collections.Generic.List<GlassButton> _nudgeButtons =
@@ -131,7 +132,7 @@ namespace PianoGlass.UI
             }
 #endif
             // Its usual spot is the song panel's, set every frame below.
-            GrabbablePanel.Add(_canvas.gameObject, "Settings", _calibration);
+            _grab = GrabbablePanel.Add(_canvas.gameObject, "Settings", _calibration);
         }
 
         /// <summary>Short enough for a half-width button.</summary>
@@ -173,8 +174,11 @@ namespace PianoGlass.UI
             if (_canvas.gameObject.activeSelf != show) _canvas.gameObject.SetActive(show);
             if (!show) return;
 
-            // In the song panel's place: same spot, same tilt.
-            if (SongPanel.Instance != null) SongPanel.Instance.PlaceLike(_canvas, Size.y);
+            // In the song panel's place: same spot, same tilt. Not while it is
+            // held or has been put somewhere: that put it back every frame and
+            // it never reached the hand (2026-11-14).
+            bool own = _grab != null && (_grab.Held || _grab.HasSaved);
+            if (!own && SongPanel.Instance != null) SongPanel.Instance.PlaceLike(_canvas, Size.y);
             Refresh();
         }
 

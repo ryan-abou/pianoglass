@@ -42,6 +42,8 @@ namespace PianoGlass.UI
         private bool _anyGlass;
 
         public bool Held { get; private set; }
+        /// <summary>It has a spot of its own: whoever places it by default leaves it alone.</summary>
+        public bool HasSaved => _hasSaved;
         public string Key => _key;
 
         /// <summary>Makes <paramref name="go"/> movable. <paramref name="key"/>
