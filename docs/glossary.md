@@ -24,6 +24,7 @@ project. Add a word the first time it comes up.
 - **JSON**: a text format for saving data as labels and values, like a filled-in form. PianoGlass example: every attempt you play is saved on the headset as a `.json` file with your accuracy and timing.
 - **logcat**: the headset's running diary of messages from every app. PianoGlass example: `adb logcat -s Unity` shows lines like `[AnchorFlow] verify error x/y/z mm`.
 - **manifest.json**: the project's shopping list of packages and which version of each to get. PianoGlass example: `Packages/manifest.json` says to use Meta XR SDK version 205.0.0.
+- **median**: the middle value once a list is put in order, so one wild value can't drag it the way it drags an average. PianoGlass example: a hand calibration touch is the median of the fingertip's frames while the key is held.
 - **merge**: bringing the commits from one branch into another. PianoGlass example: after a headset round passes, a feature branch is merged into `main`.
 - **.meta file**: a small file Unity keeps next to every asset, like a name tag that also holds its import settings. PianoGlass example: deleting `Assets/Readme.asset` also meant deleting `Assets/Readme.asset.meta`, or Unity would complain.
 - **occlusion**: a real thing hiding a virtual thing that is behind it. PianoGlass example: without it, a note slab draws on top of your hand even when your hand is in front.
