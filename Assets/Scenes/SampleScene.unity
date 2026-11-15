@@ -2785,8 +2785,9 @@ MonoBehaviour:
   slabThickness: 0.004
   surfaceOffset: 0.001
   displayMode: 2
-  translucentAlpha: 0.25
-  activeKeysAlpha: 0.55
+  fullOverlayAlpha: 0.55
+  translucentAlpha: 0.15
+  activeKeysAlpha: 0.35
   activeKeyLookaheadSeconds: 0.5
   edgeMarkerDepthFraction: 0.2
 --- !u!114 &2007997131

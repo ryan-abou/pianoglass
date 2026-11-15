@@ -101,23 +101,29 @@ namespace PianoGlass.Piano
                  "is restored from PlayerPrefs.")]
         [SerializeField] private DisplayMode displayMode = DisplayMode.ActiveKeysOnly;
 
-        [Tooltip("Alpha applied to every colour in Translucent mode. Default " +
-                 "0.25 -- faint enough to still show a hand through it.")]
-        [SerializeField] private float translucentAlpha = 0.25f;
+        [Tooltip("Alpha of every key in FullOverlay. Not opaque any more: a " +
+                 "hand has to show through it (Ryan, 2026-11-14). Set by SceneSetup.")]
+        [Range(0.1f, 1f)]
+        [SerializeField] private float fullOverlayAlpha = 0.55f;
+
+        [Tooltip("Alpha applied to every colour in Translucent mode -- faint " +
+                 "enough to still show a hand through it. Set by SceneSetup.")]
+        [SerializeField] private float translucentAlpha = 0.15f;
 
         [Tooltip("Alpha of a lit key (due, pressed or wrong) in ActiveKeysOnly. " +
                  "Less see-through than Translucent so the key still reads as lit, " +
                  "but enough to see a hand through it (Ryan, 2026-11-03).")]
         [Range(0.1f, 1f)]
-        [SerializeField] private float activeKeysAlpha = 0.55f;
+        [SerializeField] private float activeKeysAlpha = 0.35f;
 
         /// <summary>The alpha every key colour is drawn with in the current
         /// mode; 1 means the opaque material.</summary>
         private float ModeAlpha => displayMode switch
         {
+            DisplayMode.FullOverlay    => fullOverlayAlpha,
             DisplayMode.Translucent    => translucentAlpha,
             DisplayMode.ActiveKeysOnly => activeKeysAlpha,
-            _                          => 1f,
+            _                          => 1f, // EdgeMarkers: far edge, clear of the hands
         };
 
         [Tooltip("How far ahead of its due time a note's key appears in " +
@@ -138,7 +144,8 @@ namespace PianoGlass.Piano
         private const string DisplayModePrefKey = "PianoGlass.KeyOverlay.DisplayMode";
 
         private readonly Dictionary<int, Renderer> _renderers = new Dictionary<int, Renderer>();
-        private readonly HashSet<int> _dueSoon = new HashSet<int>();
+        /// <summary>Pitch to seconds until its soonest due note.</summary>
+        private readonly Dictionary<int, double> _dueSoon = new Dictionary<int, double>();
         /// <summary>Keys pulsing coral, and when the wrong press happened (realtime).</summary>
         private readonly Dictionary<int, float> _wrongAt = new Dictionary<int, float>();
         /// <summary>Wrong keys already released, and when (realtime): fading out.</summary>
@@ -229,8 +236,8 @@ namespace PianoGlass.Piano
         {
             double from = clock.Loop?.NotesFrom ?? double.NegativeInfinity;
             double until = clock.Loop?.NotesUntil ?? double.PositiveInfinity;
-            ActiveNoteSelector.CollectDueSoonPitches(current.Song.Notes, clock.DisplaySongTime, activeKeyLookaheadSeconds,
-                                                     _dueSoon, from, until, current.Hand);
+            ActiveNoteSelector.CollectDueSoon(current.Song.Notes, clock.DisplaySongTime, activeKeyLookaheadSeconds,
+                                              _dueSoon, from, until, current.Hand);
 
             foreach (var kv in _renderers)
             {
@@ -243,13 +250,16 @@ namespace PianoGlass.Piano
                 // Memory fade: a lit key would give the note away, so the hint
                 // fades with the slab, and is gone when the slab is. A key the
                 // player is holding is their own press, and is not touched here.
+                // It also fades in as its note comes: full only when due.
                 float opacity = clock.NoteOpacity;
-                bool relevant = _dueSoon.Contains(note) && opacity > 0f;
+                float fade = _dueSoon.TryGetValue(note, out double untilDue)
+                    ? ActiveNoteSelector.FadeIn(untilDue, activeKeyLookaheadSeconds) : 0f;
+                bool relevant = fade > 0f && opacity > 0f;
                 renderer.enabled = relevant;
                 if (!relevant) continue;
 
                 Color idle = PianoKeyLayout.IsBlackKey(note) ? idleBlackKey : idleWhiteKey;
-                if (opacity >= 1f || translucentMaterial == null)
+                if ((opacity >= 1f && fade >= 1f) || translucentMaterial == null)
                 {
                     renderer.sharedMaterial = MaterialForMode;
                     SetColor(note, idle);
@@ -257,7 +267,7 @@ namespace PianoGlass.Piano
                 else
                 {
                     renderer.sharedMaterial = translucentMaterial;
-                    FadeOut(note, idle, ModeAlpha * opacity);
+                    FadeOut(note, idle, ModeAlpha * opacity * fade);
                 }
             }
         }
