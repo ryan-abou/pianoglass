@@ -67,6 +67,8 @@ namespace PianoGlass.Piano
         private void Update()
         {
             if (_calibration == null) return;
+            // Hands tracked: a pinch reads as the trigger, and is not a capture.
+            if (ControllerInput.Ignored) return;
 
             if (_tip != null && OVRInput.GetDown(OVRInput.Button.Start, OVRInput.Controller.LTouch))
             {
