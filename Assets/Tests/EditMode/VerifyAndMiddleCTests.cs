@@ -385,7 +385,8 @@ namespace PianoGlass.Tests.EditMode
             Run(s.RecalibrateAsync());
             Run(s.OnCapturedAsync(World(Low) + touch, World(High) + touch, Recenter.rotation * Toward,
                                   Lowest, Highest, Depth));
-            s.Nudge(-touchMm * 0.001f);
+            // To where the keys look right, from wherever this calibration started.
+            s.Nudge((-touchMm - s.NudgeMm) * 0.001f);
             s.Confirm();
 
             Near(-touchMm, byHand ? OnDisk().handCalibrationBiasMm : OnDisk().calibrationBiasMm, 1e-3f, "bias learned");
@@ -450,6 +451,23 @@ namespace PianoGlass.Tests.EditMode
 
             Near(Vector3.zero, s.LastVerifyErrorMm, 0.01f, "the hand bias, not the controller's, is taken off");
             Near(before, s.BuildLayout().FrontEdgeCenter(60), 1e-5f, "keys left alone");
+        }
+
+        [Test]
+        public void AFirstHandCalibrationStartsFromTheDefaultHandBias()
+        {
+            AnchoredCalibrationSession s = CalibratedWithError(Vector3.zero);
+            s.TouchesByHand = true;
+            Recalibrated(s);
+            Near(AnchoredCalibrationSession.DefaultHandBiasMm, s.NudgeMm, 1e-3f, "starts from the default");
+        }
+
+        [Test]
+        public void AHandNudgeOf30MmIsKept()
+        {
+            // 2026-11-14: (+1.7, -21.2, +22.1) mm after a hand calibration was thrown away at 25.
+            CalibratedWithTouchBias(out _, new Vector3(-1.7f, 21.2f, -22.1f), byHand: true);
+            Near(new Vector3(1.7f, -21.2f, 22.1f), OnDisk().handCalibrationBiasMm, 1e-3f, "kept");
         }
 
         [Test]
