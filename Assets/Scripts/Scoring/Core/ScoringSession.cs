@@ -27,7 +27,9 @@ namespace PianoGlass.Scoring
     /// each note until it is played: only the earliest unjudged note or chord
     /// is accepted, whenever it is pressed; the right key is Correct, never
     /// PERFECT or GREAT; any other key is wrong and names what is awaited.
-    /// Nothing can be missed. A chord's keys may come in any order.
+    /// Nothing can be missed. A chord's keys may come in any order, but are
+    /// only played once they are all held down together (Ryan, 2026-11-15:
+    /// pressing them one at a time moved on); see <see cref="IsHeld"/>.
     /// </summary>
     public sealed class ScoringSession
     {
@@ -86,6 +88,15 @@ namespace PianoGlass.Scoring
         // Wait mode only. Presses there can share a song time, the clock being
         // held, so its streak is counted as they come rather than sorted after.
         private int _run, _bestRun;
+        /// <summary>Wait mode: the awaited chord's pitches pressed since the
+        /// last chord was played. Each still has to be held when the last comes.</summary>
+        private readonly HashSet<int> _down = new HashSet<int>();
+
+        /// <summary>Wait mode: whether a key is still held down (MidiInput).
+        /// A chord is played once all its keys are down at the same moment.
+        /// Null: every key pressed counts as still held, so a chord's keys may
+        /// come one at a time.</summary>
+        public Func<int, bool> IsHeld { get; set; }
 
         /// <param name="isPlayable">Whether a pitch is on the player's
         /// keyboard; null means every pitch is.</param>
@@ -197,14 +208,34 @@ namespace PianoGlass.Scoring
             if (double.IsPositiveInfinity(due)) return;
 
             int first = -1;
+            bool inChord = false;
             foreach (int i in _scorable)
             {
                 SongNote n = Song.Notes[i];
                 if (_judged[i] || Math.Abs(n.StartTime - due) > SameTimeSeconds) continue;
                 if (first < 0) first = i;
-                if (n.Pitch != pitch) continue;
-                Record(JudgementResult.Hit(i, n.Pitch, Song.BarOf(n.StartTime), n.StartTime,
-                                           pressSongTime, 0.0, Judgement.Correct));
+                if (n.Pitch == pitch) inChord = true;
+            }
+
+            if (inChord)
+            {
+                _down.Add(pitch);
+                // Every key of the chord pressed since the last one, and still down.
+                foreach (int i in _scorable)
+                {
+                    SongNote n = Song.Notes[i];
+                    if (_judged[i] || Math.Abs(n.StartTime - due) > SameTimeSeconds) continue;
+                    if (n.Pitch == pitch) continue; // just pressed: down right now
+                    if (!_down.Contains(n.Pitch) || (IsHeld != null && !IsHeld(n.Pitch))) return;
+                }
+                foreach (int i in new List<int>(_scorable))
+                {
+                    SongNote n = Song.Notes[i];
+                    if (_judged[i] || Math.Abs(n.StartTime - due) > SameTimeSeconds) continue;
+                    Record(JudgementResult.Hit(i, n.Pitch, Song.BarOf(n.StartTime), n.StartTime,
+                                               pressSongTime, 0.0, Judgement.Correct));
+                }
+                _down.Clear();
                 return;
             }
 
@@ -236,14 +267,19 @@ namespace PianoGlass.Scoring
             }
         }
 
-        /// <summary>The pitches of that note or chord still to be pressed.</summary>
+        /// <summary>The pitches of that note or chord still to be pressed: not
+        /// the ones already held down for it.</summary>
         public List<int> WaitingPitches()
         {
             var pitches = new List<int>();
             double due = NextDueTime;
             foreach (int i in _scorable)
-                if (!_judged[i] && Math.Abs(Song.Notes[i].StartTime - due) <= SameTimeSeconds)
-                    pitches.Add(Song.Notes[i].Pitch);
+            {
+                if (_judged[i] || Math.Abs(Song.Notes[i].StartTime - due) > SameTimeSeconds) continue;
+                int p = Song.Notes[i].Pitch;
+                bool down = _down.Contains(p) && (IsHeld == null || IsHeld(p));
+                if (!down) pitches.Add(p);
+            }
             return pitches;
         }
 
