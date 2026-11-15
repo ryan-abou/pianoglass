@@ -81,12 +81,14 @@ hand when you point at it: pinch with the ray on a button to press it, or on
 the glass to move the panel, pulling your hand back to bring it closer. Where
 you put a panel is saved relative to the keys, so it comes back there after a
 relaunch and moves with the keys when they are nudged. Off while a song plays,
-so a thumb passing under can't grab anything.
+so a thumb passing under can't grab anything. Letting go: the panel stops
+moving the moment the pinch loosens, and is let go once the fingers are clearly
+open, so it doesn't slide while you let go (2026-11-15).
 
 A held panel never leans sideways. It snaps straight up once within 4 degrees of
 it, and square to the keys once within 4 degrees of that, and stays snapped until
-9 degrees away. While snapped, faint lines show it: a frame, up-and-down lines for
-straight up, side-to-side lines for square to the keys. Settings and the song
+9 degrees away. While snapped, a very faint square much bigger than the panel
+shows the flat plane it is locked into, a little brighter when both snap. Settings and the song
 panel share one spot: moving either moves both. While controllers are down, the
 controller buttons are ignored (a pinch reads as a trigger pull).
 
@@ -100,9 +102,9 @@ asked for while waiting opens in front of you after the recenter.
 | Tempo −/+, metronome, wait mode, memory fade | Song panel buttons, only while stopped or paused, or the piano chords as before | `SongPanel` |
 | Songs, hand switch | Song panel "Songs", then poke the picker | `SongPanel`, `SongPicker` |
 | Settings | Song panel "Settings": shown in the song panel's place | `SettingsPanel` |
-| Calibrate | Settings "Calibrate with hands", then press A0 and C8 at their front edges with one index finger | `HandCalibration` |
+| Calibrate | Settings "Calibrate with hands", then press and hold A0 and C8 at their front edges with one index finger (the touch is where the fingertip rests while the key is down) | `HandCalibration` |
 | Looks right | Settings "Looks right" | `SettingsPanel` |
-| Middle C fix | Settings "Middle C fix", then press Middle C with one index finger | `HandCalibration` |
+| Middle C fix | Settings "Middle C fix", then press and hold Middle C with one index finger | `HandCalibration` |
 | Nudge, turn, clear nudge | Settings nudge pad: 2 mm or 0.2 deg per poke, saved each time | `SettingsPanel` |
 | Display mode | Settings "Display" | `SettingsPanel` |
 | Move or tilt a panel | Pinch it and move your hand, or point at it from afar and pinch its glass | `PanelGrabber` |
@@ -114,7 +116,8 @@ asked for while waiting opens in front of you after the recenter.
 A key press only counts as a calibration touch while hands are tracked, so a
 controller tip that presses a key never counts twice. Hand touches learn their
 own calibration bias, kept apart from the controller tip's; a Middle C fix made
-before "Looks right" is learned along with the nudge. A hand calibration keeps the
+before "Looks right" is learned along with the nudge. The hand bias is the average
+of the last 4 hand calibrations, since each one's nudge is partly its own error. A hand calibration keeps the
 last calibration's white key width (within 6%) and turn (within 2.5 degrees), since
 hand tracking measures the span short and two presses at different depths turn it.
 
