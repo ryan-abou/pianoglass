@@ -36,7 +36,10 @@ namespace PianoGlass.UI
         /// <summary>Holding on, once picked up: the pinch counts as still closed
         /// while the Quest says it is at least this firm, or thumb and index tips
         /// are this close (metres). Its own yes/no flickers off mid-move, and
-        /// panels were dropped at random (2026-11-15).</summary>
+        /// panels were dropped at random (2026-11-15). In between (the Quest
+        /// says open, but this still holds on) the panel stays still: letting
+        /// go opens the fingers through this band, and a panel that kept
+        /// following the hand there slid while being let go (2026-11-15).</summary>
         private const float HoldStrength = 0.3f, HoldGap = 0.045f;
 
         private sealed class HandState
@@ -47,6 +50,10 @@ namespace PianoGlass.UI
             public Pose PanelInHand;
             public float StartReach, HeldSince;
             public PanelPose.Snap Snap;
+            /// <summary>Held, but the fingers are opening: the panel stays put.
+            /// Rejoins counts openings that closed again without letting go.</summary>
+            public bool Opening;
+            public int Rejoins;
             public GlassButton Hovered;
             public LineRenderer Line;
         }
@@ -148,6 +155,7 @@ namespace PianoGlass.UI
                            hands.TryPinch(h, out point, out turn, out pinching, out strength, out gap);
             // Held: still pinched while firm enough or the tips are close, even
             // when the Quest's own yes/no blinks off.
+            bool firm = pinching;
             if (tracked && s.Held != null) pinching = pinching || strength >= HoldStrength || gap <= HoldGap;
             bool hasRay = tracked && hands.TryPointer(h, out ray);
 
@@ -174,7 +182,16 @@ namespace PianoGlass.UI
                 else Begin(s, near ?? far, near == null, point, turn, ray);
             }
             else if (step == PinchGrab.Step.Hold && s.Held != null && tracked)
-                Move(s, point, turn, ray, hasRay);
+            {
+                // Only a firm pinch moves it; an opening one holds it still.
+                if (firm)
+                {
+                    if (s.Opening) s.Rejoins++;
+                    s.Opening = false;
+                    Move(s, point, turn, ray, hasRay);
+                }
+                else s.Opening = true;
+            }
             else if (step == PinchGrab.Step.End)
                 End(s, tracked ? $"fingers opened (strength {strength:0.00}, tips {gap * 1000f:0} mm apart)"
                                : "hand tracking lost");
@@ -264,6 +281,8 @@ namespace PianoGlass.UI
             s.StartReach = Reach(point);
             s.HeldSince = Time.realtimeSinceStartup;
             s.Snap = default;
+            s.Opening = false;
+            s.Rejoins = 0;
             panel.BeginHold(far ? FarRate : NearRate);
             Debug.Log($"[Panels] picked up '{panel.name}' {(far ? "from afar" : "by hand")}");
         }
@@ -297,7 +316,9 @@ namespace PianoGlass.UI
             s.Held = null;
             s.Snap = default;
             s.Pinch.Release();
-            Debug.Log($"[Panels] let go of '{panel.name}' after {Time.realtimeSinceStartup - s.HeldSince:0.0} s: {why}");
+            Debug.Log($"[Panels] let go of '{panel.name}' after {Time.realtimeSinceStartup - s.HeldSince:0.0} s: {why}" +
+                      (s.Rejoins > 0 ? $"; held still {s.Rejoins} time(s) while the pinch loosened" : ""));
+            s.Opening = false;
             panel.EndHold();
         }
 
