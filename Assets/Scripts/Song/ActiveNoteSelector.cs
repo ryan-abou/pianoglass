@@ -30,6 +30,42 @@ namespace PianoGlass.Song
         }
 
         /// <summary>
+        /// How strongly a key due in <paramref name="timeUntilDue"/> seconds is
+        /// lit, 0 to 1: nothing as it comes into the lookahead window, full as
+        /// it is due. A key due in 20 ms and one due in a third of a second
+        /// looked the same (Ryan, 2026-11-14); now the key fades in as its note
+        /// comes, and the brightest key is the next one to play.
+        /// </summary>
+        public static float FadeIn(double timeUntilDue, float lookaheadSeconds)
+        {
+            if (lookaheadSeconds <= 0f) return 1f;
+            double t = 1.0 - timeUntilDue / lookaheadSeconds;
+            return t <= 0.0 ? 0f : t >= 1.0 ? 1f : (float)t;
+        }
+
+        /// <summary>
+        /// Like <see cref="CollectDueSoonPitches"/>, but with how long until
+        /// each pitch's soonest due note, for <see cref="FadeIn"/>. Reuses
+        /// the dictionary: allocates nothing per frame.
+        /// </summary>
+        public static void CollectDueSoon(
+            IReadOnlyList<SongNote> notes, double songTime, float lookaheadSeconds, Dictionary<int, double> untilDue,
+            double from = double.NegativeInfinity, double until = double.PositiveInfinity,
+            PracticeHand hand = PracticeHand.All)
+        {
+            untilDue.Clear();
+            for (int i = 0; i < notes.Count; i++)
+            {
+                SongNote note = notes[i];
+                if (!note.BelongsTo(hand) || note.StartTime < from - 1e-9 || note.StartTime >= until - 1e-9 ||
+                    !IsDueSoon(note.StartTime, songTime, lookaheadSeconds))
+                    continue;
+                double t = note.StartTime - songTime;
+                if (!untilDue.TryGetValue(note.Pitch, out double soonest) || t < soonest) untilDue[note.Pitch] = t;
+            }
+        }
+
+        /// <summary>
         /// Fills `results` with every distinct pitch that has a note due soon
         /// at songTime. Takes the output set rather than returning a new one
         /// so PianoKeyHighlighter's per-frame call in ActiveKeysOnly/
