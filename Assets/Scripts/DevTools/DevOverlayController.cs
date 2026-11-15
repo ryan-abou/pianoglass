@@ -28,8 +28,9 @@ namespace PianoGlass.DevTools
     /// (none in the Quest 3 captures of 2026-11-13), so there is nothing to
     /// hide for it.
     ///
-    /// The checklist panel always starts hidden, so it can never be in a
-    /// recording by accident. Adds itself after the scene loads; no scene change.
+    /// The checklist panel opens at launch the way it was last left (Ryan,
+    /// 2026-11-14), once the keys are placed and any launch recenter is done;
+    /// recording mode still keeps it hidden. Adds itself after the scene loads; no scene change.
     /// </summary>
     public sealed class DevOverlayController : MonoBehaviour
     {
@@ -38,6 +39,9 @@ namespace PianoGlass.DevTools
         /// and X squeezed together needed a second press).</summary>
         public const float HoldSeconds = 0.3f;
         private const string RecordingKey = "dev.recordingMode";
+        /// <summary>Whether the checklist was open when last toggled: it comes
+        /// back that way after a relaunch (Ryan, 2026-11-14).</summary>
+        private const string ChecklistKey = "dev.checklistShown";
 
         private GameObject _statusPanel;
         private DevChecklistPanel _checklist;
@@ -51,6 +55,11 @@ namespace PianoGlass.DevTools
         /// in front of you once you recenter, not a piano width off before.</summary>
         private bool _checklistAfterRecenter;
         private bool _waitingWas;
+        /// <summary>It was open last time: open it once the keys are placed
+        /// and any launch recenter is done.</summary>
+        private bool _restoreAtLaunch;
+        private float _placedSince = -1f;
+        private KeyboardCalibration _calibration;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AddInDevelopmentBuilds()
@@ -73,6 +82,8 @@ namespace PianoGlass.DevTools
 
             // Before the first frame is drawn, so a recording relaunch shows no panel at all.
             _recording = PlayerPrefs.GetInt(RecordingKey, 0) == 1;
+            _restoreAtLaunch = PlayerPrefs.GetInt(ChecklistKey, 0) == 1;
+            _calibration = FindAnyObjectByType<KeyboardCalibration>();
             Apply();
             Debug.Log($"[DevOverlays] ready: left grip + X = checklist, left grip + Y = recording mode " +
                       $"(recording mode {(_recording ? "ON" : "off")})");
@@ -81,6 +92,7 @@ namespace PianoGlass.DevTools
         private void Update()
         {
             FollowRecenter();
+            RestoreAtLaunch();
             if (!DevOverlays.ModifierHeld)
             {
                 // Let go before the hold was up: forget the press.
@@ -95,6 +107,40 @@ namespace PianoGlass.DevTools
 
             if (_pendingX) { _pendingX = false; ToggleChecklist(); }
             if (_pendingY) { _pendingY = false; ToggleRecording(); }
+        }
+
+        private void RestoreAtLaunch()
+        {
+            if (!_restoreAtLaunch) return;
+            bool placed = _calibration == null || _calibration.IsPlacementValid;
+            if (!placed || LaunchResync.WaitingForRecenter)
+            {
+                _placedSince = -1f;
+                return;
+            }
+            // Half a second settled, so a launch recenter prompt has had its chance to ask first.
+            if (_placedSince < 0f) _placedSince = Time.realtimeSinceStartup;
+            if (Time.realtimeSinceStartup - _placedSince < 0.5f) return;
+
+            _restoreAtLaunch = false;
+            if (_recording || !EnsureChecklist() || _checklist.IsShown) return;
+            _checklist.Show(Camera.main != null ? Camera.main.transform : null);
+            Debug.Log("[DevOverlays] checklist open again, as it was last time");
+        }
+
+        private bool EnsureChecklist()
+        {
+            if (_checklist != null) return true;
+            _checklist = DevChecklistPanel.Create(FindAnyObjectByType<SongPicker>(FindObjectsInactive.Include));
+            if (_checklist == null)
+                Debug.LogWarning("[DevOverlays] no song picker to borrow the glass from; no checklist panel");
+            return _checklist != null;
+        }
+
+        private static void RememberChecklist(bool shown)
+        {
+            PlayerPrefs.SetInt(ChecklistKey, shown ? 1 : 0);
+            PlayerPrefs.Save();
         }
 
         private void FollowRecenter()
@@ -134,28 +180,21 @@ namespace PianoGlass.DevTools
                 return;
             }
 
+            _restoreAtLaunch = false;
             if (LaunchResync.WaitingForRecenter)
             {
                 _checklistAfterRecenter = !_checklistAfterRecenter;
+                RememberChecklist(_checklistAfterRecenter);
                 Debug.Log(_checklistAfterRecenter ? "[DevOverlays] checklist opens once you recenter"
                                                   : "[DevOverlays] checklist won't open after the recenter");
-                if (_checklist == null) _checklist = DevChecklistPanel.Create(
-                    FindAnyObjectByType<SongPicker>(FindObjectsInactive.Include));
+                EnsureChecklist();
                 return;
             }
 
-            if (_checklist == null)
-            {
-                _checklist = DevChecklistPanel.Create(FindAnyObjectByType<SongPicker>(FindObjectsInactive.Include));
-                if (_checklist == null)
-                {
-                    Debug.LogWarning("[DevOverlays] no song picker to borrow the glass from; no checklist panel");
-                    return;
-                }
-            }
-
+            if (!EnsureChecklist()) return;
             if (_checklist.IsShown) _checklist.Hide();
             else _checklist.Show(Camera.main != null ? Camera.main.transform : null);
+            RememberChecklist(_checklist.IsShown);
         }
 
         private void ToggleRecording()

@@ -5,6 +5,7 @@ using System.IO;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using PianoGlass.Piano;
 using PianoGlass.UI;
 
 namespace PianoGlass.DevTools
@@ -90,8 +91,9 @@ namespace PianoGlass.DevTools
 
             var panel = go.AddComponent<DevChecklistPanel>();
             panel.Build(styleSource.Style);
-            // Pinch to move it (#5); not saved, it opens in front of you each time.
-            GrabbablePanel.Add(go, null, null);
+            // Pinch to move it (#5). Where it was put is saved on the keys like
+            // every panel, so it opens there again; until then, in front of you.
+            GrabbablePanel.Add(go, "Checklist", FindAnyObjectByType<KeyboardCalibration>());
             return panel;
         }
 

@@ -369,6 +369,12 @@ namespace PianoGlass.Highway
 
         private void Update()
         {
+            // Nothing on the highway before a launch recenter (#17): it would be a piano width off.
+            if (LaunchResync.WaitingForRecenter)
+            {
+                if (_inUse.Count > 0) ReleaseAll();
+                return;
+            }
             if (clock == null || calibration == null || !calibration.IsPlacementValid ||
                 !calibration.IsCalibrated || _song == null || _window == null) return;
 

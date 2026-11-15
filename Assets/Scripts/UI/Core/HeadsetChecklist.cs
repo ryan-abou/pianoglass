@@ -24,9 +24,10 @@ namespace PianoGlass.UI
     /// </summary>
     public sealed class HeadsetChecklist
     {
-        /// <summary>Rows the panel has room for. Checklists are meant to be
-        /// 5 to 8 items; the rest are counted in <see cref="Overflow"/>.</summary>
-        public const int MaxItems = 10;
+        /// <summary>Rows the panel shows. Checklists are meant to be 5 to 8
+        /// items, but one big round can need more (16 since 2026-11-14, it was
+        /// 10); the rest are counted in <see cref="Overflow"/>.</summary>
+        public const int MaxItems = 16;
 
         public sealed class Item
         {

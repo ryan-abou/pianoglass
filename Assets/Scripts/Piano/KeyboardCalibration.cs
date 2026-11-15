@@ -85,10 +85,10 @@ namespace PianoGlass.Piano
         public string Prompt => CurrentStage switch
         {
             Stage.AwaitingLowest  => HandsInUse
-                ? $"Press the LOWEST key ({NoteName(lowestNote)}) with one index finger"
+                ? $"Press the LOWEST key ({NoteName(lowestNote)}) with one index finger, other hand still"
                 : $"Touch the front edge of the LOWEST key ({NoteName(lowestNote)}) and pull the trigger",
             Stage.AwaitingHighest => HandsInUse
-                ? $"Now press the HIGHEST key ({NoteName(highestNote)}) with one index finger"
+                ? $"Now press the HIGHEST key ({NoteName(highestNote)}) with one index finger, other hand still"
                 : $"Now the HIGHEST key ({NoteName(highestNote)})",
             Stage.Calibrated      => _owner?.PlacedPrompt ??
                                      "Calibrated.  sticks = nudge   left stick L/R = yaw   B = redo   stick click = clear nudge",

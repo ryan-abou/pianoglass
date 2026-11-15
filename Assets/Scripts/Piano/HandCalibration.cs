@@ -6,7 +6,7 @@ namespace PianoGlass.Piano
     /// <summary>
     /// Calibrating without controllers (#5): press the lowest and then the
     /// highest key with an index finger, and the fingertip that pressed each
-    /// one is the touch. MIDI says exactly which key went down and when, and
+    /// one is the touch (PressingFinger tells which hand that was). MIDI says exactly which key went down and when, and
     /// the tracked fingertip says where, which the press probe found accurate
     /// along the keys (within a few mm; 328 presses, 2026-11-05). A Middle C
     /// fix works the same way: start it, then press Middle C.
@@ -45,6 +45,15 @@ namespace PianoGlass.Piano
             MidiInput.Instance.NoteOn += OnNoteOn;
         }
 
+        private static string Describe(PressingFinger.Tip[] tips)
+        {
+            var parts = new System.Collections.Generic.List<string>();
+            for (int i = 0; i < tips.Length; i++)
+                parts.Add(tips[i].Tracked ? $"hand {i} at {tips[i].Position} came down {tips[i].Drop * 1000f:0} mm"
+                                          : $"hand {i} not tracked");
+            return string.Join(", ", parts);
+        }
+
         private void OnDestroy()
         {
             if (MidiInput.Instance != null) MidiInput.Instance.NoteOn -= OnNoteOn;
@@ -53,7 +62,7 @@ namespace PianoGlass.Piano
         private void OnNoteOn(int note, int velocity, double time)
         {
             TrackedHands hands = TrackedHands.Instance;
-            if (hands == null || !hands.TryPressingIndexTip(out Vector3 tip)) return;
+            if (hands == null || !hands.AnyTracked) return;
 
             KeyboardCalibration.Stage stage = _calibration.CurrentStage;
             bool wanted =
@@ -63,7 +72,24 @@ namespace PianoGlass.Piano
                  _flow != null && _flow.Active && _flow.IsCorrecting);
             if (!wanted) return;
 
-            Debug.Log($"[HandCalibration] {MidiInput.NoteName(note)} pressed: fingertip at {tip} is the touch ({stage})");
+            // Which hand pressed it: the fingertip that just came down, not the
+            // lower one (the other hand in the lap is lower, 2026-11-14).
+            PressingFinger.Tip[] tips = hands.PressTips();
+            Vector3? last = null;
+            PianoKeyLayout layout = _calibration.Layout;
+            if (layout != null && layout.TryGetKey(note, out PianoKey key)) last = key.Center;
+            int i = PressingFinger.Choose(tips, last);
+            string seen = Describe(tips);
+            if (i < 0)
+            {
+                Debug.Log($"[HandCalibration] {MidiInput.NoteName(note)} pressed, but which finger pressed it " +
+                          $"can't be told ({seen}): press it again, with the other hand still and off the keys");
+                return;
+            }
+
+            Vector3 tip = tips[i].Position;
+            Debug.Log($"[HandCalibration] {MidiInput.NoteName(note)} pressed: hand {i} fingertip at {tip} " +
+                      $"is the touch ({stage}; {seen})");
             _calibration.CapturePointAt(tip, byHand: true);
         }
     }

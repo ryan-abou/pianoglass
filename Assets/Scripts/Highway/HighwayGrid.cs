@@ -127,7 +127,8 @@ namespace PianoGlass.Highway
             KeyboardCalibration calibration = highway != null ? highway.Calibration : null;
             SongClock clock = highway != null ? highway.Clock : null;
             if (gridMaterial == null || clock == null || calibration == null ||
-                !calibration.IsCalibrated || !calibration.IsPlacementValid || highway.Song == null)
+                !calibration.IsCalibrated || !calibration.IsPlacementValid || highway.Song == null ||
+                LaunchResync.WaitingForRecenter) // a piano width off until then (#17)
             {
                 Hide();
                 return;
