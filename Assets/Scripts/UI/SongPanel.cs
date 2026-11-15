@@ -111,6 +111,8 @@ namespace PianoGlass.UI
 
             foreach (GlassButton b in new[] { _play, _restart, _songs, _slower, _faster, _metro, _wait, _fade, _settings })
                 b.AlwaysShown = true;
+            GrabbablePanel.Add(_canvas.gameObject, "SongPanel", _calibration,
+                               () => { if (_placedFor != null) Place(_placedFor); });
         }
 
         private void LateUpdate()

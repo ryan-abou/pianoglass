@@ -113,8 +113,10 @@ namespace PianoGlass.UI
             NudgeRow(g, root, y, c3a, c3c, w3, ("Down", Nudge(0, -1, 0)), ("", null), ("Up", Nudge(0, 1, 0)));
             y -= BtnH + Gap + 8f;
 
-            g.Pill(root, "Display", new Vector2(0f, y), new Vector2(Size.x - 32f, BtnH), "Display",
-                   () => { if (_highlighter != null) _highlighter.CycleDisplayMode(); _shown = null; }, out _displayLabel, 15f);
+            g.Pill(root, "Display", new Vector2(c2a, y), new Vector2(w2, BtnH), "Display",
+                   () => { if (_highlighter != null) _highlighter.CycleDisplayMode(); _shown = null; }, out _displayLabel, 13f);
+            g.Pill(root, "ResetPanels", new Vector2(c2b, y), new Vector2(w2, BtnH), "Reset panels",
+                   GrabbablePanel.ResetAll, out _, 14f);
             y -= BtnH + Gap;
 
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
@@ -128,7 +130,18 @@ namespace PianoGlass.UI
                        PianoGlass.DevTools.DevOverlayController.ToggleRecordingFromMenu, out _, 13f);
             }
 #endif
+            // Its usual spot is the song panel's, set every frame below.
+            GrabbablePanel.Add(_canvas.gameObject, "Settings", _calibration);
         }
+
+        /// <summary>Short enough for a half-width button.</summary>
+        private static string ShortName(string mode) => mode switch
+        {
+            "FullOverlay" => "Full",
+            "ActiveKeysOnly" => "Active",
+            "EdgeMarkers" => "Edges",
+            _ => mode,
+        };
 
         private void NudgeRow(GlassBuilder g, Transform root, float y, float xa, float xc, float w,
                               (string label, System.Action act) a, (string label, System.Action act) b,
@@ -181,7 +194,7 @@ namespace PianoGlass.UI
             GlassBuilder.Set(_middle, anchored && calibrated, correcting);
             _middleLabel.text = correcting ? "Cancel fix" : "Middle C fix";
             foreach (GlassButton b in _nudgeButtons) GlassBuilder.Set(b, calibrated);
-            _displayLabel.text = $"Display: {mode}";
+            _displayLabel.text = $"Display: {ShortName(mode)}";
         }
     }
 }
