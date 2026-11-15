@@ -209,6 +209,11 @@ namespace PianoGlass.Piano
         private bool _learningBias;
         /// <summary>The bias being learned is the hand one (see TouchesByHand).</summary>
         private bool _learningBiasByHand;
+        /// <summary>Middle C fixes applied since that fresh calibration,
+        /// keyboard mm: they moved the keys just as a nudge does, so they are
+        /// learned with it (2026-11-15: a fix moved the keys 10 mm, the nudge
+        /// moved them back, and only the nudge was kept as the bias).</summary>
+        private Vector3 _fixesSinceFreshMm;
 
         /// <summary>The touches handed over next come from a fingertip pressing
         /// a key, not the controller tip (#5): they land somewhere else on the
@@ -415,6 +420,7 @@ namespace PianoGlass.Piano
             _writeCorrectionMm = local * 1000f;
 
             Vector3 appliedMm = AnchoredKeyboard.NudgeToKeyboardMm(c.Delta, layout.Right, layout.Up, layout.Forward);
+            if (_learningBias) _fixesSinceFreshMm += appliedMm;
             bool capped = Mathf.Abs(rawMm.y - appliedMm.y) > 0.05f;
             bool heightIgnored = capped && appliedMm.y == 0f;
             Log($"{error} -- applied {Mm(appliedMm)}" +
@@ -724,6 +730,7 @@ namespace PianoGlass.Piano
                 {
                     _learningBias = true;
                     _learningBiasByHand = TouchesByHand;
+                    _fixesSinceFreshMm = Vector3.zero;
                     Vector3 bias = TouchesByHand ? HandBiasMm(store) : store.calibrationBiasMm;
                     if (NudgeMm != bias)
                     {
@@ -802,13 +809,16 @@ namespace PianoGlass.Piano
             {
                 _learningBias = false;
                 string which = _learningBiasByHand ? "hand calibration bias" : "calibration bias";
-                if (NudgeMm.magnitude <= (_learningBiasByHand ? MaxHandBiasMm : MaxBiasMm))
+                Vector3 learned = NudgeMm + _fixesSinceFreshMm;
+                string from = _fixesSinceFreshMm == Vector3.zero ? ""
+                    : $" (nudge {Mm(NudgeMm)} + Middle C fixes {Mm(_fixesSinceFreshMm)})";
+                if (learned.magnitude <= (_learningBiasByHand ? MaxHandBiasMm : MaxBiasMm))
                 {
-                    if (_learningBiasByHand) store.handCalibrationBiasMm = NudgeMm;
-                    else store.calibrationBiasMm = NudgeMm;
-                    Log($"{which} now {Mm(NudgeMm)}");
+                    if (_learningBiasByHand) store.handCalibrationBiasMm = learned;
+                    else store.calibrationBiasMm = learned;
+                    Log($"{which} now {Mm(learned)}{from}");
                 }
-                else Log($"nudge {Mm(NudgeMm)} is too big to be a steady offset: {which} stays " +
+                else Log($"shift {Mm(learned)}{from} is too big to be a steady offset: {which} stays " +
                          $"{Mm(_learningBiasByHand ? HandBiasMm(store) : store.calibrationBiasMm)}");
             }
             if (!_serializer.Save(store, out error)) { Log("verified not recorded: " + error); return; }
