@@ -588,6 +588,8 @@ namespace PianoGlass.EditorTools
         /// points at the dynamic LiberationSans atlas, whose TTF does, so the
         /// real sharp sign draws; NoteHighway checks and falls back to '#'.
         /// </summary>
+        private const float NoteLabelFontSize = 0.18f, NoteLabelHeight = 0.018f, NoteLabelPadding = 0.002f;
+
         [MenuItem("PianoGlass/Scene/Configure Note Names")]
         public static void ConfigureNoteNames()
         {
@@ -611,6 +613,11 @@ namespace PianoGlass.EditorTools
             so.FindProperty("showNoteNames").boolValue = true;
             so.FindProperty("labelFont").objectReferenceValue = font;
             so.FindProperty("labelMaterial").objectReferenceValue = font.material;
+            // Bigger (Ryan, 2026-11-15: so small they were easy to forget; was
+            // 0.11 / 11 mm / 3 mm). Still auto-sized down to fit inside the key.
+            so.FindProperty("labelFontSize").floatValue = NoteLabelFontSize;
+            so.FindProperty("labelHeight").floatValue = NoteLabelHeight;
+            so.FindProperty("labelPadding").floatValue = NoteLabelPadding;
             so.ApplyModifiedProperties();
 
             EditorSceneManager.MarkSceneDirty(scene);
