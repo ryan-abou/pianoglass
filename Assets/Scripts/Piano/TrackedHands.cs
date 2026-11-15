@@ -93,11 +93,20 @@ namespace PianoGlass.Piano
         /// point between thumb and index tips, the hand's turn, and whether the
         /// two are together. False while the hand isn't tracked or is doing the
         /// Meta button gesture (palm toward you), so that pinch never grabs.</summary>
-        public bool TryPinch(int i, out Vector3 point, out Quaternion turn, out bool pinching)
+        public bool TryPinch(int i, out Vector3 point, out Quaternion turn, out bool pinching) =>
+            TryPinch(i, out point, out turn, out pinching, out _, out _);
+
+        /// <summary>The same, with how firmly (0 to 1, the Quest's own measure)
+        /// and how far apart thumb and index tips are, metres: for holding on
+        /// to a pinch that is still there when the Quest's yes/no flickers.</summary>
+        public bool TryPinch(int i, out Vector3 point, out Quaternion turn, out bool pinching,
+                             out float strength, out float gap)
         {
             point = default;
             turn = Quaternion.identity;
             pinching = false;
+            strength = 0f;
+            gap = float.PositiveInfinity;
             if (!TryIndexTip(i, out Vector3 index)) return false;
             Hand h = _hands[i];
             if (h.Ovr.IsSystemGestureInProgress) return false;
@@ -110,6 +119,8 @@ namespace PianoGlass.Piano
             point = (index + h.Thumb.position) * 0.5f;
             turn = h.Ovr.transform.rotation;
             pinching = h.Ovr.GetFingerIsPinching(OVRHand.HandFinger.Index);
+            strength = h.Ovr.GetFingerPinchStrength(OVRHand.HandFinger.Index);
+            gap = Vector3.Distance(index, h.Thumb.position);
             return true;
         }
 

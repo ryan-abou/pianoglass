@@ -33,8 +33,11 @@ namespace PianoGlass.UI
         private const float ClosestPull = 0.25f;
         /// <summary>Per second: how quickly a held panel catches up with the hand.</summary>
         private const float NearRate = 25f, FarRate = 14f;
-        /// <summary>Degrees: a held panel's tilt and turn snap to straight within this.</summary>
-        private const float SnapDegrees = 5f;
+        /// <summary>Holding on, once picked up: the pinch counts as still closed
+        /// while the Quest says it is at least this firm, or thumb and index tips
+        /// are this close (metres). Its own yes/no flickers off mid-move, and
+        /// panels were dropped at random (2026-11-15).</summary>
+        private const float HoldStrength = 0.3f, HoldGap = 0.045f;
 
         private sealed class HandState
         {
@@ -43,11 +46,13 @@ namespace PianoGlass.UI
             public bool Far;
             public Pose PanelInHand;
             public float StartReach, HeldSince;
+            public PanelPose.Snap Snap;
             public GlassButton Hovered;
             public LineRenderer Line;
         }
 
         private readonly HandState[] _hands = { new HandState(), new HandState() };
+        private SnapGuide _guide;
         private SongTransport _transport;
         private Transform _head;
 
@@ -87,6 +92,7 @@ namespace PianoGlass.UI
             OvrUiPointer pointer = FindAnyObjectByType<OvrUiPointer>(FindObjectsInactive.Include);
             if (pointer != null) template = pointer.GetComponentInChildren<LineRenderer>(true);
             for (int h = 0; h < 2; h++) _hands[h].Line = MakeLine(template, h);
+            _guide = SnapGuide.Create(transform, template);
         }
 
         private LineRenderer MakeLine(LineRenderer template, int h)
@@ -124,6 +130,10 @@ namespace PianoGlass.UI
             TrackedHands hands = TrackedHands.Instance;
             bool off = SongRunning || LaunchResync.WaitingForRecenter;
             for (int h = 0; h < 2; h++) Step(h, hands, off);
+
+            // The snap guide, on the first hand's held panel.
+            HandState held = _hands[0].Held != null ? _hands[0] : _hands[1].Held != null ? _hands[1] : null;
+            if (_guide != null) _guide.Show(held?.Held, held != null ? held.Snap : default);
         }
 
         private void Step(int h, TrackedHands hands, bool off)
@@ -132,8 +142,13 @@ namespace PianoGlass.UI
             Vector3 point = default;
             Quaternion turn = Quaternion.identity;
             bool pinching = false;
+            float strength = 0f, gap = float.PositiveInfinity;
             Ray ray = default;
-            bool tracked = !off && hands != null && hands.TryPinch(h, out point, out turn, out pinching);
+            bool tracked = !off && hands != null &&
+                           hands.TryPinch(h, out point, out turn, out pinching, out strength, out gap);
+            // Held: still pinched while firm enough or the tips are close, even
+            // when the Quest's own yes/no blinks off.
+            if (tracked && s.Held != null) pinching = pinching || strength >= HoldStrength || gap <= HoldGap;
             bool hasRay = tracked && hands.TryPointer(h, out ray);
 
             // What the hand is on, when it isn't holding anything.
@@ -161,7 +176,8 @@ namespace PianoGlass.UI
             else if (step == PinchGrab.Step.Hold && s.Held != null && tracked)
                 Move(s, point, turn, ray, hasRay);
             else if (step == PinchGrab.Step.End)
-                End(s, tracked ? "fingers opened" : "hand tracking lost");
+                End(s, tracked ? $"fingers opened (strength {strength:0.00}, tips {gap * 1000f:0} mm apart)"
+                               : "hand tracking lost");
             else if (s.Held != null && (off || !s.Held.isActiveAndEnabled))
                 End(s, off ? "a song started or the recenter prompt came up" : "the panel closed");
 
@@ -247,6 +263,7 @@ namespace PianoGlass.UI
             s.PanelInHand = PanelPose.ToFrame(HandPose(s, point, turn, ray), panel.Current);
             s.StartReach = Reach(point);
             s.HeldSince = Time.realtimeSinceStartup;
+            s.Snap = default;
             panel.BeginHold(far ? FarRate : NearRate);
             Debug.Log($"[Panels] picked up '{panel.name}' {(far ? "from afar" : "by hand")}");
         }
@@ -265,7 +282,11 @@ namespace PianoGlass.UI
             }
             // Always upright (no sideways lean), and easy to set straight.
             Vector3? straight = s.Held.TryKeyboard(out Pose keys) ? keys.rotation * Vector3.back : (Vector3?)null;
-            target.rotation = PanelPose.Upright(target.rotation, Vector3.up, straight, SnapDegrees);
+            PanelPose.Snap was = s.Snap;
+            target.rotation = PanelPose.Upright(target.rotation, Vector3.up, straight, ref s.Snap);
+            if (s.Snap.Upright != was.Upright || s.Snap.Square != was.Square)
+                Debug.Log($"[Panels] '{s.Held.name}' snapped: upright {(s.Snap.Upright ? "on" : "off")}, " +
+                          $"square to the keys {(s.Snap.Square ? "on" : "off")}");
             s.Held.HoldAt(target);
         }
 
@@ -274,6 +295,7 @@ namespace PianoGlass.UI
             if (s.Held == null) return;
             GrabbablePanel panel = s.Held;
             s.Held = null;
+            s.Snap = default;
             s.Pinch.Release();
             Debug.Log($"[Panels] let go of '{panel.name}' after {Time.realtimeSinceStartup - s.HeldSince:0.0} s: {why}");
             panel.EndHold();

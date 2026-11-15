@@ -83,6 +83,13 @@ you put a panel is saved relative to the keys, so it comes back there after a
 relaunch and moves with the keys when they are nudged. Off while a song plays,
 so a thumb passing under can't grab anything.
 
+A held panel never leans sideways. It snaps straight up once within 4 degrees of
+it, and square to the keys once within 4 degrees of that, and stays snapped until
+9 degrees away. While snapped, faint lines show it: a frame, up-and-down lines for
+straight up, side-to-side lines for square to the keys. Settings and the song
+panel share one spot: moving either moves both. While controllers are down, the
+controller buttons are ignored (a pinch reads as a trigger pull).
+
 Until the launch recenter is done (#17), no panel shows at all, only the
 recenter banner: before it they would all be a piano width off. A checklist
 asked for while waiting opens in front of you after the recenter.
@@ -93,7 +100,7 @@ asked for while waiting opens in front of you after the recenter.
 | Tempo −/+, metronome, wait mode, memory fade | Song panel buttons, only while stopped or paused, or the piano chords as before | `SongPanel` |
 | Songs, hand switch | Song panel "Songs", then poke the picker | `SongPanel`, `SongPicker` |
 | Settings | Song panel "Settings": shown in the song panel's place | `SettingsPanel` |
-| Calibrate | Settings "Calibrate with hands", then press A0 and C8 with one index finger | `HandCalibration` |
+| Calibrate | Settings "Calibrate with hands", then press A0 and C8 at their front edges with one index finger | `HandCalibration` |
 | Looks right | Settings "Looks right" | `SettingsPanel` |
 | Middle C fix | Settings "Middle C fix", then press Middle C with one index finger | `HandCalibration` |
 | Nudge, turn, clear nudge | Settings nudge pad: 2 mm or 0.2 deg per poke, saved each time | `SettingsPanel` |
@@ -106,7 +113,10 @@ asked for while waiting opens in front of you after the recenter.
 
 A key press only counts as a calibration touch while hands are tracked, so a
 controller tip that presses a key never counts twice. Hand touches learn their
-own calibration bias, kept apart from the controller tip's.
+own calibration bias, kept apart from the controller tip's; a Middle C fix made
+before "Looks right" is learned along with the nudge. A hand calibration keeps the
+last calibration's white key width (within 6%) and turn (within 2.5 degrees), since
+hand tracking measures the span short and two presses at different depths turn it.
 
 ### Target: hand-tracked Liquid Glass menus (Phase 4)
 

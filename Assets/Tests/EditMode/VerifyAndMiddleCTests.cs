@@ -471,6 +471,28 @@ namespace PianoGlass.Tests.EditMode
         }
 
         [Test]
+        public void AMiddleCFixBeforeLooksRightIsLearnedWithTheNudge()
+        {
+            // 2026-11-15: a fix moved the keys, a nudge moved them back, and
+            // only the nudge was kept: the bias was 10 mm off sideways.
+            AnchoredCalibrationSession s = CalibratedWithError(Vector3.zero);
+            MarkTipMeasured();
+            var touchMm = new Vector3(8f, 0f, -12f);
+            PianoKeyLayout real = PianoKeyLayout.WithFacing(World(Low), World(High), Lowest, Highest,
+                                                            Recenter.rotation * Toward, Depth);
+            Vector3 touch = AnchoredKeyboard.NudgeToWorld(touchMm, real.Right, real.Up, real.Forward);
+            Run(s.RecalibrateAsync());
+            Run(s.OnCapturedAsync(World(Low) + touch, World(High) + touch, Recenter.rotation * Toward,
+                                  Lowest, Highest, Depth));
+
+            StartCorrecting(s);
+            Run(s.OnMiddleCTouchedAsync(RealMiddleC()));
+            s.Confirm();
+
+            Near(-touchMm, OnDisk().calibrationBiasMm, 0.05f, "the fix is part of the steady offset");
+        }
+
+        [Test]
         public void AHugeNudgeIsNotKeptAsABias()
         {
             AnchoredCalibrationSession s = CalibratedWithError(Vector3.zero);

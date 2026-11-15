@@ -54,7 +54,7 @@ namespace PianoGlass.Tests.EditMode
         public void AHeldPanelNeverLeansSideways()
         {
             Quaternion leaning = Quaternion.Euler(-25f, 30f, 20f);
-            Quaternion r = PanelPose.Upright(leaning, Vector3.up, null, 4f);
+            Quaternion r = PanelPose.Upright(leaning, Vector3.up, null);
             Assert.AreEqual(0f, Vector3.Dot(r * Vector3.right, Vector3.up), 1e-4f, "no roll");
             Assert.Less(Vector3.Angle(leaning * Vector3.forward, r * Vector3.forward), 0.01f, "still faces the same way");
         }
@@ -62,9 +62,9 @@ namespace PianoGlass.Tests.EditMode
         [Test]
         public void PitchSnapsUprightNearZero()
         {
-            Quaternion r = PanelPose.Upright(Quaternion.Euler(3f, 40f, 0f), Vector3.up, null, 4f);
+            Quaternion r = PanelPose.Upright(Quaternion.Euler(3f, 40f, 0f), Vector3.up, null);
             Assert.AreEqual(0f, Vector3.Dot(r * Vector3.forward, Vector3.up), 1e-4f, "straight up");
-            Quaternion tipped = PanelPose.Upright(Quaternion.Euler(-30f, 40f, 0f), Vector3.up, null, 4f);
+            Quaternion tipped = PanelPose.Upright(Quaternion.Euler(-30f, 40f, 0f), Vector3.up, null);
             Assert.AreEqual(30f, Vector3.Angle(Vector3.ProjectOnPlane(tipped * Vector3.forward, Vector3.up),
                                                tipped * Vector3.forward), 0.05f, "a real tilt is kept");
         }
@@ -74,21 +74,52 @@ namespace PianoGlass.Tests.EditMode
         {
             var straight = new Vector3(0.6f, 0f, 0.8f);
             Quaternion near = Quaternion.LookRotation(Quaternion.AngleAxis(3f, Vector3.up) * straight, Vector3.up);
-            Quaternion r = PanelPose.Upright(near, Vector3.up, straight, 4f);
+            Quaternion r = PanelPose.Upright(near, Vector3.up, straight);
             Assert.Less(Vector3.Angle(straight, r * Vector3.forward), 0.01f);
 
             Quaternion turned = Quaternion.LookRotation(Quaternion.AngleAxis(20f, Vector3.up) * straight, Vector3.up);
-            Assert.AreEqual(20f, Vector3.Angle(straight, PanelPose.Upright(turned, Vector3.up, straight, 4f) * Vector3.forward), 0.05f);
+            Assert.AreEqual(20f, Vector3.Angle(straight, PanelPose.Upright(turned, Vector3.up, straight) * Vector3.forward), 0.05f);
         }
 
         [Test]
         public void YawSnapKeepsATilt()
         {
             Quaternion q = Quaternion.Euler(-30f, 2f, 0f);
-            Quaternion r = PanelPose.Upright(q, Vector3.up, Vector3.forward, 4f);
+            Quaternion r = PanelPose.Upright(q, Vector3.up, Vector3.forward);
             Vector3 f = r * Vector3.forward;
             Assert.AreEqual(0f, f.x, 1e-4f, "square to the keys");
             Assert.AreEqual(30f, Vector3.Angle(Vector3.ProjectOnPlane(f, Vector3.up), f), 0.05f, "tilt kept");
+        }
+
+        [Test]
+        public void OnceSnappedItHoldsUntilWellPastTheEdge()
+        {
+            var snap = new PanelPose.Snap();
+            PanelPose.Upright(Quaternion.Euler(3f, 0f, 0f), Vector3.up, null, ref snap);
+            Assert.IsTrue(snap.Upright, "snaps in within 4 degrees");
+
+            Quaternion r = PanelPose.Upright(Quaternion.Euler(7f, 0f, 0f), Vector3.up, null, ref snap);
+            Assert.IsTrue(snap.Upright, "7 degrees: still snapped");
+            Assert.AreEqual(0f, Vector3.Dot(r * Vector3.forward, Vector3.up), 1e-4f);
+
+            PanelPose.Upright(Quaternion.Euler(10f, 0f, 0f), Vector3.up, null, ref snap);
+            Assert.IsFalse(snap.Upright, "10 degrees: let go");
+
+            PanelPose.Upright(Quaternion.Euler(7f, 0f, 0f), Vector3.up, null, ref snap);
+            Assert.IsFalse(snap.Upright, "7 degrees coming back: not yet");
+        }
+
+        [Test]
+        public void SquareHoldsTheSameWay()
+        {
+            var snap = new PanelPose.Snap();
+            Quaternion Turned(float deg) => Quaternion.LookRotation(Quaternion.AngleAxis(deg, Vector3.up) * Vector3.forward);
+            PanelPose.Upright(Turned(3f), Vector3.up, Vector3.forward, ref snap);
+            Assert.IsTrue(snap.Square);
+            PanelPose.Upright(Turned(8f), Vector3.up, Vector3.forward, ref snap);
+            Assert.IsTrue(snap.Square, "8 degrees: still square");
+            PanelPose.Upright(Turned(12f), Vector3.up, Vector3.forward, ref snap);
+            Assert.IsFalse(snap.Square);
         }
 
         [Test]

@@ -17,8 +17,8 @@ namespace PianoGlass.UI
     {
         public const float OpenSeconds = 0.1f;
         public const float CloseSeconds = 0.05f;
-        public const float ReleaseSeconds = 0.12f;
-        public const float LostSeconds = 0.3f;
+        public const float ReleaseSeconds = 0.2f;
+        public const float LostSeconds = 0.5f;
 
         public enum Step { None, Start, Hold, End }
 
