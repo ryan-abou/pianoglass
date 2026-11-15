@@ -40,7 +40,7 @@ on them and none can be played by accident.
 | Switch to the other hand and restart | right controller ray + right trigger on the results card's "Switch to left hand" | — | `ResultsCard` → `CurrentSong` | Offered after a perfect run at full speed. Not offered after All notes |
 | Tempo −5% / +5% | — | hold A0, press B0 / C1 | `SongTransport` | 25–200%, only while stopped or paused, saved |
 | Metronome on/off | — | hold A0, press C♯1 | `SongTransport` → `Metronome` | Only while stopped or paused, saved |
-| Wait mode on/off | — | hold A0, press D1 | `SongTransport` | Only while stopped or paused, saved. While paused part-way it starts a new attempt from there |
+| Wait mode on/off | — | hold A0, press D1 | `SongTransport` | Only while stopped or paused, saved. While paused part-way it starts a new attempt from there. A chord moves on only once all its keys are held down together (2026-11-15) |
 | Memory fade on/off | — | hold A0, press D♯1 | `SongTransport` | Only while stopped or paused, saved. Works on whole songs and in loops |
 | Display mode (cycle) | left X | — | `OvrKeyOverlayInput` | FullOverlay / Translucent / ActiveKeysOnly / EdgeMarkers, saved |
 | Passthrough on/off | left stick click | — | `OvrKeyOverlayInput` | A/B test tool |
