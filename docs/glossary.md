@@ -35,6 +35,7 @@ project. Add a word the first time it comes up.
 - **poke**: pressing a button that floats in the air by pushing a fingertip through it. PianoGlass example: poking "Play" on the song panel starts the song.
 - **pooling**: reusing a small set of objects over and over instead of making a new one each time, like a restaurant washing plates instead of buying new ones. PianoGlass example: the highway reuses a few dozen note slabs as notes scroll by, instead of one per note in the song.
 - **PR (pull request)**: a request on GitHub to merge a branch into `main`, where you can see every change before it goes in. PianoGlass example: a PR that says "Closes #1" closes issue #1 by itself when it is merged.
+- **ray**: a straight line pointed out from a controller or a hand, like a laser pointer, to reach things too far to touch. PianoGlass example: point your hand at the song picker and a ray shows; pinch to press the button it is on.
 - **recenter**: holding the Meta button so the headset resets which way is "forward". PianoGlass example: a recenter moves the room's coordinates, and the anchor brings the keys back onto the piano.
 - **release build**: the normal build a tester gets, with debugging tools off. PianoGlass example: `.\build.ps1` makes one; today it still uses the older calibration, not the anchored one.
 - **RMS**: a kind of average size of the errors, where big errors count extra. PianoGlass example: the controller tip measurement reported RMS 1.3 mm on the Quest 3, so its samples agreed closely.
