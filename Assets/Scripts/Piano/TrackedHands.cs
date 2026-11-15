@@ -27,7 +27,13 @@ namespace PianoGlass.Piano
             public OVRSkeleton Skeleton;
             public OVRSkeleton.BoneId IndexTip, ThumbTip;
             public Transform Tip, Thumb;
+            /// <summary>Recent index fingertip heights: x seconds, y metres.</summary>
+            public readonly List<Vector2> Heights = new List<Vector2>();
         }
+
+        /// <summary>Seconds of fingertip heights kept, and the last part of
+        /// that counted as "now" when measuring a press.</summary>
+        private const float HistorySeconds = 0.4f, LandSeconds = 0.12f;
 
         private Transform _trackingSpace;
 
@@ -135,19 +141,51 @@ namespace PianoGlass.Piano
             }
         }
 
-        /// <summary>The lower of the two index fingertips: the one pressing a
-        /// key. False if no hand is tracked.</summary>
-        public bool TryPressingIndexTip(out Vector3 world)
+        /// <summary>Each hand's index fingertip and how far it just came down,
+        /// for PressingFinger to tell which one pressed a key.</summary>
+        public PressingFinger.Tip[] PressTips()
         {
-            world = default;
-            bool found = false;
+            var tips = new PressingFinger.Tip[_hands.Count];
             for (int i = 0; i < _hands.Count; i++)
             {
                 if (!TryIndexTip(i, out Vector3 tip)) continue;
-                if (!found || tip.y < world.y) world = tip;
-                found = true;
+                tips[i] = new PressingFinger.Tip { Tracked = true, Position = tip, Drop = Drop(_hands[i].Heights) };
             }
-            return found;
+            return tips;
+        }
+
+        /// <summary>Highest in the last <see cref="HistorySeconds"/> minus
+        /// lowest in the last <see cref="LandSeconds"/>: how far it came down
+        /// onto the key, even if it has started to lift since.</summary>
+        private static float Drop(List<Vector2> heights)
+        {
+            if (heights.Count == 0) return 0f;
+            float now = heights[heights.Count - 1].x;
+            float high = float.NegativeInfinity, low = float.PositiveInfinity;
+            foreach (Vector2 h in heights)
+            {
+                high = Mathf.Max(high, h.y);
+                if (now - h.x <= LandSeconds) low = Mathf.Min(low, h.y);
+            }
+            return Mathf.Max(0f, high - low);
+        }
+
+        private void LateUpdate()
+        {
+            float now = Time.realtimeSinceStartup;
+            for (int i = 0; i < _hands.Count; i++)
+            {
+                List<Vector2> heights = _hands[i].Heights;
+                if (!TryIndexTip(i, out Vector3 tip))
+                {
+                    heights.Clear();
+                    continue;
+                }
+                heights.Add(new Vector2(now, tip.y));
+                int old = 0;
+                while (old < heights.Count && now - heights[old].x > HistorySeconds) old++;
+                if (old > 0) heights.RemoveRange(0, old);
+            }
         }
 
         private void Build(OVRCameraRig rig, OVRHand.Hand type)
