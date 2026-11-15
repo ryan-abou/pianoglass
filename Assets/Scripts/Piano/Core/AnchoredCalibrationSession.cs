@@ -230,8 +230,22 @@ namespace PianoGlass.Piano
         /// <summary>Where a hand touch lands from where the player sees the
         /// key, until one has been learned: down 21 mm and toward the player
         /// 22 mm, the nudge after the first hand calibration on the Quest 3
-        /// (2026-11-14). Each hand calibration's own nudge replaces it.</summary>
+        /// (2026-11-14). The first hand calibration's own nudge replaces it.</summary>
         public static readonly Vector3 DefaultHandBiasMm = new Vector3(0f, -21f, 22f);
+
+        /// <summary>The hand bias is the average of this many of the latest
+        /// hand calibrations. Each one's nudge is part steady offset and part
+        /// that calibration's own error (two in a row: 9 mm apart sideways and
+        /// 10 mm up and down, 2026-11-15), so keeping only the newest one
+        /// chased the error.</summary>
+        public const int HandBiasAverageOf = 4;
+
+        /// <summary>The hand bias after one more calibration that needed
+        /// <paramref name="learned"/>: a running average, the newest counting
+        /// 1 / (samples + 1), but never less than 1 / <see cref="HandBiasAverageOf"/>,
+        /// so old ones fade out.</summary>
+        public static Vector3 AverageHandBias(Vector3 old, int samples, Vector3 learned) =>
+            samples <= 0 ? learned : Vector3.Lerp(old, learned, 1f / Mathf.Min(samples + 1, HandBiasAverageOf));
 
         /// <summary>The learned hand bias, or <see cref="DefaultHandBiasMm"/>
         /// while none has been (an exact zero is never learned).</summary>
@@ -814,9 +828,20 @@ namespace PianoGlass.Piano
                     : $" (nudge {Mm(NudgeMm)} + Middle C fixes {Mm(_fixesSinceFreshMm)})";
                 if (learned.magnitude <= (_learningBiasByHand ? MaxHandBiasMm : MaxBiasMm))
                 {
-                    if (_learningBiasByHand) store.handCalibrationBiasMm = learned;
-                    else store.calibrationBiasMm = learned;
-                    Log($"{which} now {Mm(learned)}{from}");
+                    if (_learningBiasByHand)
+                    {
+                        int n = Mathf.Max(0, store.handBiasSamples);
+                        Vector3 average = AverageHandBias(HandBiasMm(store), n, learned);
+                        store.handCalibrationBiasMm = average;
+                        store.handBiasSamples = n + 1;
+                        Log($"{which} now {Mm(average)}: this one needed {Mm(learned)}{from}, " +
+                            $"averaged over {Mathf.Min(n + 1, HandBiasAverageOf)}");
+                    }
+                    else
+                    {
+                        store.calibrationBiasMm = learned;
+                        Log($"{which} now {Mm(learned)}{from}");
+                    }
                 }
                 else Log($"shift {Mm(learned)}{from} is too big to be a steady offset: {which} stays " +
                          $"{Mm(_learningBiasByHand ? HandBiasMm(store) : store.calibrationBiasMm)}");

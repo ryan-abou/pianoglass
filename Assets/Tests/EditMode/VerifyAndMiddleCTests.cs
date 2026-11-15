@@ -454,6 +454,42 @@ namespace PianoGlass.Tests.EditMode
         }
 
         [Test]
+        public void HandBiasesAreAveragedOverCalibrations()
+        {
+            // 2026-11-15: two hand calibrations in a row needed nudges 10 mm
+            // apart; the bias is their average, not just the newest one.
+            CalibratedWithTouchBias(out AnchoredCalibrationSession s, new Vector3(0f, 0f, -20f), byHand: true);
+            Assert.AreEqual(1, OnDisk().handBiasSamples);
+
+            PianoKeyLayout real = PianoKeyLayout.WithFacing(World(Low), World(High), Lowest, Highest,
+                                                            Recenter.rotation * Toward, Depth);
+            var needs = new Vector3(0f, 0f, 10f);
+            Vector3 touch = AnchoredKeyboard.NudgeToWorld(-needs, real.Right, real.Up, real.Forward);
+            Run(s.RecalibrateAsync());
+            Run(s.OnCapturedAsync(World(Low) + touch, World(High) + touch, Recenter.rotation * Toward,
+                                  Lowest, Highest, Depth));
+            Near(new Vector3(0f, 0f, 20f), s.NudgeMm, 1e-3f, "starts from the bias so far");
+            s.Nudge((needs - s.NudgeMm) * 0.001f);
+            s.Confirm();
+
+            Near(new Vector3(0f, 0f, 15f), OnDisk().handCalibrationBiasMm, 1e-3f, "the average of 20 and 10");
+            Assert.AreEqual(2, OnDisk().handBiasSamples);
+        }
+
+        [Test]
+        public void OldHandCalibrationsFadeOut()
+        {
+            Vector3 b = Vector3.zero;
+            int n = 0;
+            for (int i = 0; i < 10; i++) b = AnchoredCalibrationSession.AverageHandBias(b, n++, new Vector3(0f, 0f, 20f));
+            for (int i = 0; i < 10; i++) b = AnchoredCalibrationSession.AverageHandBias(b, n++, new Vector3(0f, 0f, 10f));
+            Assert.AreEqual(10f, b.z, 1f, "after many at 10, close to 10, not stuck near 15");
+            Assert.AreEqual(new Vector3(1f, 2f, 3f),
+                            AnchoredCalibrationSession.AverageHandBias(new Vector3(9f, 9f, 9f), 0, new Vector3(1f, 2f, 3f)),
+                            "the first one replaces what was there");
+        }
+
+        [Test]
         public void AFirstHandCalibrationStartsFromTheDefaultHandBias()
         {
             AnchoredCalibrationSession s = CalibratedWithError(Vector3.zero);
