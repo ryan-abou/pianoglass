@@ -315,6 +315,8 @@ namespace PianoGlass.Scoring
                                          scoreFrom, scoreUntil,
                                          transport != null && transport.WaitMode,
                                          current != null ? current.Hand : PracticeHand.All);
+            // Wait mode: a chord counts once all its keys are down together.
+            if (MidiInput.Instance != null) Session.IsHeld = MidiInput.Instance.IsHeld;
             AttemptReset?.Invoke();
             Session.Judged += r => NoteJudged?.Invoke(r);
             Session.WrongNotePlayed += w => WrongNotePlayed?.Invoke(w);
