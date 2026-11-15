@@ -6,7 +6,8 @@ namespace PianoGlass.Piano
 {
     /// <summary>
     /// The player's two tracked hands, for using the app without controllers
-    /// (#5): poking Liquid Glass buttons and calibrating by pressing keys.
+    /// (#5): poking Liquid Glass buttons, pinching panels to move them, and
+    /// calibrating by pressing keys.
     /// Gives each hand's index fingertip in world space while that hand is
     /// tracked; with controllers in hand, nothing is tracked and nothing here
     /// does anything.
@@ -24,9 +25,11 @@ namespace PianoGlass.Piano
         {
             public OVRHand Ovr;
             public OVRSkeleton Skeleton;
-            public OVRSkeleton.BoneId IndexTip;
-            public Transform Tip;
+            public OVRSkeleton.BoneId IndexTip, ThumbTip;
+            public Transform Tip, Thumb;
         }
+
+        private Transform _trackingSpace;
 
         private readonly List<Hand> _hands = new List<Hand>();
 
@@ -55,6 +58,7 @@ namespace PianoGlass.Piano
                 enabled = false;
                 return;
             }
+            _trackingSpace = rig.trackingSpace;
             Build(rig, OVRHand.Hand.HandLeft);
             Build(rig, OVRHand.Hand.HandRight);
             Debug.Log($"[Hands] on: {_hands.Count} hands");
@@ -76,6 +80,48 @@ namespace PianoGlass.Piano
                 if (h.Tip == null) return false;
             }
             world = h.Tip.position;
+            return true;
+        }
+
+        /// <summary>Hand <paramref name="i"/>'s pinch (#5, moving panels): the
+        /// point between thumb and index tips, the hand's turn, and whether the
+        /// two are together. False while the hand isn't tracked or is doing the
+        /// Meta button gesture (palm toward you), so that pinch never grabs.</summary>
+        public bool TryPinch(int i, out Vector3 point, out Quaternion turn, out bool pinching)
+        {
+            point = default;
+            turn = Quaternion.identity;
+            pinching = false;
+            if (!TryIndexTip(i, out Vector3 index)) return false;
+            Hand h = _hands[i];
+            if (h.Ovr.IsSystemGestureInProgress) return false;
+            if (h.Thumb == null)
+            {
+                foreach (OVRBone bone in h.Skeleton.Bones)
+                    if (bone.Id == h.ThumbTip) h.Thumb = bone.Transform;
+                if (h.Thumb == null) return false;
+            }
+            point = (index + h.Thumb.position) * 0.5f;
+            turn = h.Ovr.transform.rotation;
+            pinching = h.Ovr.GetFingerIsPinching(OVRHand.HandFinger.Index);
+            return true;
+        }
+
+        /// <summary>Hand <paramref name="i"/>'s pointing ray, the Quest's own
+        /// (from about the shoulder through the hand), in world space.</summary>
+        public bool TryPointer(int i, out Ray ray)
+        {
+            ray = default;
+            if (!TryIndexTip(i, out _)) return false;
+            OVRHand hand = _hands[i].Ovr;
+            if (!hand.IsPointerPoseValid || hand.PointerPose == null) return false;
+            Transform p = hand.PointerPose;
+            // The SDK may leave it unparented, in tracking space: put it in the world.
+            if (p.parent == null && _trackingSpace != null)
+                ray = new Ray(_trackingSpace.TransformPoint(p.localPosition),
+                              _trackingSpace.TransformDirection(p.localRotation * Vector3.forward));
+            else
+                ray = new Ray(p.position, p.forward);
             return true;
         }
 
@@ -133,6 +179,7 @@ namespace PianoGlass.Piano
                 Ovr = hand,
                 Skeleton = skeleton,
                 IndexTip = openXr ? OVRSkeleton.BoneId.XRHand_IndexTip : OVRSkeleton.BoneId.Hand_IndexTip,
+                ThumbTip = openXr ? OVRSkeleton.BoneId.XRHand_ThumbTip : OVRSkeleton.BoneId.Hand_ThumbTip,
             });
         }
     }
