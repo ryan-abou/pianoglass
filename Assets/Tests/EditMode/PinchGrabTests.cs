@@ -16,15 +16,17 @@ namespace PianoGlass.Tests.EditMode
             return last;
         }
 
-        /// <summary>Feeds frames until something other than None comes back, or the time runs out.</summary>
-        private static Step First(PinchGrab g, float seconds, bool tracked, bool pinching, bool onTarget)
+        /// <summary>Feeds frames until something other than <paramref name="skip"/>
+        /// comes back, or the time runs out.</summary>
+        private static Step First(PinchGrab g, float seconds, bool tracked, bool pinching, bool onTarget,
+                                  Step skip = Step.None)
         {
             for (float t = 0f; t < seconds - 1e-4f; t += Dt)
             {
                 Step s = g.Update(tracked, pinching, onTarget, Dt);
-                if (s != Step.None) return s;
+                if (s != skip) return s;
             }
-            return Step.None;
+            return skip;
         }
 
         [Test]
@@ -34,8 +36,22 @@ namespace PianoGlass.Tests.EditMode
             Run(g, 0.2f, true, false, true);
             Assert.AreEqual(Step.Start, First(g, 0.2f, true, true, true));
             Assert.AreEqual(Step.Hold, g.Update(true, true, false, Dt), "holds even once off the panel");
-            Assert.AreEqual(Step.End, g.Update(true, false, false, Dt));
+            Assert.AreEqual(Step.End, First(g, 0.3f, true, false, false, Step.Hold));
             Assert.IsFalse(g.Holding);
+        }
+
+        [Test]
+        public void AFlickerOpenWhileHoldingKeepsHold()
+        {
+            var g = new PinchGrab();
+            Run(g, 0.2f, true, false, true);
+            First(g, 0.2f, true, true, true);
+            for (int i = 0; i < 20; i++)
+            {
+                Assert.AreEqual(Step.Hold, g.Update(true, false, false, Dt), "one frame open");
+                Assert.AreEqual(Step.Hold, g.Update(true, true, false, Dt));
+            }
+            Assert.IsTrue(g.Holding);
         }
 
         [Test]
