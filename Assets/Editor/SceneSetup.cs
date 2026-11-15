@@ -182,6 +182,8 @@ namespace PianoGlass.EditorTools
         /// toggles passthrough) pointed at both that highlighter and
         /// whatever OVRPassthroughLayer Configure Passthrough added.
         /// </summary>
+        private const float FullOverlayAlpha = 0.55f, TranslucentAlpha = 0.15f, ActiveKeysAlpha = 0.35f;
+
         [MenuItem("PianoGlass/Scene/Configure Key Overlay")]
         public static void ConfigureKeyOverlay()
         {
@@ -203,6 +205,12 @@ namespace PianoGlass.EditorTools
             SerializedProperty materialProp = highlighterSo.FindProperty("translucentMaterial");
             if (materialProp.objectReferenceValue == null)
                 materialProp.objectReferenceValue = GetOrCreateTranslucentMaterial();
+
+            // See-through enough for a hand under a key to show (Ryan, 2026-11-14:
+            // hands were hard to see; was opaque / 0.25 / 0.55).
+            highlighterSo.FindProperty("fullOverlayAlpha").floatValue = FullOverlayAlpha;
+            highlighterSo.FindProperty("translucentAlpha").floatValue = TranslucentAlpha;
+            highlighterSo.FindProperty("activeKeysAlpha").floatValue = ActiveKeysAlpha;
 
             highlighterSo.ApplyModifiedProperties();
 
