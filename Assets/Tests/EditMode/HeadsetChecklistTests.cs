@@ -53,7 +53,7 @@ namespace PianoGlass.Tests.EditMode
         public void ItemsPastTheLimitAreCountedNotShown()
         {
             var text = "# Long\n";
-            for (int i = 1; i <= 12; i++) text += $"- item {i}\n";
+            for (int i = 1; i <= HeadsetChecklist.MaxItems + 2; i++) text += $"- item {i}\n";
             HeadsetChecklist c = HeadsetChecklist.Parse(text);
             Assert.AreEqual(HeadsetChecklist.MaxItems, c.Items.Count);
             Assert.AreEqual(2, c.Overflow);
