@@ -140,8 +140,9 @@ namespace PianoGlass.UI
             float farDistance = 0f;
             if (tracked && s.Held == null)
             {
-                near = Nearest(point);
-                if (near == null && hasRay) far = Pointed(ray, out farDistance, out button);
+                near = Nearest(point, out bool close);
+                // A hand right at a panel pokes or grabs it; the ray is for out of reach.
+                if (!close && hasRay) far = Pointed(ray, out farDistance, out button);
             }
 
             PinchGrab.Step step = s.Pinch.Update(tracked, pinching, near != null || far != null, Time.unscaledDeltaTime);
@@ -165,15 +166,21 @@ namespace PianoGlass.UI
                     s.Held != null && s.Far && hasRay);
         }
 
-        /// <summary>The visible panel whose face the pinch is closest to.</summary>
-        private static GrabbablePanel Nearest(Vector3 point)
+        /// <summary>The visible panel whose face the pinch is closest to, not
+        /// counting a pinch over a button. <paramref name="close"/>: the hand
+        /// is at some panel, button or not.</summary>
+        private static GrabbablePanel Nearest(Vector3 point, out bool close)
         {
             GrabbablePanel best = null;
             float bestFront = 0f;
+            close = false;
             foreach (GrabbablePanel p in GrabbablePanel.All)
             {
                 if (!p.IsVisible || !p.Over(point, NearMarginMm, out float front)) continue;
                 if (front > NearFrontMm || front < -NearBehindMm) continue;
+                close = true;
+                // Up close a button is for poking: grab the glass around it or the edge.
+                if (OverButton(p, point)) continue;
                 if (best == null || Mathf.Abs(front) < Mathf.Abs(bestFront))
                 {
                     best = p;
@@ -181,6 +188,19 @@ namespace PianoGlass.UI
                 }
             }
             return best;
+        }
+
+        private static bool OverButton(GrabbablePanel panel, Vector3 point)
+        {
+            foreach (GlassButton b in GlassButton.All)
+            {
+                if (!b.IsPressable || !b.transform.IsChildOf(panel.transform)) continue;
+                var rect = (RectTransform)b.transform;
+                Vector3 l = rect.InverseTransformPoint(point);
+                Rect r = rect.rect;
+                if (l.x >= r.xMin - 4f && l.x <= r.xMax + 4f && l.y >= r.yMin - 4f && l.y <= r.yMax + 4f) return true;
+            }
+            return false;
         }
 
         /// <summary>The nearest visible panel the ray meets, and the button it
