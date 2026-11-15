@@ -33,6 +33,8 @@ namespace PianoGlass.UI
         private const float ClosestPull = 0.25f;
         /// <summary>Per second: how quickly a held panel catches up with the hand.</summary>
         private const float NearRate = 25f, FarRate = 14f;
+        /// <summary>Degrees: a held panel's tilt and turn snap to straight within this.</summary>
+        private const float SnapDegrees = 5f;
 
         private sealed class HandState
         {
@@ -40,7 +42,7 @@ namespace PianoGlass.UI
             public GrabbablePanel Held;
             public bool Far;
             public Pose PanelInHand;
-            public float StartReach;
+            public float StartReach, HeldSince;
             public GlassButton Hovered;
             public LineRenderer Line;
         }
@@ -158,8 +160,10 @@ namespace PianoGlass.UI
             }
             else if (step == PinchGrab.Step.Hold && s.Held != null && tracked)
                 Move(s, point, turn, ray, hasRay);
-            else if (step == PinchGrab.Step.End || (s.Held != null && (off || !s.Held.isActiveAndEnabled)))
-                End(s);
+            else if (step == PinchGrab.Step.End)
+                End(s, tracked ? "fingers opened" : "hand tracking lost");
+            else if (s.Held != null && (off || !s.Held.isActiveAndEnabled))
+                End(s, off ? "a song started or the recenter prompt came up" : "the panel closed");
 
             SetHover(s, s.Held == null ? button : null);
             DrawRay(s, hasRay && s.Held == null && far != null, ray, farDistance,
@@ -242,6 +246,7 @@ namespace PianoGlass.UI
             s.Far = far;
             s.PanelInHand = PanelPose.ToFrame(HandPose(s, point, turn, ray), panel.Current);
             s.StartReach = Reach(point);
+            s.HeldSince = Time.realtimeSinceStartup;
             panel.BeginHold(far ? FarRate : NearRate);
             Debug.Log($"[Panels] picked up '{panel.name}' {(far ? "from afar" : "by hand")}");
         }
@@ -258,15 +263,19 @@ namespace PianoGlass.UI
                 float length = Mathf.Max(ClosestPull, along.magnitude + pull);
                 target.position = ray.origin + along.normalized * length;
             }
+            // Always upright (no sideways lean), and easy to set straight.
+            Vector3? straight = s.Held.TryKeyboard(out Pose keys) ? keys.rotation * Vector3.back : (Vector3?)null;
+            target.rotation = PanelPose.Upright(target.rotation, Vector3.up, straight, SnapDegrees);
             s.Held.HoldAt(target);
         }
 
-        private static void End(HandState s)
+        private static void End(HandState s, string why)
         {
             if (s.Held == null) return;
             GrabbablePanel panel = s.Held;
             s.Held = null;
             s.Pinch.Release();
+            Debug.Log($"[Panels] let go of '{panel.name}' after {Time.realtimeSinceStartup - s.HeldSince:0.0} s: {why}");
             panel.EndHold();
         }
 

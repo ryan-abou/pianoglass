@@ -51,6 +51,47 @@ namespace PianoGlass.Tests.EditMode
         }
 
         [Test]
+        public void AHeldPanelNeverLeansSideways()
+        {
+            Quaternion leaning = Quaternion.Euler(-25f, 30f, 20f);
+            Quaternion r = PanelPose.Upright(leaning, Vector3.up, null, 4f);
+            Assert.AreEqual(0f, Vector3.Dot(r * Vector3.right, Vector3.up), 1e-4f, "no roll");
+            Assert.Less(Vector3.Angle(leaning * Vector3.forward, r * Vector3.forward), 0.01f, "still faces the same way");
+        }
+
+        [Test]
+        public void PitchSnapsUprightNearZero()
+        {
+            Quaternion r = PanelPose.Upright(Quaternion.Euler(3f, 40f, 0f), Vector3.up, null, 4f);
+            Assert.AreEqual(0f, Vector3.Dot(r * Vector3.forward, Vector3.up), 1e-4f, "straight up");
+            Quaternion tipped = PanelPose.Upright(Quaternion.Euler(-30f, 40f, 0f), Vector3.up, null, 4f);
+            Assert.AreEqual(30f, Vector3.Angle(Vector3.ProjectOnPlane(tipped * Vector3.forward, Vector3.up),
+                                               tipped * Vector3.forward), 0.05f, "a real tilt is kept");
+        }
+
+        [Test]
+        public void YawSnapsSquareToTheKeysNearZero()
+        {
+            var straight = new Vector3(0.6f, 0f, 0.8f);
+            Quaternion near = Quaternion.LookRotation(Quaternion.AngleAxis(3f, Vector3.up) * straight, Vector3.up);
+            Quaternion r = PanelPose.Upright(near, Vector3.up, straight, 4f);
+            Assert.Less(Vector3.Angle(straight, r * Vector3.forward), 0.01f);
+
+            Quaternion turned = Quaternion.LookRotation(Quaternion.AngleAxis(20f, Vector3.up) * straight, Vector3.up);
+            Assert.AreEqual(20f, Vector3.Angle(straight, PanelPose.Upright(turned, Vector3.up, straight, 4f) * Vector3.forward), 0.05f);
+        }
+
+        [Test]
+        public void YawSnapKeepsATilt()
+        {
+            Quaternion q = Quaternion.Euler(-30f, 2f, 0f);
+            Quaternion r = PanelPose.Upright(q, Vector3.up, Vector3.forward, 4f);
+            Vector3 f = r * Vector3.forward;
+            Assert.AreEqual(0f, f.x, 1e-4f, "square to the keys");
+            Assert.AreEqual(30f, Vector3.Angle(Vector3.ProjectOnPlane(f, Vector3.up), f), 0.05f, "tilt kept");
+        }
+
+        [Test]
         public void ARayPoseHasNoRoll()
         {
             Pose p = PanelPose.RayPose(Vector3.zero, new Vector3(0.3f, -0.4f, 1f));
