@@ -54,7 +54,9 @@ namespace PianoGlass.Piano
         {
             if (highlighter == null) return;
 
-            if (OVRInput.GetDown(OVRInput.Button.One, OVRInput.Controller.LTouch))
+            // Left grip + X is the development checklist's toggle.
+            if (OVRInput.GetDown(OVRInput.Button.One, OVRInput.Controller.LTouch) &&
+                !PianoGlass.DevTools.DevOverlays.ModifierHeld)
             {
                 highlighter.CycleDisplayMode();
                 Log("mode cycled");
