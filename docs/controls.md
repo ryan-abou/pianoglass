@@ -95,9 +95,10 @@ waiting, so the trigger still places calibration points.
 
 A held panel never leans sideways. It snaps straight up once within 2.5 degrees
 of it, and square to the keys once within 2.5 degrees of that, and stays snapped
-until 6 degrees away. Snapping straight up lights soft bars along the panel's two
-upright edges; square to the keys lights its top and bottom edges. They flash on
-snapping, then stay clearly lit. Settings and the song
+until 6 degrees away. Snapping straight up makes the glass's own two upright
+edges glow; square to the keys, its top and bottom edges (`SnapGuide`, since
+2026-11-21; bars beside the panel before that). The glow flashes on snapping,
+settles, and fades out when the snap or the panel is let go. Settings and the song
 panel share one spot: moving either moves both. While controllers are down, the
 controller buttons are ignored (a pinch reads as a trigger pull).
 
