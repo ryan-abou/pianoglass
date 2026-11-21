@@ -92,9 +92,9 @@ namespace PianoGlass.Piano
         public string Prompt => CurrentStage switch
         {
             Stage.AwaitingLowest  => HandsInUse
-                ? $"Right controller: touch the front of {NoteName(lowestNote)} (lowest key) with the tip, pull the trigger. " +
+                ? $"Right controller: touch the middle of {NoteName(lowestNote)}'s front edge (lowest key) with the tip, pull the trigger. " +
                   "No controller? Press and hold it"
-                : $"Touch the front edge of the LOWEST key ({NoteName(lowestNote)}) and pull the trigger",
+                : $"Touch the middle of the front edge of the LOWEST key ({NoteName(lowestNote)}) and pull the trigger",
             Stage.AwaitingHighest => HandsInUse
                 ? $"Now {NoteName(highestNote)} (highest key), the same way"
                 : $"Now the HIGHEST key ({NoteName(highestNote)})",

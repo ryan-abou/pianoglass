@@ -196,7 +196,7 @@ namespace PianoGlass.UI
             if (key == _shown) return;
             _shown = key;
 
-            _prompt.text = correcting ? "Right controller: touch the front of Middle C with the tip, pull the trigger"
+            _prompt.text = correcting ? "Right controller: touch the middle of Middle C's front edge with the tip, pull the trigger"
                                       : _calibration.Prompt;
             GlassBuilder.Set(_confirm, _calibration.AwaitingConfirmation);
             GlassBuilder.Set(_middle, anchored && calibrated, correcting);
