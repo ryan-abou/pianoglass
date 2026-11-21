@@ -205,7 +205,7 @@ Bad commit example:
 Implement robust MIDI file ingestion pipeline with comprehensive error handling
 ```
 
-## Current state (2026-11-13)
+## Current state (2026-11-21)
 
 Proven on device (Quest 2, and retested on the Quest 3 on 2026-11-13 unless noted):
 MIDI input, the key overlay, calibration (anchored in dev builds), the highway (grid,
@@ -214,15 +214,25 @@ metronome, loops, auto-tempo, wait mode, memory fade, MIDI songs and the song pi
 On branches: `return-settle` (holds `anchor-trio`), `press-probe`, `calib-bias-total`
 (all Quest 2 era, waiting on #3 Time-box the calibration drift work).
 
-Quest 3 round 1 (`docs/history.md`, `docs/anchored-calibration-status.md`) found three
-problems, now issues: #15 Middle C fix undoes the calibration bias, #16 Metronome clicks
-about 150 ms late on Quest 3 (measured about 170 ms; needs about 310 ms), #17 Keys start
-a piano width to the right at launch. 72 fps still needs reading on a release build.
-Next feature on the board: #11 Play songs with both hands, on a `both-hands` branch.
+Batch G (`docs/history.md`, top section) is tested on `batchG-test`, a merge of
+`dev-checklist-panel`, `batchG-launch-position` (#17), `both-hands` (#11), `hand-menus`
+(#5: hands instead of controllers, panels you pinch and move, Settings), `overlay-fade`,
+`wait-chords`, `metronome-retune` (#16) and `batchG-notes`. Round 8 is on the headset
+(checklist in `Milestones/2026-11-14-batchG/`); once it passes, merge them through PRs
+in that order. Still open: hand calibration needs about 8 mm of nudging (goal under 5,
+`docs/anchored-calibration-status.md`), and the metronome latency (85 ms) needs round
+8's eyes-closed check. Horizon OS v210 arrived 2026-11-19. From Quest 3 round 1, check
+where #15 Middle C fix undoes the calibration bias stands (branch `batchG-middlec-bias`),
+and 72 fps still needs reading on a release build.
+
+After a test round, pull `files/logs/` from the headset first (dev builds save their
+log there; a headset restart wipes most of logcat). Set the metronome latency from
+Ryan's eyes-closed test (Twinkle at 50%, eyes closed, playing only by the click; the
+median press minus beat in real ms from the attempt files), not from phone videos. This
+is a deliberate test, not scores from normal play, so it fits the rule below.
 
 Next: the board's To do column, top to bottom. When Ryan says "do Batch X", follow
 "How a batch runs" in `docs/history.md`.
-
 Rules that stay: the song clock is a `double` of seconds with a tempo multiplier, and note
 positions come from `(noteTime − songTime)`, never frame counts. Every attempt is written
 to JSON. Latency calibration is a system measurement, never the player's mean error.
