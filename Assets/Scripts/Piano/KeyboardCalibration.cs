@@ -314,6 +314,19 @@ namespace PianoGlass.Piano
             if (captured.Warning != null) Debug.LogWarning("[Calibration] " + captured.Warning);
             Debug.Log($"[Calibration] highest key at {high}; white key width {captured.WhiteKeySpacing * 1000f:0.0} mm");
 
+            // Two presses at different heights tilt the keyboard, and the piano
+            // is level: both ends go to their average height (HandSpan.KeepLevel).
+            if (byHand)
+            {
+                float tiltMm = (low.y - high.y) * 1000f;
+                if (HandSpan.KeepLevel(ref low, ref high, Vector3.up))
+                {
+                    captured = new PianoKeyLayout(low, high, lowestNote, highestNote, head, whiteKeyDepth);
+                    Debug.Log($"[Calibration] by hand: levelled the keys (the lowest key was pressed " +
+                              $"{tiltMm:+0.0;-0.0} mm above the highest)");
+                }
+            }
+
             // Hand tracking measures the span a little short, and two presses at
             // different depths turn the keyboard: the keyboard is the size, and
             // turned the way, it was last time (HandSpan).
