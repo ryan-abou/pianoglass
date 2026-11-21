@@ -15,6 +15,20 @@ anything not yet tried on the headset is marked **PENDING DEVICE TEST**.
 
 ---
 
+## Round 9 on the Quest 3 (Batch H, 2026-11-21)
+
+- Time away (#3): **passed**. Headset off for 69 minutes; the keys came back in
+  place and were confirmed with no nudge and no Middle C fix. #3 is closed;
+  `return-settle`, `press-probe` and `calib-bias-total` stay unmerged.
+- Controller calibration: **failed** on the calibration bias, not the tip. Four
+  captures in a row agreed within about 5 mm, but the bias added on top still had
+  round 4's +10.2 mm sideways, and Ryan nudged about 9 mm back. Every controller bias
+  so far: toward the player 11.8 to 14.4 mm, sideways -4.7 to +10.2 mm. Now the
+  sideways part is never learned and the rest is averaged over the last 4
+  calibrations (`AnchoredCalibrationSession.ControllerBiasMm`). Retest in round 10.
+- Hand calibration: levelled as planned (10.7 mm of tilt taken out), still about
+  9 mm off afterwards. That is the backup's known limit, so it stays.
+
 ## Hand calibration on the Quest 3 (Batch G, `hand-menus`, 2026-11-21)
 
 Pressing A0 and C8 with an index finger instead of touching them with the controller
@@ -416,7 +430,8 @@ recenter they are in different frames. Being measured further in the next round.
 
 1. ~~#15: take the calibration bias off a Middle C touch~~: done, see above.
 2. #17: find why the keys start a piano width to the right at launch.
-3. Retest drift after time away on the Quest 3 (the `return-settle` round, #3).
+3. ~~Retest drift after time away on the Quest 3 (#3)~~: passed in round 9, 69
+   minutes away with no nudge.
 4. Measure observation 2: a seated Middle C fix with the y value written
    down (`verify error x/y/z mm` in the log). Then decide whether the
    fix's vertical part (capped at 10 mm) is enough, or whether a dedicated
