@@ -247,7 +247,7 @@ namespace PianoGlass.UI
         private void StepController(bool off)
         {
             HandState s = _hands[ControllerSlot];
-            bool tracked = !off && OvrUiPointer.TryControllerRay(out Ray ray, out bool trigger, out bool down, out bool onButton);
+            bool tracked = OvrUiPointer.TryControllerRay(out Ray ray, out bool trigger, out bool down, out bool onButton) && !off;
 
             if (s.Held != null)
             {
