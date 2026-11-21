@@ -129,7 +129,9 @@ namespace PianoGlass.UI
             if (layout != _placedFor)
             {
                 _placedFor = layout;
-                Place(layout);
+                // Its saved spot if it has one: switched off while settings is
+                // open, nothing else puts it there (2026-11-20).
+                if (_grab == null || !_grab.TryPlaceSaved()) Place(layout);
             }
             if (show) Refresh();
         }
@@ -149,6 +151,9 @@ namespace PianoGlass.UI
         public void PlaceLike(Transform other, float otherHeightMm)
         {
             if (_placedFor == null) return;
+            // The keys move a little whenever the headset finds the anchor
+            // again (looking away and back): follow them to the saved spot.
+            if (_grab != null) _grab.TryPlaceSaved();
             Vector3 up = _canvas.up;
             other.SetPositionAndRotation(_canvas.position + up * ((otherHeightMm - Size.y) * 0.5f * 0.001f), _canvas.rotation);
         }

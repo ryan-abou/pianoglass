@@ -174,10 +174,13 @@ namespace PianoGlass.UI
         /// <summary>Where the hand wants it this frame; eased there in LateUpdate.</summary>
         public void HoldAt(Pose target) => _target = target;
 
-        public void EndHold()
+        /// <param name="at">Where it ends up, if not where it is now: letting
+        /// go puts it back where it was before the fingers opened.</param>
+        public void EndHold(Pose? at = null)
         {
             if (!Held) return;
             Held = false;
+            if (at.HasValue) transform.SetPositionAndRotation(at.Value.position, at.Value.rotation);
             Save();
             Released?.Invoke(this);
         }
@@ -207,9 +210,19 @@ namespace PianoGlass.UI
                 transform.SetPositionAndRotation(p.position, p.rotation);
                 return;
             }
-            if (!_hasSaved || !TryKeyboard(out Pose frame)) return;
+            TryPlaceSaved();
+        }
+
+        /// <summary>Puts it where it was saved, on the keys as they are now.
+        /// For a panel that is switched off, which doesn't run LateUpdate:
+        /// the song panel while settings takes its place (2026-11-20: settings
+        /// jumped back to the usual spot after the keys moved a little).</summary>
+        public bool TryPlaceSaved()
+        {
+            if (Held || !_hasSaved || !TryKeyboard(out Pose frame)) return false;
             Pose saved = PanelPose.FromFrame(frame, _saved);
             transform.SetPositionAndRotation(saved.position, saved.rotation);
+            return true;
         }
 
         /// <summary>The keyboard's frame: A0's front edge, +Z toward the player.</summary>

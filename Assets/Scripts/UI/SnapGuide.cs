@@ -4,31 +4,35 @@ namespace PianoGlass.UI
 {
     /// <summary>
     /// Shows what a held panel is snapped to (Ryan, 2026-11-15: the snap felt
-    /// uncertain with nothing to see). While it is snapped (straight up, square
-    /// to the keys, or both), a very faint square much bigger than the panel
-    /// lies in the panel's own plane, with a hairline edge: the flat plane it
-    /// is locked into. A little brighter when both are snapped. The first
-    /// version drew grid lines; Ryan asked for a plane instead (2026-11-15).
-    /// Uses the key overlay's see-through material (an opaque one would show
-    /// a solid grey sheet); built by PanelGrabber.
+    /// uncertain with nothing to see). Soft light bars just outside the
+    /// panel's edges: its two upright edges light up when it stands straight
+    /// up, its top and bottom edges when it is square to the keys, so each
+    /// snap lights the edges it straightened. A snap flashes them brighter
+    /// for a moment, then they settle to faint. Grid lines, then a big faint
+    /// square came first; Ryan didn't like how either looked (2026-11-15,
+    /// 2026-11-20). Uses the key overlay's see-through material; built by
+    /// PanelGrabber.
     /// </summary>
     public sealed class SnapGuide : MonoBehaviour
     {
-        /// <summary>How much bigger than the panel (times its size, plus mm
-        /// all round), and how far behind its face (mm).</summary>
-        private const float Grow = 2.5f, MarginMm = 150f, BehindMm = 4f;
-        /// <summary>See-through amounts: the square, and its edge.</summary>
-        private const float FillAlpha = 0.05f, BothFillAlpha = 0.08f, EdgeAlpha = 0.18f;
-        private const float EdgeWidth = 0.0008f;
-        private static readonly Color Tint = new Color(0.85f, 0.9f, 0.95f, 1f);
+        /// <summary>Mm outside the panel's outline, and kept clear of each
+        /// corner so the bars read as edges, not a box.</summary>
+        private const float GapMm = 7f, CornerMm = 18f;
+        /// <summary>Metres wide.</summary>
+        private const float Width = 0.0016f;
+        /// <summary>See-through amounts: settled, and the flash on snapping.</summary>
+        private const float SettledAlpha = 0.3f, FlashAlpha = 0.75f;
+        /// <summary>Seconds for the flash to fade.</summary>
+        private const float FlashSeconds = 0.3f;
+        private static readonly Color Tint = new Color(0.85f, 0.93f, 1f, 1f);
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         private static readonly int ColorId = Shader.PropertyToID("_Color");
 
-        private Transform _fill;
-        private MeshRenderer _fillRenderer;
-        private LineRenderer _edge;
+        // Left and right (upright), bottom and top (square to the keys).
+        private readonly LineRenderer[] _bars = new LineRenderer[4];
+        private readonly float[] _alpha = new float[4];
         private MaterialPropertyBlock _block;
-        private bool _both;
+        private float _uprightSince = -1f, _squareSince = -1f;
 
         public static SnapGuide Create(Transform parent, Material seeThrough)
         {
@@ -41,72 +45,73 @@ namespace PianoGlass.UI
             go.transform.SetParent(parent, false);
             SnapGuide g = go.AddComponent<SnapGuide>();
             g._block = new MaterialPropertyBlock();
-
-            // The square: a quad, which faces -Z, the player's side of a panel.
-            GameObject quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
-            quad.name = "Plane";
-            Destroy(quad.GetComponent<Collider>());
-            quad.transform.SetParent(go.transform, false);
-            g._fill = quad.transform;
-            g._fillRenderer = quad.GetComponent<MeshRenderer>();
-            g._fillRenderer.sharedMaterial = seeThrough;
-            g._fillRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            g._fillRenderer.receiveShadows = false;
-
-            var edge = new GameObject("Edge");
-            edge.transform.SetParent(go.transform, false);
-            g._edge = edge.AddComponent<LineRenderer>();
-            g._edge.sharedMaterial = seeThrough;
-            g._edge.useWorldSpace = true;
-            g._edge.loop = true;
-            g._edge.positionCount = 4;
-            g._edge.startWidth = g._edge.endWidth = EdgeWidth;
-            g._edge.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            g._edge.receiveShadows = false;
-            g.Paint(g._edge, EdgeAlpha);
-            g.Paint(g._fillRenderer, FillAlpha);
-
-            g.Show(null, default);
+            string[] names = { "Left", "Right", "Bottom", "Top" };
+            for (int i = 0; i < 4; i++)
+            {
+                var bar = new GameObject(names[i]);
+                bar.transform.SetParent(go.transform, false);
+                LineRenderer line = bar.AddComponent<LineRenderer>();
+                line.sharedMaterial = seeThrough;
+                line.useWorldSpace = true;
+                line.positionCount = 2;
+                line.startWidth = line.endWidth = Width;
+                line.numCapVertices = 4; // rounded ends
+                line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                line.receiveShadows = false;
+                line.enabled = false;
+                g._bars[i] = line;
+                g._alpha[i] = -1f;
+            }
             return g;
-        }
-
-        private void Paint(Renderer r, float alpha)
-        {
-            Color c = Tint;
-            c.a = alpha;
-            _block.SetColor(BaseColorId, c);
-            _block.SetColor(ColorId, c);
-            r.SetPropertyBlock(_block);
         }
 
         /// <summary>Every frame: <paramref name="panel"/> null hides it.</summary>
         public void Show(GrabbablePanel panel, PanelPose.Snap snap)
         {
-            bool any = panel != null && (snap.Upright || snap.Square);
-            _fillRenderer.enabled = any;
-            _edge.enabled = any;
-            if (!any) return;
+            float now = Time.unscaledTime;
+            bool upright = panel != null && snap.Upright, square = panel != null && snap.Square;
+            if (upright && _uprightSince < 0f) _uprightSince = now;
+            if (!upright) _uprightSince = -1f;
+            if (square && _squareSince < 0f) _squareSince = now;
+            if (!square) _squareSince = -1f;
 
-            bool both = snap.Upright && snap.Square;
-            if (both != _both)
+            for (int i = 0; i < 4; i++)
             {
-                _both = both;
-                Paint(_fillRenderer, both ? BothFillAlpha : FillAlpha);
+                bool on = i < 2 ? upright : square;
+                _bars[i].enabled = on;
+                if (!on) continue;
+                float since = now - (i < 2 ? _uprightSince : _squareSince);
+                float flash = Mathf.Clamp01(1f - since / FlashSeconds);
+                Paint(i, Mathf.Lerp(SettledAlpha, FlashAlpha, flash * flash));
             }
+            if (!upright && !square) return;
 
             Rect r = panel.Outline;
-            Vector2 c = r.center, h = r.size * 0.5f * Grow + new Vector2(MarginMm, MarginMm);
+            float x0 = r.xMin - GapMm, x1 = r.xMax + GapMm, y0 = r.yMin - GapMm, y1 = r.yMax + GapMm;
             Transform t = panel.transform;
-            Vector3 P(float x, float y) => t.TransformPoint(new Vector3(c.x + x, c.y + y, BehindMm));
+            Vector3 P(float x, float y) => t.TransformPoint(new Vector3(x, y, 0f));
+            Set(0, P(x0, y0 + CornerMm), P(x0, y1 - CornerMm));
+            Set(1, P(x1, y0 + CornerMm), P(x1, y1 - CornerMm));
+            Set(2, P(x0 + CornerMm, y0), P(x1 - CornerMm, y0));
+            Set(3, P(x0 + CornerMm, y1), P(x1 - CornerMm, y1));
+        }
 
-            _fill.SetPositionAndRotation(P(0f, 0f), t.rotation);
-            _fill.localScale = new Vector3(t.TransformVector(new Vector3(2f * h.x, 0f, 0f)).magnitude,
-                                           t.TransformVector(new Vector3(0f, 2f * h.y, 0f)).magnitude, 1f);
+        private void Set(int i, Vector3 a, Vector3 b)
+        {
+            if (!_bars[i].enabled) return;
+            _bars[i].SetPosition(0, a);
+            _bars[i].SetPosition(1, b);
+        }
 
-            _edge.SetPosition(0, P(-h.x, -h.y));
-            _edge.SetPosition(1, P(-h.x, h.y));
-            _edge.SetPosition(2, P(h.x, h.y));
-            _edge.SetPosition(3, P(h.x, -h.y));
+        private void Paint(int i, float alpha)
+        {
+            if (Mathf.Abs(alpha - _alpha[i]) < 0.005f) return;
+            _alpha[i] = alpha;
+            Color c = Tint;
+            c.a = alpha;
+            _block.SetColor(BaseColorId, c);
+            _block.SetColor(ColorId, c);
+            _bars[i].SetPropertyBlock(_block);
         }
     }
 }
