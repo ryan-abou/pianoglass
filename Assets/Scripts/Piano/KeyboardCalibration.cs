@@ -56,8 +56,10 @@ namespace PianoGlass.Piano
         public int LowestNote => lowestNote;
         public int HighestNote => highestNote;
 
-        /// <summary>The controllers are down and hands are tracked: prompts
-        /// say press a key, not touch it with the tip (#5).</summary>
+        /// <summary>The controllers are down and hands are tracked. The prompts
+        /// still ask for the controller first, because its tip is good to about
+        /// 1 mm and a fingertip only to about 1 cm (round 8, 2026-11-21); a
+        /// press with a finger is the backup (#5).</summary>
         private static bool HandsInUse => TrackedHands.Instance != null && TrackedHands.Instance.AnyTracked;
 
         /// <summary>The transform whose position is captured. Exposed so
@@ -90,10 +92,11 @@ namespace PianoGlass.Piano
         public string Prompt => CurrentStage switch
         {
             Stage.AwaitingLowest  => HandsInUse
-                ? $"Press and hold the LOWEST key ({NoteName(lowestNote)}) at its front edge with one index finger, other hand still"
-                : $"Touch the front edge of the LOWEST key ({NoteName(lowestNote)}) and pull the trigger",
+                ? $"Right controller: touch the middle of {NoteName(lowestNote)}'s front edge (lowest key) with the tip, pull the trigger. " +
+                  "No controller? Press and hold it"
+                : $"Touch the middle of the front edge of the LOWEST key ({NoteName(lowestNote)}) and pull the trigger",
             Stage.AwaitingHighest => HandsInUse
-                ? $"Now press and hold the HIGHEST key ({NoteName(highestNote)}) at its front edge, the same way"
+                ? $"Now {NoteName(highestNote)} (highest key), the same way"
                 : $"Now the HIGHEST key ({NoteName(highestNote)})",
             Stage.Calibrated      => _owner?.PlacedPrompt ??
                                      "Calibrated.  sticks = nudge   left stick L/R = yaw   B = redo   stick click = clear nudge",
@@ -313,6 +316,19 @@ namespace PianoGlass.Piano
             var captured = new PianoKeyLayout(low, high, lowestNote, highestNote, head, whiteKeyDepth);
             if (captured.Warning != null) Debug.LogWarning("[Calibration] " + captured.Warning);
             Debug.Log($"[Calibration] highest key at {high}; white key width {captured.WhiteKeySpacing * 1000f:0.0} mm");
+
+            // Two presses at different heights tilt the keyboard, and the piano
+            // is level: both ends go to their average height (HandSpan.KeepLevel).
+            if (byHand)
+            {
+                float tiltMm = (low.y - high.y) * 1000f;
+                if (HandSpan.KeepLevel(ref low, ref high, Vector3.up))
+                {
+                    captured = new PianoKeyLayout(low, high, lowestNote, highestNote, head, whiteKeyDepth);
+                    Debug.Log($"[Calibration] by hand: levelled the keys (the lowest key was pressed " +
+                              $"{tiltMm:+0.0;-0.0} mm above the highest)");
+                }
+            }
 
             // Hand tracking measures the span a little short, and two presses at
             // different depths turn the keyboard: the keyboard is the size, and
