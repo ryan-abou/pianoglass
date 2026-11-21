@@ -124,6 +124,18 @@ namespace PianoGlass.Piano
             return true;
         }
 
+        /// <summary>Hand <paramref name="i"/>'s wrist: where it is and how it is
+        /// turned. A held panel follows this, not the pinch point, which moves
+        /// as the fingers open (2026-11-20).</summary>
+        public bool TryHandPose(int i, out Pose pose)
+        {
+            pose = default;
+            if (!TryIndexTip(i, out _)) return false;
+            Transform t = _hands[i].Ovr.transform;
+            pose = new Pose(t.position, t.rotation);
+            return true;
+        }
+
         /// <summary>Hand <paramref name="i"/>'s pointing ray, the Quest's own
         /// (from about the shoulder through the hand), in world space.</summary>
         public bool TryPointer(int i, out Ray ray)
