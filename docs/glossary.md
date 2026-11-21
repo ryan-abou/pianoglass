@@ -16,6 +16,7 @@ project. Add a word the first time it comes up.
 - **depth sensor**: a part of the headset that measures how far away things are, like a tape measure for the whole room at once. PianoGlass example: the Quest 3 has one, but PianoGlass doesn't use it to hide notes behind your hands.
 - **development build**: a build with extra debugging and test tools turned on, a bit slower. PianoGlass example: `.\build.ps1 -Development` turns on anchored calibration and the in-headset checklist, and runs about 69 to 72 fps.
 - **EditMode tests**: tests that run inside the Unity editor without pressing Play or using the headset. PianoGlass example: 727 of them run in about a minute while the editor window is closed.
+- **frame rate**: how many pictures a second the headset draws. PianoGlass example: the Quest 3 should hold 72 a second; `VrApi FPS=` lines in logcat show the real number.
 - **gh**: GitHub's command-line tool, so GitHub jobs can be done from the terminal instead of the website. PianoGlass example: moving a card on the project board to Doing with `gh project item-edit`.
 - **importer**: editor code that tells Unity how to read a file type it doesn't understand on its own. PianoGlass example: the `.mid` importer turns each song file into an asset that ships inside the APK.
 - **issue**: a numbered to-do or bug report on GitHub, like a ticket. PianoGlass example: "#1 MIDI file loading" is an issue with a card on the project board.

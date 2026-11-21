@@ -27,6 +27,15 @@ mm. The controller tip measures 1.3 mm RMS, so it stays the accurate way. Goal f
 hands: under 5 mm without nudging. Ideas not built yet: about 8 touches (every C)
 fitted together, and making the controller tip the normal way to set up. The hand
 Middle C fix (one touch) moved the keys 12-19 mm by itself, so it may be dropped.
+Round 8 (2026-11-21) failed: about 12 mm of nudging (10 mm of it down), and the piano
+came out tilted, left end about 12 mm high. Cause: `HandSpan` evens out the turn and the
+width of a hand calibration, not the height of its two ends, and the fingertip pressed
+A0 14 mm higher than C8. Across five hand calibrations the ends were 7 to 20 mm apart in
+height, either way round, while the controller's were level. **Decision:** the controller
+tip is the normal way to set up; hand calibration stays as a backup with both ends at
+their average height; the hand Middle C fix and the 8-touch idea are dropped (branch
+`batchH-controller-setup`).
+
 ## Phase summary
 
 | Phase | Commit | What it did | Device result |

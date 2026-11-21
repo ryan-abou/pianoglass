@@ -2,7 +2,41 @@
 
 Batch plans, round results and the state of the project as CLAUDE.md said it, moved out word for word on 2026-11-07. Calibration rounds are in `docs/calibration-rounds.md`.
 
-## Batch G big rounds on the Quest 3 (2026-11-14 to 2026-11-21): waiting on round 8
+## Round 8 and what comes next (2026-11-21)
+
+Round 8 (Batch G's last round): 4 of 5 passed. The metronome at 85 ms felt on the beat
+with eyes closed, and each click landed with its line at 100%. Letting go of a moving
+panel kept it about where it was. The brighter snap bars are easy to see now, but Ryan
+doesn't think they look good. Hand calibration failed: it needed about 12 mm of nudging
+(4 mm sideways, 10 mm down, 6 mm away), and the depth swung from +10 to -7 mm while
+Ryan tried to fix a tilt. The piano looked tilted, left end about 12 mm higher than the
+right. Logs in `Milestones/2026-11-14-batchG/big-round8/`.
+
+The tilt is a bug: the fingertip pressed A0 14 mm higher than C8, and `HandSpan` takes
+the turn and width off a hand calibration but not the height difference, so the saved
+piano was 7.3 mm up at one end and 7.3 mm down at the other. Over five hand calibrations
+the two ends came out 7 to 20 mm apart in height, either way round; the controller's
+came out level. Round 7 needed 7.7 mm up, round 8 about 10 mm down: not a steady offset,
+so the learned average can't remove it.
+
+Decisions (Ryan agreed 2026-11-21):
+- The controller tip is the normal way to calibrate. Hand calibration stays as a
+  backup, with both ends at the same height. The hand Middle C fix goes (it moved the
+  keys 12-19 mm by itself), and the 8-touch idea is dropped.
+- The snap bars become a glow on the glass's own edge.
+- Batch G merged into `main` today, in the order below.
+- No Quest 2 branch: `quest2` stays in the manifest, nothing is tested for it.
+- Liquid Glass polish for the Quest 3 waits for the first testers and a release
+  build frame rate reading.
+- The twelve weeks were never a hard date; Ryan now has about 14 hours a week.
+- #4 Fix the stall after an attempt ends: Ryan never noticed it. Round 9's log decides
+  whether it is still there on the Quest 3; fix it only if so.
+
+Batch H, one branch each, then round 9: `batchH-controller-setup`,
+`batchH-snap-glow`, `batchH-hand-misses` (#6), `batchH-readme` (#7, Ryan reads it
+before it is merged).
+
+## Batch G big rounds on the Quest 3 (2026-11-14 to 2026-11-21): passed round 8, merged
 
 All tested together on `batchG-test` (a merge of the branches below, never merged
 itself). Milestones: `Milestones/2026-11-14-batchG/` (APKs, checklists, logs, videos,
