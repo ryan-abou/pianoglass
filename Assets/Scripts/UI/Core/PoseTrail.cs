@@ -12,8 +12,9 @@ namespace PianoGlass.UI
     {
         /// <summary>Seconds kept.</summary>
         public const double Keep = 0.5;
-        /// <summary>Seconds: letting go never goes further back than this.</summary>
-        public const double RewindAtMost = 0.3;
+        /// <summary>Seconds: letting go never goes further back than this.
+        /// Opening the fingers takes about a tenth of a second.</summary>
+        public const double RewindAtMost = 0.15;
 
         private readonly List<(double time, Pose pose)> _poses = new List<(double, Pose)>();
 

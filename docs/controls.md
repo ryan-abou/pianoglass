@@ -97,7 +97,7 @@ A held panel never leans sideways. It snaps straight up once within 2.5 degrees
 of it, and square to the keys once within 2.5 degrees of that, and stays snapped
 until 6 degrees away. Snapping straight up lights soft bars along the panel's two
 upright edges; square to the keys lights its top and bottom edges. They flash on
-snapping, then stay faint. Settings and the song
+snapping, then stay clearly lit. Settings and the song
 panel share one spot: moving either moves both. While controllers are down, the
 controller buttons are ignored (a pinch reads as a trigger pull).
 

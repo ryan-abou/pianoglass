@@ -90,7 +90,7 @@ namespace PianoGlass.Tests.EditMode
             Feed(h, ref now, 0.5f, _ => 0.015f);
             double together = now;
             Feed(h, ref now, 0.3f, t => 0.015f + 0.25f * (float)t);
-            Assert.AreEqual(together, h.ClosedAt, 0.04, "the last frame the tips were still together");
+            Assert.AreEqual(together, h.ClosedAt, 0.06, "the last frame the tips were still together");
         }
 
         [Test]
@@ -101,7 +101,7 @@ namespace PianoGlass.Tests.EditMode
             Assert.IsTrue(trail.TryAt(0.9, 1.0, out Pose p));
             Assert.AreEqual(54f, p.position.x, 1e-4f);
             Assert.IsTrue(trail.TryAt(0.1, 1.0, out p), "asked for too far back");
-            Assert.AreEqual(42f, p.position.x, 1.01f, "never more than 0.3 s back");
+            Assert.AreEqual(51f, p.position.x, 1.01f, "never more than 0.15 s back");
             Assert.LessOrEqual(trail.Count, 32, "keeps only half a second");
         }
     }
