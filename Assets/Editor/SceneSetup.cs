@@ -885,11 +885,18 @@ namespace PianoGlass.EditorTools
         ///   (two far angles, 14 beats, sd 6 and 14; close up agreed within
         ///   about 20 ms), but this phone's sound was 75 ms behind its
         ///   picture (two claps), so +89 ms late (beatfit.py)   -> 280
+        ///   That was wrong the other way. 2026-11-21, 280 ms set: Ryan played
+        ///   Twinkle at 50% five times with his eyes closed, going only by the
+        ///   click; his presses came 197 ms before the beat (134 presses,
+        ///   run medians -183 to -217, sd 39), so the click was that early.
+        ///   That includes the little a player naturally leads a click by,
+        ///   so the real figure may be 20-50 ms higher                -> 85
+        ///   Trust this test over a phone video from now on (Ryan's call).
         /// The first readings, by eye
         /// from contact sheets of 3 beats, gave 310 and then 200: too coarse.
         /// The log reads "DSP buffer 512 x 4 @ 24000 Hz". Quest 2, 2026-11-03:
         /// 141 ms (median 140, sd 11, 8 bars), then 17 ms early on a retest.</summary>
-        private const float MetronomeOutputLatencyMs = 280f;
+        private const float MetronomeOutputLatencyMs = 85f;
 
         /// <summary>
         /// The metronome (Batch B3, F27): a Metronome on its own object, its
