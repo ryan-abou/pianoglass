@@ -19,12 +19,14 @@ namespace PianoGlass.UI
         /// corner so the bars read as edges, not a box.</summary>
         private const float GapMm = 7f, CornerMm = 18f;
         /// <summary>Metres wide.</summary>
-        private const float Width = 0.0016f;
+        private const float Width = 0.003f;
         /// <summary>See-through amounts: settled, and the flash on snapping.</summary>
-        private const float SettledAlpha = 0.3f, FlashAlpha = 0.75f;
+        private const float SettledAlpha = 0.7f, FlashAlpha = 1f;
         /// <summary>Seconds for the flash to fade.</summary>
         private const float FlashSeconds = 0.3f;
-        private static readonly Color Tint = new Color(0.85f, 0.93f, 1f, 1f);
+        // Twice as wide and more than twice as solid as at first: Ryan could
+        // barely see it when looking for it (2026-11-21).
+        private static readonly Color Tint = new Color(0.92f, 0.97f, 1f, 1f);
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         private static readonly int ColorId = Shader.PropertyToID("_Color");
 
