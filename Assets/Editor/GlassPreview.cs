@@ -35,6 +35,19 @@ namespace PianoGlass.EditorTools
         private const int Width = 1920, Height = 1080;
         private const float Mm = 0.001f;
         private static Material _textMaterial;
+        /// <summary>The card's snap glow (left, right, bottom, top), from
+        /// -glassEdgeGlow "0,0,1,1": how a snapped panel looks.</summary>
+        private static Vector4 EdgeGlow;
+
+        private static Vector4 ParseGlow(string arg)
+        {
+            if (string.IsNullOrEmpty(arg)) return Vector4.zero;
+            string[] p = arg.Split(',');
+            var v = Vector4.zero;
+            for (int i = 0; i < 4 && i < p.Length; i++)
+                v[i] = float.Parse(p[i], System.Globalization.CultureInfo.InvariantCulture);
+            return v;
+        }
 
         [MenuItem("PianoGlass/Preview/Render Glass Preview")]
         public static void Render()
@@ -45,6 +58,7 @@ namespace PianoGlass.EditorTools
                 string backdrop = Arg("-glassBackdrop");
                 string output = Arg("-glassOut") ?? "Logs/glass-preview.png";
                 float yaw = float.TryParse(Arg("-glassYaw"), out float y) ? y : 0f;
+                EdgeGlow = ParseGlow(Arg("-glassEdgeGlow"));
                 RenderTo(backdrop, output, yaw);
                 Debug.Log($"[GlassPreview] wrote {Path.GetFullPath(output)}");
             }
@@ -184,6 +198,7 @@ namespace PianoGlass.EditorTools
             renderer.sharedMaterial = material;
             var block = new MaterialPropertyBlock();
             GlassPanel.Apply(block, tokens, style, half, tint);
+            if (style == GlassStyle.Panel) block.SetVector("_EdgeGlow", EdgeGlow);
             renderer.SetPropertyBlock(block);
         }
 

@@ -17,6 +17,8 @@
 //             both slide with the view direction, so the glass reads as a
 //             physical object when the head moves
 //   chroma    a faint rainbow fringe along the bottom edge
+//   snap glow a soft light along the edges a held panel snapped straight
+//             (_EdgeGlow: left, right, bottom, top), set by SnapGuide
 //
 // Output is PREMULTIPLIED (Blend One OneMinusSrcAlpha): the Quest
 // compositor shows   rgb + passthrough * (1 - alpha).   The body darkens the
@@ -48,6 +50,7 @@ Shader "PianoGlass/LiquidGlass"
         _HalfSize ("Half size (m)", Vector) = (0.3, 0.3, 0, 0)
         _Radius ("Corner radius (m)", Float) = 0.028
         _Fade ("Fade", Float) = 1.0
+        _EdgeGlow ("Snap glow (left, right, bottom, top)", Vector) = (0, 0, 0, 0)
     }
 
     SubShader
@@ -85,6 +88,7 @@ Shader "PianoGlass/LiquidGlass"
                 float4 _HalfSize;
                 float _Radius;
                 half _Fade;
+                half4 _EdgeGlow;
             CBUFFER_END
 
             struct Attributes
@@ -177,6 +181,16 @@ Shader "PianoGlass/LiquidGlass"
                 half chroma = lens * lower * lower * _ChromaStrength;
                 half3 fringe = Spectrum(p.x / max(halfSize.x, 1e-4) * 0.5 + 0.5) * chroma;
 
+                // Snap glow: a cyan light in the edge on the sides that snapped,
+                // about three bevels wide, brightest in the hairline. Round 9
+                // (2026-11-21): a pale 14 mm band was "barely visible" over
+                // passthrough, so it is wider, stronger, coloured, and dims the
+                // room behind it a little so it stands out.
+                // Corners take a share of both sides they join.
+                half4 sides = half4(saturate(-n.x), saturate(n.x), saturate(-n.y), saturate(n.y));
+                half glowAmount = dot(_EdgeGlow, sides);
+                half band = saturate(1.0 - inward / max(_BevelWidth * 3.0, aa));
+                half glow = glowAmount * (band * band * 1.1 + hair * 1.5);
                 // Body: premultiplied tint, lighter towards the top.
                 half a = _Tint.a;
                 half3 body = (_Tint.rgb + _TopGlow * y01) * a;
@@ -184,8 +198,9 @@ Shader "PianoGlass/LiquidGlass"
                 // Light added on top (premultiplied: brightens what is behind).
                 half3 light3 = (bevel + sheen + fresnel) * half3(1, 1, 1)
                              + _HairlineColor.rgb * (hair * _HairlineColor.a)
-                             + fringe;
-                half alpha = saturate(a + hair * _HairlineColor.a * 0.5 + bevel * 0.25);
+                             + fringe
+                             + glow * half3(0.45, 0.85, 1.0);
+                half alpha = saturate(a + hair * _HairlineColor.a * 0.5 + bevel * 0.25 + glow * 0.45);
 
                 return half4((body + light3) * coverage, alpha * coverage) * _Fade;
             }
