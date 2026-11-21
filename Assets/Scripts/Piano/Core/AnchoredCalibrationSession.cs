@@ -207,9 +207,50 @@ namespace PianoGlass.Piano
         /// <summary>A fresh calibration has not been confirmed yet, so the
         /// nudge now is its bias.</summary>
         private bool _learningBias;
+        /// <summary>The bias being learned is the hand one (see TouchesByHand).</summary>
+        private bool _learningBiasByHand;
+        /// <summary>Middle C fixes applied since that fresh calibration,
+        /// keyboard mm: they moved the keys just as a nudge does, so they are
+        /// learned with it (2026-11-15: a fix moved the keys 10 mm, the nudge
+        /// moved them back, and only the nudge was kept as the bias).</summary>
+        private Vector3 _fixesSinceFreshMm;
+
+        /// <summary>The touches handed over next come from a fingertip pressing
+        /// a key, not the controller tip (#5): they land somewhere else on the
+        /// key, so they have their own calibration bias. Set by whoever captures.</summary>
+        public bool TouchesByHand { get; set; }
         /// <summary>A bigger nudge than this is not a steady offset from the
         /// touches; something else was wrong, and it is not kept.</summary>
         public const float MaxBiasMm = 25f;
+        /// <summary>The same for touches by hand, which land further off: a
+        /// fingertip presses on top of the key, not at its front edge where
+        /// the controller tip goes, and hand tracking puts it above the key.
+        /// 30.6 mm on the Quest 3 was thrown away at 25 (2026-11-14).</summary>
+        public const float MaxHandBiasMm = 45f;
+        /// <summary>Where a hand touch lands from where the player sees the
+        /// key, until one has been learned: down 21 mm and toward the player
+        /// 22 mm, the nudge after the first hand calibration on the Quest 3
+        /// (2026-11-14). The first hand calibration's own nudge replaces it.</summary>
+        public static readonly Vector3 DefaultHandBiasMm = new Vector3(0f, -21f, 22f);
+
+        /// <summary>The hand bias is the average of this many of the latest
+        /// hand calibrations. Each one's nudge is part steady offset and part
+        /// that calibration's own error (two in a row: 9 mm apart sideways and
+        /// 10 mm up and down, 2026-11-15), so keeping only the newest one
+        /// chased the error.</summary>
+        public const int HandBiasAverageOf = 4;
+
+        /// <summary>The hand bias after one more calibration that needed
+        /// <paramref name="learned"/>: a running average, the newest counting
+        /// 1 / (samples + 1), but never less than 1 / <see cref="HandBiasAverageOf"/>,
+        /// so old ones fade out.</summary>
+        public static Vector3 AverageHandBias(Vector3 old, int samples, Vector3 learned) =>
+            samples <= 0 ? learned : Vector3.Lerp(old, learned, 1f / Mathf.Min(samples + 1, HandBiasAverageOf));
+
+        /// <summary>The learned hand bias, or <see cref="DefaultHandBiasMm"/>
+        /// while none has been (an exact zero is never learned).</summary>
+        public static Vector3 HandBiasMm(PianoProfileStore store) =>
+            store.handCalibrationBiasMm == Vector3.zero ? DefaultHandBiasMm : store.handCalibrationBiasMm;
         /// <summary>Set by an accepted Middle C touch for the WriteProfile
         /// that follows: the applied shift, anchor-local mm.</summary>
         private Vector3? _writeCorrectionMm;
@@ -393,6 +434,7 @@ namespace PianoGlass.Piano
             _writeCorrectionMm = local * 1000f;
 
             Vector3 appliedMm = AnchoredKeyboard.NudgeToKeyboardMm(c.Delta, layout.Right, layout.Up, layout.Forward);
+            if (_learningBias) _fixesSinceFreshMm += appliedMm;
             bool capped = Mathf.Abs(rawMm.y - appliedMm.y) > 0.05f;
             bool heightIgnored = capped && appliedMm.y == 0f;
             Log($"{error} -- applied {Mm(appliedMm)}" +
@@ -696,13 +738,18 @@ namespace PianoGlass.Piano
                 // which does not apply to keys that were just touched (16 mm
                 // off, 2026-11-05). The steady offset from the touches does:
                 // start from that, and let this calibration's own nudge replace it.
-                if (store.hasTipOffset)
+                // Touches by hand have their own steady offset, kept apart from
+                // the controller tip's (#5).
+                if (TouchesByHand || store.hasTipOffset)
                 {
                     _learningBias = true;
-                    if (NudgeMm != store.calibrationBiasMm)
+                    _learningBiasByHand = TouchesByHand;
+                    _fixesSinceFreshMm = Vector3.zero;
+                    Vector3 bias = TouchesByHand ? HandBiasMm(store) : store.calibrationBiasMm;
+                    if (NudgeMm != bias)
                     {
-                        Log($"fresh calibration: nudge {Mm(NudgeMm)} -> calibration bias {Mm(store.calibrationBiasMm)}");
-                        NudgeMm = store.calibrationBiasMm;
+                        Log($"fresh calibration{(TouchesByHand ? " by hand" : "")}: nudge {Mm(NudgeMm)} -> calibration bias {Mm(bias)}");
+                        NudgeMm = bias;
                         PlacementChanged?.Invoke();
                     }
                 }
@@ -775,12 +822,29 @@ namespace PianoGlass.Piano
             if (_learningBias)
             {
                 _learningBias = false;
-                if (NudgeMm.magnitude <= MaxBiasMm)
+                string which = _learningBiasByHand ? "hand calibration bias" : "calibration bias";
+                Vector3 learned = NudgeMm + _fixesSinceFreshMm;
+                string from = _fixesSinceFreshMm == Vector3.zero ? ""
+                    : $" (nudge {Mm(NudgeMm)} + Middle C fixes {Mm(_fixesSinceFreshMm)})";
+                if (learned.magnitude <= (_learningBiasByHand ? MaxHandBiasMm : MaxBiasMm))
                 {
-                    store.calibrationBiasMm = NudgeMm;
-                    Log($"calibration bias now {Mm(NudgeMm)}");
+                    if (_learningBiasByHand)
+                    {
+                        int n = Mathf.Max(0, store.handBiasSamples);
+                        Vector3 average = AverageHandBias(HandBiasMm(store), n, learned);
+                        store.handCalibrationBiasMm = average;
+                        store.handBiasSamples = n + 1;
+                        Log($"{which} now {Mm(average)}: this one needed {Mm(learned)}{from}, " +
+                            $"averaged over {Mathf.Min(n + 1, HandBiasAverageOf)}");
+                    }
+                    else
+                    {
+                        store.calibrationBiasMm = learned;
+                        Log($"{which} now {Mm(learned)}{from}");
+                    }
                 }
-                else Log($"nudge {Mm(NudgeMm)} is too big to be a steady offset: calibration bias stays {Mm(store.calibrationBiasMm)}");
+                else Log($"shift {Mm(learned)}{from} is too big to be a steady offset: {which} stays " +
+                         $"{Mm(_learningBiasByHand ? HandBiasMm(store) : store.calibrationBiasMm)}");
             }
             if (!_serializer.Save(store, out error)) { Log("verified not recorded: " + error); return; }
             Log($"verified by the player: lastVerifiedUtc={utc}");
@@ -815,7 +879,9 @@ namespace PianoGlass.Piano
         private Vector3 TouchBiasMm()
         {
             PianoProfileStore store = _serializer.Load().Store;
-            return store != null && store.hasTipOffset ? store.calibrationBiasMm : Vector3.zero;
+            if (store == null) return Vector3.zero;
+            if (TouchesByHand) return HandBiasMm(store);
+            return store.hasTipOffset ? store.calibrationBiasMm : Vector3.zero;
         }
 
         /// <summary>The store as it is on disk right now, for a

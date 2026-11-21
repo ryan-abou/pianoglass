@@ -66,6 +66,13 @@ namespace PianoGlass.Piano
             calibration.PlacementValidChanged -= OnPlacementValidChanged;
         }
 
+        /// <summary>Back to its usual spot on the keys now ("Reset panels", #5).</summary>
+        public void PlaceNow()
+        {
+            if (calibration != null && calibration.IsPlacementValid && calibration.Layout != null)
+                OnCalibrated(calibration.Layout);
+        }
+
         private void OnPlacementValidChanged(bool valid)
         {
             if (valid)

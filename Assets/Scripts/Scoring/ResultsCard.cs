@@ -130,6 +130,7 @@ namespace PianoGlass.Scoring
         private bool _hasResult;
         private bool? _statusOn;
         private bool _pickerWasUp;
+        private bool _recenterWas;
 
         public bool IsShowing => _canvas != null && _canvas.enabled;
         public ResultsSummary Last { get; private set; }
@@ -278,7 +279,8 @@ namespace PianoGlass.Scoring
 
         private void Update()
         {
-            if (_hasResult || PickerUp != _pickerWasUp) ApplyVisibility();
+            if (_hasResult || PickerUp != _pickerWasUp || LaunchResync.WaitingForRecenter != _recenterWas)
+                ApplyVisibility();
         }
 
         private bool PickerUp => picker != null && picker.IsShowing;
@@ -292,8 +294,12 @@ namespace PianoGlass.Scoring
         {
             bool pickerUp = PickerUp;
             _pickerWasUp = pickerUp;
-            bool card = _hasResult && !CalibrationNeedsPlayer && !pickerUp;
-            bool status = !card && !pickerUp;
+            // Neither shows before a launch recenter (#17): until then the
+            // keys, and every panel placed on them, are a piano width off.
+            bool waiting = LaunchResync.WaitingForRecenter;
+            _recenterWas = waiting;
+            bool card = _hasResult && !CalibrationNeedsPlayer && !pickerUp && !waiting;
+            bool status = !card && !pickerUp && !waiting;
             if (!card)
             {
                 if (_details != null) _details.SetInstant(false);

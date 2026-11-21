@@ -35,6 +35,7 @@ namespace PianoGlass.Transport
 
         private void Update()
         {
+            if (PianoGlass.Piano.ControllerInput.Ignored) return; // a pinch is not a button press
             if (OVRInput.GetDown(OVRInput.Button.One, OVRInput.Controller.RTouch))
                 _transport.TogglePlayPause();
 

@@ -132,6 +132,8 @@ namespace PianoGlass.Piano
 
             if (store.hasTipOffset && !AnchoredKeyboard.IsFinite(store.tipOffsetController))
                 return "tip offset is not a finite number";
+            if (!AnchoredKeyboard.IsFinite(store.handCalibrationBiasMm))
+                return "hand calibration bias is not a finite number";
             if (!AnchoredKeyboard.IsFinite(store.tipNudgeKeyboardMm))
                 return "tip nudge is not a finite number";
 

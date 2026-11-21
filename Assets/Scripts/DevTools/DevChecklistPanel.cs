@@ -5,6 +5,7 @@ using System.IO;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using PianoGlass.Piano;
 using PianoGlass.UI;
 
 namespace PianoGlass.DevTools
@@ -19,10 +20,12 @@ namespace PianoGlass.DevTools
     /// changes, so it never needs a rebuild:
     ///   adb push checklist.md /sdcard/Android/data/com.ryanabourjeili.pianoglass/files/checklist.md
     ///
-    /// Each row is a GlassButton: the right controller ray + right trigger
-    /// ticks it, exactly like the results card's buttons. Ticks are saved in
-    /// checklist_ticks.json, so they survive a relaunch, and every tick is
-    /// logged with "[Checklist]", which puts it on the logcat timeline.
+    /// Each row has a Pass and a Fail button (2026-11-14, Ryan; it was one
+    /// tick per row), pressed like any glass button: a poke, a pinch from
+    /// afar, or the right controller ray + right trigger. Pressing the same
+    /// one again clears it. Marks are saved in checklist_ticks.json, so they
+    /// survive a relaunch, and every one is logged with "[Checklist]", which
+    /// puts it on the logcat timeline.
     ///
     /// Built in code, never in the scene, borrowing the song picker's glass,
     /// tokens and font. Opens in front of the head, where it then stays put
@@ -35,9 +38,12 @@ namespace PianoGlass.DevTools
         public const string TicksFileName = "checklist_ticks.json";
 
         // ---- Layout, mm ------------------------------------------------------
-        private const float Width = 460f, Inner = 420f, Pad = 20f;
+        private const float Width = 560f, Inner = 520f, Pad = 20f;
         /// <summary>Shortest row; rows grow with their wrapped text.</summary>
-        private const float RowPlain = 36f, RowGap = 6f;
+        private const float RowPlain = 50f, RowGap = 6f;
+        /// <summary>The Pass and Fail pills at a row's right end.</summary>
+        private const float MarkW = 72f, MarkH = 38f, MarkGap = 8f, MarkRight = 10f;
+        private const float CountWidth = 200f;
         private const float PanelDepth = 0.002f, RowDepth = 0.0014f, DotDepth = 0.001f;
         private const int OrderPanel = -6, OrderRow = -5, OrderDot = -3;
 
@@ -47,18 +53,24 @@ namespace PianoGlass.DevTools
 
         private static readonly Color RowFill = new Color(0.55f, 0.60f, 0.66f, 0.16f);
         private static readonly Color DotOff = new Color(1f, 1f, 1f, 0.14f);
-        private static readonly Color DotOn = new Color(0.66f, 0.78f, 0.49f, 0.95f);
+        private static readonly Color DotPass = new Color(0.66f, 0.78f, 0.49f, 0.95f);
+        private static readonly Color DotFail = new Color(0.93f, 0.45f, 0.42f, 0.95f);
+        private static readonly Color PassOn = new Color(0.50f, 0.74f, 0.42f, 0.60f);
+        private static readonly Color FailOn = new Color(0.90f, 0.40f, 0.38f, 0.60f);
 
         [Serializable]
         private class TickFile
         {
+            /// <summary>Passed items (the name is from when there were only ticks).</summary>
             public List<string> keys = new List<string>();
+            public List<string> failed = new List<string>();
         }
 
         private sealed class RowView
         {
             public GlassPanel Dot;
             public TextMeshProUGUI Text, Detail;
+            public GlassButton Pass, Fail;
         }
 
         private TMP_FontAsset _font;
@@ -90,6 +102,9 @@ namespace PianoGlass.DevTools
 
             var panel = go.AddComponent<DevChecklistPanel>();
             panel.Build(styleSource.Style);
+            // Pinch to move it (#5). Where it was put is saved on the keys like
+            // every panel, so it opens there again; until then, in front of you.
+            GrabbablePanel.Add(go, "Checklist", FindAnyObjectByType<KeyboardCalibration>());
             return panel;
         }
 
@@ -101,7 +116,7 @@ namespace PianoGlass.DevTools
             gameObject.SetActive(true);
             Reload();
             if (head != null) PlaceInFrontOf(head);
-            Debug.Log($"[Checklist] shown: '{_list.Title}', {_list.TickedCount}/{_list.Items.Count} ticked");
+            Debug.Log($"[Checklist] shown: '{_list.Title}', {Summary()}");
         }
 
         public void Hide()
@@ -137,22 +152,26 @@ namespace PianoGlass.DevTools
             }
 
             _list = HeadsetChecklist.Parse(text);
-            _list.ApplyTicks(LoadTicks());
+            TickFile saved = LoadTicks();
+            _list.ApplyMarks(saved?.keys, saved?.failed);
             Debug.Log(text == null
                 ? $"[Checklist] no checklist at {_path}"
-                : $"[Checklist] loaded '{_list.Title}': {_list.Items.Count} items, {_list.TickedCount} ticked" +
+                : $"[Checklist] loaded '{_list.Title}': {_list.Items.Count} items, {Summary()}" +
                   (_list.Overflow > 0 ? $", {_list.Overflow} more left out" : ""));
             Layout(text == null);
         }
 
-        private void OnRow(int index)
+        private void OnMark(int index, HeadsetChecklist.Mark button)
         {
-            bool on = _list.Toggle(index);
+            HeadsetChecklist.Mark now = _list.Press(index, button);
             SaveTicks();
             Paint();
-            Debug.Log($"[Checklist] {(on ? "ticked" : "unticked")} {index + 1}: {_list.Items[index].Text} " +
-                      $"({_list.TickedCount}/{_list.Items.Count} done)");
+            string what = now == HeadsetChecklist.Mark.Pass ? "PASS" : now == HeadsetChecklist.Mark.Fail ? "FAIL" : "cleared";
+            Debug.Log($"[Checklist] {what} {index + 1}: {_list.Items[index].Text} ({Summary()})");
         }
+
+        private string Summary() =>
+            $"{_list.PassedCount} pass, {_list.FailedCount} fail, {_list.Items.Count - _list.MarkedCount} left";
 
         private DateTime FileWriteTime()
         {
@@ -160,24 +179,25 @@ namespace PianoGlass.DevTools
             catch (Exception) { return DateTime.MinValue; }
         }
 
-        private List<string> LoadTicks()
+        private TickFile LoadTicks()
         {
             try
             {
                 if (!File.Exists(_ticksPath)) return null;
-                return JsonUtility.FromJson<TickFile>(File.ReadAllText(_ticksPath))?.keys;
+                return JsonUtility.FromJson<TickFile>(File.ReadAllText(_ticksPath));
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[Checklist] ticks not read ({e.Message}); starting unticked");
+                Debug.LogWarning($"[Checklist] marks not read ({e.Message}); starting unmarked");
                 return null;
             }
         }
 
         private void SaveTicks()
         {
-            try { File.WriteAllText(_ticksPath, JsonUtility.ToJson(new TickFile { keys = _list.TickedKeys() })); }
-            catch (Exception e) { Debug.LogWarning($"[Checklist] ticks not saved: {e.Message}"); }
+            var file = new TickFile { keys = _list.Keys(HeadsetChecklist.Mark.Pass), failed = _list.Keys(HeadsetChecklist.Mark.Fail) };
+            try { File.WriteAllText(_ticksPath, JsonUtility.ToJson(file)); }
+            catch (Exception e) { Debug.LogWarning($"[Checklist] marks not saved: {e.Message}"); }
         }
 
         // ------------------------------------------------------------------
@@ -196,8 +216,8 @@ namespace PianoGlass.DevTools
             glass.Init(_glassMaterial, _tokens, GlassStyle.Panel, new Vector2(0.012f, 0.012f), PanelDepth);
             glass.SetSortingOrder(OrderPanel);
 
-            _title = Text(transform, "Title", 22f, _primary, TextAlignmentOptions.TopLeft, Inner - 80f, true);
-            _count = Text(transform, "Count", 18f, _secondary, TextAlignmentOptions.TopRight, 80f);
+            _title = Text(transform, "Title", 22f, _primary, TextAlignmentOptions.TopLeft, Inner - CountWidth, true);
+            _count = Text(transform, "Count", 16f, _secondary, TextAlignmentOptions.TopRight, CountWidth);
             _rowsRoot = new GameObject("Rows", typeof(RectTransform)).transform;
             _rowsRoot.SetParent(transform, false);
         }
@@ -216,7 +236,7 @@ namespace PianoGlass.DevTools
             // one line with an ellipsis cut tasks off in the headset).
             TextMeshProUGUI hintText = Text(_rowsRoot, "Hint", 13f, _secondary, TextAlignmentOptions.TopLeft, Inner);
             Place(hintText, -Inner * 0.5f, hint);
-            hintText.text = "Ray + right trigger: tick     Left grip + X: hide";
+            hintText.text = "Pass or Fail each one: poke, pinch from afar, or ray + trigger.   Left grip + X: hide";
 
             float y = 0f;
             for (int i = 0; i < _list.Items.Count; i++)
@@ -239,7 +259,7 @@ namespace PianoGlass.DevTools
             ((RectTransform)transform).sizeDelta = new Vector2(Width, height);
             float top = height * 0.5f - Pad;
             Place(_title, -Inner * 0.5f, top);
-            Place(_count, Inner * 0.5f - 80f, top);
+            Place(_count, Inner * 0.5f - CountWidth, top);
             _title.text = _list.Title;
             ((RectTransform)_rowsRoot).anchoredPosition = new Vector2(0f, top - header - hint);
             Paint();
@@ -251,11 +271,11 @@ namespace PianoGlass.DevTools
         {
             GlassPanel row = Glass(_rowsRoot, $"Row_{index}", GlassStyle.Row, Vector2.zero, new Vector2(Inner, RowPlain),
                                    RowDepth, OrderRow);
-            var button = row.gameObject.AddComponent<Button>();
-            button.onClick.AddListener(() => OnRow(index));
+            row.SetTint(RowFill);
 
             const float padTop = 8f, padBottom = 9f, gap = 3f;
-            float textLeft = -Inner * 0.5f + 40f, textWidth = Inner - 52f;
+            float textLeft = -Inner * 0.5f + 40f;
+            float textWidth = Inner - 40f - 12f - (MarkW * 2f + MarkGap + MarkRight);
             var view = new RowView
             {
                 Text = Text(row.transform, "Text", 17f, _primary, TextAlignmentOptions.TopLeft, textWidth, true, wrap: true),
@@ -280,9 +300,28 @@ namespace PianoGlass.DevTools
             // On the first line of the text.
             view.Dot = Glass(row.transform, "Dot", GlassStyle.Pill, new Vector2(-Inner * 0.5f + 20f, height * 0.5f - padTop - 11f),
                              new Vector2(16f, 16f), DotDepth, OrderDot);
-            // After the size is final: the button keeps its rest position from Init.
-            row.gameObject.AddComponent<GlassButton>().Init(RowFill);
+
+            // Pass and Fail at the right end, level with the middle of the row.
+            float failX = Inner * 0.5f - MarkRight - MarkW * 0.5f;
+            view.Fail = MarkButton(row.transform, $"Fail_{index}", "Fail", new Vector2(failX, 0f),
+                                   () => OnMark(index, HeadsetChecklist.Mark.Fail));
+            view.Pass = MarkButton(row.transform, $"Pass_{index}", "Pass", new Vector2(failX - MarkW - MarkGap, 0f),
+                                   () => OnMark(index, HeadsetChecklist.Mark.Pass));
             return view;
+        }
+
+        private GlassButton MarkButton(Transform parent, string name, string label, Vector2 centre, Action onClick)
+        {
+            GlassPanel glass = Glass(parent, name, GlassStyle.Pill, centre, new Vector2(MarkW, MarkH), DotDepth, OrderDot);
+            TextMeshProUGUI t = Text(glass.transform, "Label", 16f, _primary, TextAlignmentOptions.Center, MarkW, true);
+            Place(t, -MarkW * 0.5f, 16f * 0.7f);
+            t.text = label;
+            var button = glass.gameObject.AddComponent<Button>();
+            button.onClick.AddListener(() => onClick());
+            // After it is placed: the button keeps its rest position from Init.
+            var glassButton = glass.gameObject.AddComponent<GlassButton>();
+            glassButton.Init(GlassBuilder.ButtonFill);
+            return glassButton;
         }
 
         /// <summary>Wrapped height of a text at <paramref name="width"/>, and its rect set to match.</summary>
@@ -293,16 +332,20 @@ namespace PianoGlass.DevTools
             return h;
         }
 
-        /// <summary>Ticked rows: a green dot and dimmer text.</summary>
+        /// <summary>Marked rows: a green or red dot, that button lit, dimmer text.</summary>
         private void Paint()
         {
             for (int i = 0; i < _rows.Count; i++)
             {
-                bool on = _list.Items[i].Ticked;
-                _rows[i].Dot.SetTint(on ? DotOn : DotOff);
-                _rows[i].Text.color = on ? _secondary : _primary;
+                HeadsetChecklist.Mark m = _list.Items[i].Mark;
+                RowView r = _rows[i];
+                r.Dot.SetTint(m == HeadsetChecklist.Mark.Pass ? DotPass : m == HeadsetChecklist.Mark.Fail ? DotFail : DotOff);
+                r.Text.color = m == HeadsetChecklist.Mark.None ? _primary : _secondary;
+                r.Pass.SetFill(m == HeadsetChecklist.Mark.Pass ? PassOn : GlassBuilder.ButtonFill);
+                r.Fail.SetFill(m == HeadsetChecklist.Mark.Fail ? FailOn : GlassBuilder.ButtonFill);
             }
-            _count.text = _list.Items.Count > 0 ? $"{_list.TickedCount}/{_list.Items.Count}" : "";
+            _count.text = _list.Items.Count == 0 ? ""
+                        : $"{_list.PassedCount} pass  {_list.FailedCount} fail  {_list.Items.Count - _list.MarkedCount} left";
         }
 
         private void PlaceInFrontOf(Transform head)

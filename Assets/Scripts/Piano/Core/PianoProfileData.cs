@@ -37,6 +37,18 @@ namespace PianoGlass.Piano
         /// JsonUtility reads as zero.</summary>
         public Vector3 calibrationBiasMm;
 
+        /// <summary>The same for calibrations made by pressing keys with a
+        /// fingertip (#5): a fingertip lands somewhere else on the key than the
+        /// controller tip, so it learns its own steady offset. Absent in older
+        /// files, which read it as zero.</summary>
+        public Vector3 handCalibrationBiasMm;
+
+        /// <summary>How many hand calibrations <see cref="handCalibrationBiasMm"/>
+        /// is the average of. Absent in older files, which read it as zero: the
+        /// next one then replaces the bias, which suits the settled touches
+        /// that came in with it (2026-11-15).</summary>
+        public int handBiasSamples;
+
         /// <summary>Set by pivot calibration. When false, tipOffsetController
         /// is meaningless and PointerTip stays where the scene put it.</summary>
         public bool hasTipOffset;

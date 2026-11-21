@@ -373,10 +373,11 @@ namespace PianoGlass.Tests.EditMode
         /// recenter with that error, nudged back by eye and confirmed, so the
         /// calibration bias is -touchMm and the keys on show are right.
         /// Returns the touch error in world metres.</summary>
-        private Vector3 CalibratedWithTouchBias(out AnchoredCalibrationSession s, Vector3 touchMm)
+        private Vector3 CalibratedWithTouchBias(out AnchoredCalibrationSession s, Vector3 touchMm, bool byHand = false)
         {
             s = CalibratedWithError(Vector3.zero);
             MarkTipMeasured();
+            s.TouchesByHand = byHand;
             PianoKeyLayout real = PianoKeyLayout.WithFacing(World(Low), World(High), Lowest, Highest,
                                                             Recenter.rotation * Toward, Depth);
             Vector3 touch = AnchoredKeyboard.NudgeToWorld(touchMm, real.Right, real.Up, real.Forward);
@@ -384,10 +385,11 @@ namespace PianoGlass.Tests.EditMode
             Run(s.RecalibrateAsync());
             Run(s.OnCapturedAsync(World(Low) + touch, World(High) + touch, Recenter.rotation * Toward,
                                   Lowest, Highest, Depth));
-            s.Nudge(-touchMm * 0.001f);
+            // To where the keys look right, from wherever this calibration started.
+            s.Nudge((-touchMm - s.NudgeMm) * 0.001f);
             s.Confirm();
 
-            Near(-touchMm, OnDisk().calibrationBiasMm, 1e-3f, "bias learned");
+            Near(-touchMm, byHand ? OnDisk().handCalibrationBiasMm : OnDisk().calibrationBiasMm, 1e-3f, "bias learned");
             Near(RealMiddleC(), s.BuildLayout().FrontEdgeCenter(60), 1e-4f, "the keys look right");
             return touch;
         }
@@ -422,6 +424,108 @@ namespace PianoGlass.Tests.EditMode
 
             Near(new Vector3(-8f, 0f, 6f), s.LastVerifyErrorMm, 0.01f, "only the drift is measured");
             Near(RealMiddleC(), s.BuildLayout().FrontEdgeCenter(60), 1e-4f, "Middle C back on the real key");
+        }
+
+        [Test]
+        public void AHandCalibrationLearnsItsOwnBias()
+        {
+            // A fingertip lands 20 mm away from the player's view of the key: its
+            // bias is kept apart from the controller tip's, which stays zero.
+            CalibratedWithTouchBias(out AnchoredCalibrationSession s, new Vector3(0f, 0f, -20f), byHand: true);
+            Near(new Vector3(0f, 0f, 20f), OnDisk().handCalibrationBiasMm, 1e-3f, "hand bias");
+            Near(Vector3.zero, OnDisk().calibrationBiasMm, 1e-3f, "controller bias untouched");
+
+            s.TouchesByHand = false;
+            Recalibrated(s);
+            Assert.AreEqual(Vector3.zero, s.NudgeMm, "a controller calibration starts from the controller's bias");
+        }
+
+        [Test]
+        public void AMiddleCPressByHandTakesTheHandBiasOff()
+        {
+            Vector3 touch = CalibratedWithTouchBias(out AnchoredCalibrationSession s, new Vector3(4f, 0f, -20f), byHand: true);
+            Vector3 before = s.BuildLayout().FrontEdgeCenter(60);
+            StartCorrecting(s);
+
+            Run(s.OnMiddleCTouchedAsync(RealMiddleC() + touch));
+
+            Near(Vector3.zero, s.LastVerifyErrorMm, 0.01f, "the hand bias, not the controller's, is taken off");
+            Near(before, s.BuildLayout().FrontEdgeCenter(60), 1e-5f, "keys left alone");
+        }
+
+        [Test]
+        public void HandBiasesAreAveragedOverCalibrations()
+        {
+            // 2026-11-15: two hand calibrations in a row needed nudges 10 mm
+            // apart; the bias is their average, not just the newest one.
+            CalibratedWithTouchBias(out AnchoredCalibrationSession s, new Vector3(0f, 0f, -20f), byHand: true);
+            Assert.AreEqual(1, OnDisk().handBiasSamples);
+
+            PianoKeyLayout real = PianoKeyLayout.WithFacing(World(Low), World(High), Lowest, Highest,
+                                                            Recenter.rotation * Toward, Depth);
+            var needs = new Vector3(0f, 0f, 10f);
+            Vector3 touch = AnchoredKeyboard.NudgeToWorld(-needs, real.Right, real.Up, real.Forward);
+            Run(s.RecalibrateAsync());
+            Run(s.OnCapturedAsync(World(Low) + touch, World(High) + touch, Recenter.rotation * Toward,
+                                  Lowest, Highest, Depth));
+            Near(new Vector3(0f, 0f, 20f), s.NudgeMm, 1e-3f, "starts from the bias so far");
+            s.Nudge((needs - s.NudgeMm) * 0.001f);
+            s.Confirm();
+
+            Near(new Vector3(0f, 0f, 15f), OnDisk().handCalibrationBiasMm, 1e-3f, "the average of 20 and 10");
+            Assert.AreEqual(2, OnDisk().handBiasSamples);
+        }
+
+        [Test]
+        public void OldHandCalibrationsFadeOut()
+        {
+            Vector3 b = Vector3.zero;
+            int n = 0;
+            for (int i = 0; i < 10; i++) b = AnchoredCalibrationSession.AverageHandBias(b, n++, new Vector3(0f, 0f, 20f));
+            for (int i = 0; i < 10; i++) b = AnchoredCalibrationSession.AverageHandBias(b, n++, new Vector3(0f, 0f, 10f));
+            Assert.AreEqual(10f, b.z, 1f, "after many at 10, close to 10, not stuck near 15");
+            Assert.AreEqual(new Vector3(1f, 2f, 3f),
+                            AnchoredCalibrationSession.AverageHandBias(new Vector3(9f, 9f, 9f), 0, new Vector3(1f, 2f, 3f)),
+                            "the first one replaces what was there");
+        }
+
+        [Test]
+        public void AFirstHandCalibrationStartsFromTheDefaultHandBias()
+        {
+            AnchoredCalibrationSession s = CalibratedWithError(Vector3.zero);
+            s.TouchesByHand = true;
+            Recalibrated(s);
+            Near(AnchoredCalibrationSession.DefaultHandBiasMm, s.NudgeMm, 1e-3f, "starts from the default");
+        }
+
+        [Test]
+        public void AHandNudgeOf30MmIsKept()
+        {
+            // 2026-11-14: (+1.7, -21.2, +22.1) mm after a hand calibration was thrown away at 25.
+            CalibratedWithTouchBias(out _, new Vector3(-1.7f, 21.2f, -22.1f), byHand: true);
+            Near(new Vector3(1.7f, -21.2f, 22.1f), OnDisk().handCalibrationBiasMm, 1e-3f, "kept");
+        }
+
+        [Test]
+        public void AMiddleCFixBeforeLooksRightIsLearnedWithTheNudge()
+        {
+            // 2026-11-15: a fix moved the keys, a nudge moved them back, and
+            // only the nudge was kept: the bias was 10 mm off sideways.
+            AnchoredCalibrationSession s = CalibratedWithError(Vector3.zero);
+            MarkTipMeasured();
+            var touchMm = new Vector3(8f, 0f, -12f);
+            PianoKeyLayout real = PianoKeyLayout.WithFacing(World(Low), World(High), Lowest, Highest,
+                                                            Recenter.rotation * Toward, Depth);
+            Vector3 touch = AnchoredKeyboard.NudgeToWorld(touchMm, real.Right, real.Up, real.Forward);
+            Run(s.RecalibrateAsync());
+            Run(s.OnCapturedAsync(World(Low) + touch, World(High) + touch, Recenter.rotation * Toward,
+                                  Lowest, Highest, Depth));
+
+            StartCorrecting(s);
+            Run(s.OnMiddleCTouchedAsync(RealMiddleC()));
+            s.Confirm();
+
+            Near(-touchMm, OnDisk().calibrationBiasMm, 0.05f, "the fix is part of the steady offset");
         }
 
         [Test]

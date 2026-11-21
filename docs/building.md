@@ -55,11 +55,14 @@ line is an item, and text after ` | ` is what pass looks like, drawn smaller:
 - Middle C fix with the bare tip | keys stay put, no nudge after
 ```
 
-Hold the left grip, then press X to open or close it (it opens in front of you and
-always starts hidden). Tick a row with the right controller ray and right trigger.
-Ticks survive a relaunch (`checklist_ticks.json`) and are logged as `[Checklist]`
-lines, so they sit on the logcat timeline next to everything else. Start the ticks
-over: `adb shell rm /sdcard/Android/data/com.ryanabourjeili.pianoglass/files/checklist_ticks.json`.
+Hold the left grip, then press X to open or close it, or poke Settings, Checklist.
+After a relaunch it is open or closed the way you left it, and where you last put it
+(pinch it to move it). Each item has a Pass and a Fail button: press one with a poke,
+a pinch with the hand ray, or the right controller ray and right trigger, and press
+it again to clear it. Up to 16 items show.
+Marks survive a relaunch (`checklist_ticks.json`) and are logged as `[Checklist] PASS`
+or `FAIL` lines, so they sit on the logcat timeline next to everything else. Start the
+marks over: `adb shell rm /sdcard/Android/data/com.ryanabourjeili.pianoglass/files/checklist_ticks.json`.
 
 **Recording mode** (hold the left grip, then press Y) switches off every debug
 overlay for milestone videos: the status panel (MIDI bridge, calibration readout)

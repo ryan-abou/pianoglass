@@ -31,7 +31,7 @@ on them and none can be played by accident.
 | Restart from the top and play | left Y | A0 + A♯0 | `OvrSongTransport`, `SongTransport` | The chord works whenever calibrated, playing or not. Also how a practice loop is left. Not while the left grip is held (that Y is recording mode's) |
 | Start a practice loop | right controller ray + right trigger on the results card's "Loop bars" button | — | `ResultsCard` → `PracticeLoop` | The button shows when a bar is under 75%: that bar, and a neighbour under 90% |
 | Choose bars to loop | right controller ray + right trigger on a bar pill | — | `ResultsCard`, `BarSelection` | One pill, then another for a range; the suggestion's button becomes "Loop bars 3–5". The same pill again, alone, clears it |
-| Press a results card button (Retry, Songs, More/Less info, the suggestion's button) | right controller ray + right trigger | — | `OvrUiPointer`, `GlassButton` | Stopgap until hand poke (Phase 4). The ray shows only while a button is pressable; the trigger goes to calibration unless the ray is on a button |
+| Press a results card button (Retry, Songs, More/Less info, the suggestion's button) | right controller ray + right trigger | — | `OvrUiPointer`, `GlassButton` | Stopgap until hand poke (Phase 4). The ray shows only while a button is pressable, or on a panel's glass; the trigger goes to calibration unless the ray is on a button or a panel |
 | Open the song picker | right controller ray + right trigger on the results card's Songs button | — | `ResultsCard` → `SongPicker` | The picker also opens by itself at launch, once the keys are placed |
 | Choose which hand to practice | right controller ray + right trigger on the picker's Left, Right or Both pill | — | `SongPicker` | Both: every note scored, each in its own hand's colour (#11). Songs marked hands unknown ignore it and play All notes |
 | Pick a song | right controller ray + right trigger on a picker row | — | `SongPicker` → `CurrentSong` | Loads it stopped at the top; press play as usual. Greyed rows can't be pressed |
@@ -51,8 +51,8 @@ so it does not happen by accident with the controllers set down on the piano:
 
 | Control | Controller | Notes |
 |---|---|---|
-| Test checklist panel on/off | hold left grip, then left X | Opens in front of you, stays put in the room. Always starts hidden. Format and push command: `docs/building.md` |
-| Tick a checklist item | right controller ray + right trigger on the row | Saved, survives a relaunch, logged as `[Checklist]` |
+| Test checklist panel on/off | hold left grip, then left X | Opens in front of you, or where you last put it. Open or closed after a relaunch the way you left it. Format and push command: `docs/building.md` |
+| Pass or fail a checklist item | right controller ray + right trigger on the row's Pass or Fail (or poke it, or pinch it with the hand ray) | The same button again clears it. Saved, survives a relaunch, logged as `[Checklist] PASS` / `FAIL` |
 | Recording mode on/off | hold left grip, then left Y | Switches off every debug overlay (status panel, checklist) for milestone videos. Turning it off brings back whatever was showing. Remembered across launches |
 
 Development tools that are not player controls:
@@ -64,6 +64,71 @@ Development tools that are not player controls:
 - *PianoGlass → Checks → Run song check* runs the whole song flow in Play Mode.
 - `OvrAnchorSpike` (Phase 3 harness) uses both grips. It is disabled in the
   scene and must stay disabled alongside the anchored-calibration flow.
+
+### Without controllers (#5, built 2026-11-14)
+
+Put the controllers down and the Quest tracks your hands. Every glass button
+(song panel, settings, song picker, results card, checklist) is pressed by
+**poking it with an index fingertip** (`HandPokePointer`, `PokeDetector`): hover
+within 4 cm, press as the fingertip pushes through the face, then pull back
+1.5 cm to press again. The controller ray keeps working alongside.
+
+Every panel (song panel, settings, song picker, results card, status panel,
+checklist) can be **pinched and moved** (`PanelGrabber`, `GrabbablePanel`,
+2026-11-14). Pinch its glass or edge and it stays in your hand the way you hold
+it, so turning the wrist tilts it. A panel out of reach shows a ray from your
+hand when you point at it: pinch with the ray on a button to press it, or on
+the glass to move the panel, pulling your hand back to bring it closer. Where
+you put a panel is saved relative to the keys, so it comes back there after a
+relaunch and moves with the keys when they are nudged. Off while a song plays,
+so a thumb passing under can't grab anything. A held panel follows your wrist,
+and stays held as long as thumb and index stay together, measured from how far
+apart they are, not the Quest's own pinch signal, which blinks off mid-move. If the
+hand stops being tracked, the panel stays still for up to a second. Letting go:
+once the fingers are clearly apart, the panel goes back to where it was the moment
+they began to open, so it never slides while you let go (2026-11-20).
+
+With a controller in hand, point the right controller's ray at a panel's glass (not a
+button) and hold the right trigger to move it the same way as a far pinch; let go of
+the trigger to put it down. Only once the keys are calibrated and no Middle C fix is
+waiting, so the trigger still places calibration points.
+
+A held panel never leans sideways. It snaps straight up once within 2.5 degrees
+of it, and square to the keys once within 2.5 degrees of that, and stays snapped
+until 6 degrees away. Snapping straight up lights soft bars along the panel's two
+upright edges; square to the keys lights its top and bottom edges. They flash on
+snapping, then stay clearly lit. Settings and the song
+panel share one spot: moving either moves both. While controllers are down, the
+controller buttons are ignored (a pinch reads as a trigger pull).
+
+Until the launch recenter is done (#17), no panel shows at all, only the
+recenter banner: before it they would all be a piano width off. A checklist
+asked for while waiting opens in front of you after the recenter.
+
+| Control | Without controllers | Where |
+|---|---|---|
+| Play / pause, restart | Song panel buttons (left end of the keyboard) | `SongPanel` |
+| Tempo −/+, metronome, wait mode, memory fade | Song panel buttons, only while stopped or paused, or the piano chords as before | `SongPanel` |
+| Songs, hand switch | Song panel "Songs", then poke the picker | `SongPanel`, `SongPicker` |
+| Settings | Song panel "Settings": shown in the song panel's place | `SettingsPanel` |
+| Calibrate | Settings "Calibrate with hands", then press and hold A0 and C8 at their front edges with one index finger (the touch is where the fingertip rests while the key is down) | `HandCalibration` |
+| Looks right | Settings "Looks right" | `SettingsPanel` |
+| Middle C fix | Settings "Middle C fix", then press and hold Middle C with one index finger | `HandCalibration` |
+| Nudge, turn, clear nudge | Settings nudge pad: 2 mm or 0.2 deg per poke, saved each time | `SettingsPanel` |
+| Display mode | Settings "Display" | `SettingsPanel` |
+| Move or tilt a panel | Pinch it and move your hand, or point at it from afar and pinch its glass. With a controller: ray on its glass, hold the right trigger | `PanelGrabber` |
+| Press a button out of reach | Point at it (a ray shows) and pinch | `PanelGrabber` |
+| Put every panel back | Settings "Reset panels" | `GrabbablePanel` |
+| Recenter (the keys a piano width off at launch, #17) | Look at your palm, pinch and hold | Quest system gesture |
+| Passthrough, test checklist, recording mode (development builds) | Settings buttons | `SettingsPanel` |
+
+A key press only counts as a calibration touch while hands are tracked, so a
+controller tip that presses a key never counts twice. Hand touches learn their
+own calibration bias, kept apart from the controller tip's; a Middle C fix made
+before "Looks right" is learned along with the nudge. The hand bias is the average
+of the last 4 hand calibrations, since each one's nudge is partly its own error. A hand calibration keeps the
+last calibration's white key width (within 6%) and turn (within 2.5 degrees), since
+hand tracking measures the span short and two presses at different depths turn it.
 
 ### Target: hand-tracked Liquid Glass menus (Phase 4)
 
@@ -88,6 +153,10 @@ What stays off the menus, and why:
 - **The piano chords stay.** While playing, hands are on the keys, and a
   chord is faster than reaching for a panel. Each chord gets a matching
   button, so nothing is chord-only.
+- **Calibration by hand too (Ryan, 2026-11-14: everything without
+  controllers).** Built as key presses, not fingertip touches: MIDI says which
+  key and when, the fingertip says where (accurate along the keys, 328 presses).
+  The controller-tip way below stays. What 2026-11-07 said:
 - **Calibration stays on the controller (Ryan, 2026-11-07).** The
   hand-tracking menus (#5) leave calibration out: the two-point capture,
   Middle C fix, nudges, "looks right" and tip measuring all keep their
