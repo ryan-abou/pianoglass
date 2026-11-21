@@ -12,9 +12,11 @@ namespace PianoGlass.Scoring
     public static class ResultsSamples
     {
         public const string EightBars = "8 bars", ThirtyTwoBars = "32 bars", NinetySevenBars = "97 bars",
-                            PerfectOtherHand = "Perfect, other hand next", PerfectMastered = "Perfect, mastered";
+                            PerfectOtherHand = "Perfect, other hand next", PerfectMastered = "Perfect, mastered",
+                            BothHandsLeftWeak = "Both hands, left weaker";
 
-        public static readonly string[] All = { EightBars, ThirtyTwoBars, NinetySevenBars, PerfectOtherHand, PerfectMastered };
+        public static readonly string[] All = { EightBars, ThirtyTwoBars, NinetySevenBars, PerfectOtherHand, PerfectMastered,
+                                                 BothHandsLeftWeak };
 
         private const string Song = "Twinkle, Twinkle, Little Star";
 
@@ -65,6 +67,29 @@ namespace PianoGlass.Scoring
                     rec.bestStreak = 44;
                     rec.notes = Offsets(6, 9, 14, 24, 40, 60, 62, 40, 30, 15, 10);
                     return (rec, new List<AttemptRecord>());
+                }
+                case BothHandsLeftWeak:
+                {
+                    // #6: the right hand fine, the left hand missing all through.
+                    AttemptRecord rec = Record(76, "both", 0.8, 4);
+                    rec.bars = Bars(90, 81, 72, 84, 70, 79, 74, 88);
+                    Counts(rec, 30, 10, 4, 8);
+                    rec.meanErrorMs = 18;
+                    rec.wrongPitch = 3;
+                    rec.bestStreak = 12;
+                    rec.notes = Offsets(1, 2, 4, 6, 8, 9, 7, 4, 2, 1, 0);
+                    for (int i = 0; i < rec.notes.Count; i++)
+                    {
+                        bool right = i % 2 == 0;
+                        rec.notes[i].hand = right ? "right" : "left";
+                        rec.notes[i].judgement = right ? Judgement.Perfect : Judgement.Great;
+                        rec.notes[i].rating = rec.notes[i].judgement.ToString();
+                    }
+                    for (int i = 0; i < 8; i++)
+                        rec.notes.Add(new JudgementResult { hand = "left", judgement = Judgement.Miss, rating = "Miss" });
+                    for (int i = 0; i < 3; i++)
+                        rec.wrongNotes.Add(new WrongNote { kind = WrongNote.WrongPitch, hand = i == 0 ? "right" : "left" });
+                    return (rec, History("both", 0.8, 69, 72, 74));
                 }
                 case PerfectOtherHand:
                 {

@@ -118,6 +118,15 @@ namespace PianoGlass.Tests.EditMode
         }
 
         [Test]
+        public void ThePreviewSampleShowsBothHands()
+        {
+            ResultsSummary s = ResultsSamples.Summary(ResultsSamples.BothHandsLeftWeak);
+            Assert.IsNotNull(s.Hands);
+            Assert.AreEqual(SuggestionRule.WeakHand, s.Suggestion.Rule);
+            Assert.AreEqual("left", s.Suggestion.TargetHand);
+        }
+
+        [Test]
         public void HandsThatDidAboutAsWellPickNeither()
         {
             Assert.IsNull(HandSplit.Weaker(HandSplit.From(Attempt(leftMissed: 2))), "80%: above the weak line");
