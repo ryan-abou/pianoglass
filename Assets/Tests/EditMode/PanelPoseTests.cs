@@ -62,7 +62,7 @@ namespace PianoGlass.Tests.EditMode
         [Test]
         public void PitchSnapsUprightNearZero()
         {
-            Quaternion r = PanelPose.Upright(Quaternion.Euler(3f, 40f, 0f), Vector3.up, null);
+            Quaternion r = PanelPose.Upright(Quaternion.Euler(2f, 40f, 0f), Vector3.up, null);
             Assert.AreEqual(0f, Vector3.Dot(r * Vector3.forward, Vector3.up), 1e-4f, "straight up");
             Quaternion tipped = PanelPose.Upright(Quaternion.Euler(-30f, 40f, 0f), Vector3.up, null);
             Assert.AreEqual(30f, Vector3.Angle(Vector3.ProjectOnPlane(tipped * Vector3.forward, Vector3.up),
@@ -73,7 +73,7 @@ namespace PianoGlass.Tests.EditMode
         public void YawSnapsSquareToTheKeysNearZero()
         {
             var straight = new Vector3(0.6f, 0f, 0.8f);
-            Quaternion near = Quaternion.LookRotation(Quaternion.AngleAxis(3f, Vector3.up) * straight, Vector3.up);
+            Quaternion near = Quaternion.LookRotation(Quaternion.AngleAxis(2f, Vector3.up) * straight, Vector3.up);
             Quaternion r = PanelPose.Upright(near, Vector3.up, straight);
             Assert.Less(Vector3.Angle(straight, r * Vector3.forward), 0.01f);
 
@@ -95,18 +95,18 @@ namespace PianoGlass.Tests.EditMode
         public void OnceSnappedItHoldsUntilWellPastTheEdge()
         {
             var snap = new PanelPose.Snap();
-            PanelPose.Upright(Quaternion.Euler(3f, 0f, 0f), Vector3.up, null, ref snap);
-            Assert.IsTrue(snap.Upright, "snaps in within 4 degrees");
+            PanelPose.Upright(Quaternion.Euler(2f, 0f, 0f), Vector3.up, null, ref snap);
+            Assert.IsTrue(snap.Upright, "snaps in within 2.5 degrees");
 
-            Quaternion r = PanelPose.Upright(Quaternion.Euler(7f, 0f, 0f), Vector3.up, null, ref snap);
-            Assert.IsTrue(snap.Upright, "7 degrees: still snapped");
+            Quaternion r = PanelPose.Upright(Quaternion.Euler(5f, 0f, 0f), Vector3.up, null, ref snap);
+            Assert.IsTrue(snap.Upright, "5 degrees: still snapped");
             Assert.AreEqual(0f, Vector3.Dot(r * Vector3.forward, Vector3.up), 1e-4f);
 
-            PanelPose.Upright(Quaternion.Euler(10f, 0f, 0f), Vector3.up, null, ref snap);
-            Assert.IsFalse(snap.Upright, "10 degrees: let go");
-
             PanelPose.Upright(Quaternion.Euler(7f, 0f, 0f), Vector3.up, null, ref snap);
-            Assert.IsFalse(snap.Upright, "7 degrees coming back: not yet");
+            Assert.IsFalse(snap.Upright, "7 degrees: let go");
+
+            PanelPose.Upright(Quaternion.Euler(4f, 0f, 0f), Vector3.up, null, ref snap);
+            Assert.IsFalse(snap.Upright, "4 degrees coming back: not yet");
         }
 
         [Test]
@@ -114,11 +114,11 @@ namespace PianoGlass.Tests.EditMode
         {
             var snap = new PanelPose.Snap();
             Quaternion Turned(float deg) => Quaternion.LookRotation(Quaternion.AngleAxis(deg, Vector3.up) * Vector3.forward);
-            PanelPose.Upright(Turned(3f), Vector3.up, Vector3.forward, ref snap);
+            PanelPose.Upright(Turned(2f), Vector3.up, Vector3.forward, ref snap);
             Assert.IsTrue(snap.Square);
+            PanelPose.Upright(Turned(5f), Vector3.up, Vector3.forward, ref snap);
+            Assert.IsTrue(snap.Square, "5 degrees: still square");
             PanelPose.Upright(Turned(8f), Vector3.up, Vector3.forward, ref snap);
-            Assert.IsTrue(snap.Square, "8 degrees: still square");
-            PanelPose.Upright(Turned(12f), Vector3.up, Vector3.forward, ref snap);
             Assert.IsFalse(snap.Square);
         }
 

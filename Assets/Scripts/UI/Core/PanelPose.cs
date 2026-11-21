@@ -52,8 +52,9 @@ namespace PianoGlass.UI
         /// <summary>Degrees: a panel snaps to straight once this close, and
         /// stays snapped until it is <see cref="SnapOutDegrees"/> away, so a
         /// hand shaking at the edge doesn't flick it in and out (2026-11-15:
-        /// one 5 degree edge for both felt uncertain).</summary>
-        public const float SnapInDegrees = 4f, SnapOutDegrees = 9f;
+        /// one 5 degree edge for both felt uncertain; 4 and 9 snapped too easily,
+        /// Ryan 2026-11-20).</summary>
+        public const float SnapInDegrees = 2.5f, SnapOutDegrees = 6f;
 
         /// <summary>
         /// A held panel's turn with no sideways lean (roll): panels always
