@@ -7,7 +7,8 @@ namespace PianoGlass.UI
     /// <summary>
     /// Settings (#5, S1): everything the controllers did that a song doesn't,
     /// on Liquid Glass buttons a fingertip can poke, so the app needs no
-    /// controllers at all. Calibration (by pressing keys, HandCalibration),
+    /// controllers at all, except to calibrate: the controller tip is the
+    /// normal way, pressing keys (HandCalibration) the backup. Calibrate,
     /// "looks right", the Middle C fix, a nudge pad, clear nudge and the
     /// display mode; in development builds also passthrough, the test
     /// checklist and recording mode (compiled out of release).
@@ -93,7 +94,7 @@ namespace PianoGlass.UI
             ((RectTransform)_prompt.transform).sizeDelta = new Vector2(Size.x - 32f, 40f);
             y -= 46f + BtnH * 0.5f;
 
-            g.Pill(root, "Calibrate", new Vector2(c2a, y), new Vector2(w2, BtnH), "Calibrate with hands",
+            g.Pill(root, "Calibrate", new Vector2(c2a, y), new Vector2(w2, BtnH), "Calibrate",
                    () => _calibration.Recalibrate(), out _, 14f);
             _confirm = g.Pill(root, "LooksRight", new Vector2(c2b, y), new Vector2(w2, BtnH), "Looks right",
                               () => _calibration.Confirm(), out _, 15f);
@@ -195,7 +196,7 @@ namespace PianoGlass.UI
             if (key == _shown) return;
             _shown = key;
 
-            _prompt.text = correcting ? "Press Middle C with one index finger (or touch it with the tip and pull the trigger)"
+            _prompt.text = correcting ? "Right controller: touch the front of Middle C with the tip, pull the trigger"
                                       : _calibration.Prompt;
             GlassBuilder.Set(_confirm, _calibration.AwaitingConfirmation);
             GlassBuilder.Set(_middle, anchored && calibrated, correcting);
