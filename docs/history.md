@@ -2,7 +2,45 @@
 
 Batch plans, round results and the state of the project as CLAUDE.md said it, moved out word for word on 2026-11-07. Calibration rounds are in `docs/calibration-rounds.md`.
 
-## Batch H on the Quest 3 (2026-11-21): waiting on round 9
+## Round 9 (2026-11-21): 4 pass, 2 fail, 1 not run
+
+Development build of `batchH-test`. Logs: `Milestones/2026-11-21-batchH/round9/`
+(`files/logs/20261121-190236Z.txt` and `logcat-full.txt`).
+
+1. Controller calibration: **fail**. The 4 captures in a row landed within about 5 mm
+   of each other, so the tip is fine. What was off is the calibration bias added on
+   top: (+10.2, +14.3, +13.7) mm, learned in round 4. Ryan nudged it to
+   (+0.9, +14.3, +11.1), about 9 mm, almost all sideways. Every controller bias saved
+   so far: toward the player 11.8 to 14.4 mm (steady), sideways -4.7 to +10.2 mm
+   (noise around zero). Keeping only the newest one carried round 4's +10 mm sideways
+   noise into round 9. Fix on `batchH-controller-setup`: the sideways part is not
+   learned, and the other two are averaged over the last 4 calibrations, like the
+   hand bias. The prompt now says the middle of the front edge.
+2. Hand calibration: **fail**. The levelling worked: the presses were 10.7 mm apart in
+   height and came out level, and the controller and the levelled hand result agree to
+   within 4 mm in height. After the hand bias, the keys still needed about 9 mm (5 up,
+   7 in), which is what one hand press is good for. No change: the finger is the
+   backup, and the README says to expect a small nudge.
+3. Snap glow: **fail**, "I could barely see it". Made much brighter on
+   `batchH-snap-glow`. Ryan wants a full visual overhaul for the Quest 3 later; the
+   glow is only made visible now, not redesigned.
+4. Both hands on the results card (#6): **pass**.
+5. Headset off, then back on (#3): **pass**. Off for 69 minutes; the keys came back in
+   place and Ryan confirmed them with no nudge and no Middle C fix. #3 is closed, and
+   `return-settle`, `press-probe` and `calib-bias-total` stay unmerged.
+6. Middle C fix asks for the controller: **pass**.
+7. Release build: not run (the development build was still installed). Moved to the
+   next round.
+
+#4 Fix the stall after an attempt ends, from round 9's logcat: still there on the
+Quest 3. Every results card gave one hitch of 17-20 stale frames in a row (about
+0.25 s), and loop passes, which save a file but show no card, gave none. From the
+attempt ending to the card showing took 150-200 ms each time: `ResultsCard.LoadPrevious`
+read all 146 attempt files on the main thread. Round 8's "2 s later" was the 1 s
+VrApi buckets lagging. Frame rate otherwise: 72 when idle, 66-71 while playing
+(development build).
+
+## Batch H on the Quest 3 (2026-11-21): round 9 above
 
 All tested together on `batchH-test` (never merged itself). Milestones:
 `Milestones/2026-11-21-batchH/`. Merge through PRs once round 9 passes, in this order:

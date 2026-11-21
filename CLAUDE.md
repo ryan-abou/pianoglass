@@ -215,8 +215,9 @@ metronome, loops, auto-tempo, wait mode, memory fade, MIDI songs and the song pi
 Batch G passed on the Quest 3 (round 8, 2026-11-21) and was merged into `main` the same
 day: the launch recenter (#17), Both hands (#11), hand menus and Settings (#5), keys
 fading in, wait mode chords, the metronome at 85 ms (#16) and the headset checklist panel.
-On branches: `return-settle` (holds `anchor-trio`), `press-probe`, `calib-bias-total`
-(all Quest 2 era, waiting on #3 Time-box the calibration drift work).
+Round 9 (2026-11-21): the results card shows each hand (#6, merged), and the keys stay
+put after 69 minutes with the headset off (#3, closed). `return-settle` (holds
+`anchor-trio`), `press-probe` and `calib-bias-total` are Quest 2 era and stay unmerged.
 
 Decided after round 8 (`docs/history.md`, top section): the controller tip is the
 normal way to calibrate (1.3 mm); hand calibration stays as a backup, levelled. One
@@ -225,12 +226,12 @@ between sessions, so learning a bias can't fix it. No Quest 2 branch: `quest2` s
 in the manifest, but nothing is tested or tuned for it. Liquid Glass polish waits for
 the first testers' comments and a release build frame rate reading.
 
-Batch H, in order, then round 9: `batchH-controller-setup`, `batchH-snap-glow`
-(the glass edge lights up instead of the snap bars), `batchH-hand-misses`
-(#6 Results card shows which hand missed), `batchH-readme` (#7 Write a README for
-judges, Ryan reads it before it is merged). Round 9 also checks a 20+ minute
-headset-off return (#3), 72 fps on a release build, and whether the stall after an
-attempt (#4) still shows in the log; #4 is fixed only if it does.
+Waiting on round 10: `batchH-controller-setup` (the controller bias no longer keeps
+sideways noise), `batchH-snap-glow` (brighter), `batchH-attempt-cache` (#4 Fix the
+stall after an attempt ends, still there in round 9), and a release build frame rate
+reading. `batchH-readme` (#7 Write a README for judges) waits for Ryan to read it.
+Ryan wants a full visual overhaul for the Quest 3 later (the UI was made for the
+Quest 2's budget): plan it after round 10, not piecemeal before.
 
 After a test round, pull `files/logs/` from the headset first (dev builds save their
 log there; a headset restart wipes most of logcat). Set the metronome latency from
