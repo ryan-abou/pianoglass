@@ -1,5 +1,11 @@
 # Measuring the metronome's latency from a phone video
 
+**Prefer the eyes-closed test (2026-11-21).** The 2026-11-20 video said the click was 89 ms
+late; it was really about 200 ms early. Play Twinkle at 50% several times with the metronome
+on and your eyes closed, going only by the click, then take the median of every press minus
+its beat (real ms) from the attempt files. The right latency is the current setting plus
+that median. The videos below are kept for reference.
+
 How `SceneSetup.MetronomeOutputLatencyMs` was set for the Quest 3 (#16). Python 3 with
 numpy, and ffmpeg (set `FFMPEG_BIN` to its `bin` folder if it isn't the default path).
 
