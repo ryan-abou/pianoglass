@@ -197,6 +197,7 @@ namespace PianoGlass.Scoring
                 wrong.bar = Song.BarOf(pressSongTime);
                 ExtraCount++;
             }
+            wrong.hand = wrong.expectedNoteIndex >= 0 ? HandOf(wrong.expectedNoteIndex) : "";
             _wrong.Add(wrong);
             LastWrongNote = wrong;
             WrongNotePlayed?.Invoke(wrong);
@@ -247,6 +248,7 @@ namespace PianoGlass.Scoring
             };
             WrongPitchCount++;
             _run = 0;
+            wrong.hand = wrong.expectedNoteIndex >= 0 ? HandOf(wrong.expectedNoteIndex) : "";
             _wrong.Add(wrong);
             LastWrongNote = wrong;
             WrongNotePlayed?.Invoke(wrong);
@@ -303,8 +305,17 @@ namespace PianoGlass.Scoring
             if (tempo > 0 && tempo < LowestTempo) LowestTempo = tempo;
         }
 
+        /// <summary>The attempt file's name for a note's hand: "left", "right",
+        /// or empty when the song doesn't say or both hands share it.</summary>
+        private string HandOf(int noteIndex)
+        {
+            NoteHand h = Song.Notes[noteIndex].Hand;
+            return h == NoteHand.Left ? AttemptHands.Left : h == NoteHand.Right ? AttemptHands.Right : "";
+        }
+
         private void Record(JudgementResult r)
         {
+            r.hand = HandOf(r.noteIndex);
             _judged[r.noteIndex] = true;
             _results.Add(r);
             switch (r.judgement)

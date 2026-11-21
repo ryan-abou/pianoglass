@@ -27,6 +27,10 @@ namespace PianoGlass.Scoring
         public Judgement judgement;
         /// <summary>The judgement's name, so the file reads without a lookup table.</summary>
         public string rating;
+        /// <summary>The note's hand, "left" or "right"; empty when the song
+        /// doesn't say or both hands share it (#6). Empty in files from before
+        /// 2026-11-21.</summary>
+        public string hand = "";
 
         public bool IsHit => judgement != Judgement.Miss;
 
@@ -66,6 +70,9 @@ namespace PianoGlass.Scoring
         public int expectedNoteIndex = -1;
         /// <summary>Real ms from the due note, positive = late; 0 for an extra press.</summary>
         public double errorMs;
+        /// <summary>The due note's hand, "left" or "right"; empty for an extra
+        /// press, or when the song doesn't say (#6).</summary>
+        public string hand = "";
     }
 
     [Serializable]
