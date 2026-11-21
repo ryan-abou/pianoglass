@@ -77,8 +77,8 @@ and a finger only to about a centimetre.
 
 1. Put the controllers down for a moment and poke **Settings** on the glass panel at
    the left end of the keyboard. Poke **Calibrate**.
-2. Pick up the right controller. Touch the tip to the **front edge of the lowest
-   key** (A0, far left) and pull the trigger.
+2. Pick up the right controller. Touch the tip to the **middle of the front edge of the
+   lowest key** (A0, far left) and pull the trigger.
 3. Do the same on the **highest key** (C8, far right).
 4. The keys appear on your piano. If they are a little off, use the arrows under
    **Move the keys** in Settings (2 mm per poke). If a **Looks right** button lights
