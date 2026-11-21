@@ -2,7 +2,7 @@
 
 Mixed-reality piano trainer for **Meta Quest 3**. Notes fall onto the keys of a
 real 88-key piano seen through passthrough; a USB MIDI keyboard provides
-ground-truth input. Built by one student developer, ~7 hours a week.
+ground-truth input. Built by one student developer, ~14 hours a week.
 
 The product claim is **feedback, not price**: a video cannot tell you that you
 played D instead of D♯, or that bar 9 is where you keep falling apart. It also
@@ -110,7 +110,8 @@ Full text in `docs/traps.md`.
 
 ## Working agreements
 
-- **Pin the toolchain.** Twelve weeks is long enough that a Unity or SDK upgrade
+- **Pin the toolchain.** The project runs to about December 2026 (the twelve weeks
+  from 2026-09-07 were never a hard date), long enough that a Unity or SDK upgrade
   will cost more than it returns. Do not upgrade without a blocking reason.
 - **Branch before large changes** so `main` stays demonstrably working:
   `git checkout -b highway`.
@@ -206,19 +207,25 @@ Proven on device (Quest 2, and retested on the Quest 3 on 2026-11-13 unless note
 MIDI input, the key overlay, calibration (anchored in dev builds), the highway (grid,
 note names, outcome colours), scoring, latency compensation, results card, tempo,
 metronome, loops, auto-tempo, wait mode, memory fade, MIDI songs and the song picker.
+Batch G passed on the Quest 3 (round 8, 2026-11-21) and was merged into `main` the same
+day: the launch recenter (#17), Both hands (#11), hand menus and Settings (#5), keys
+fading in, wait mode chords, the metronome at 85 ms (#16) and the headset checklist panel.
 On branches: `return-settle` (holds `anchor-trio`), `press-probe`, `calib-bias-total`
 (all Quest 2 era, waiting on #3 Time-box the calibration drift work).
 
-Batch G (`docs/history.md`, top section) is tested on `batchG-test`, a merge of
-`dev-checklist-panel`, `batchG-launch-position` (#17), `both-hands` (#11), `hand-menus`
-(#5: hands instead of controllers, panels you pinch and move, Settings), `overlay-fade`,
-`wait-chords`, `metronome-retune` (#16) and `batchG-notes`. Round 8 is on the headset
-(checklist in `Milestones/2026-11-14-batchG/`); once it passes, merge them through PRs
-in that order. Still open: hand calibration needs about 8 mm of nudging (goal under 5,
-`docs/anchored-calibration-status.md`), and the metronome latency (85 ms) needs round
-8's eyes-closed check. Horizon OS v210 arrived 2026-11-19. From Quest 3 round 1, check
-where #15 Middle C fix undoes the calibration bias stands (branch `batchG-middlec-bias`),
-and 72 fps still needs reading on a release build.
+Decided after round 8 (`docs/history.md`, top section): the controller tip is the
+normal way to calibrate (1.3 mm); hand calibration stays as a backup, levelled. One
+hand press is only good to about 1 cm in height, and the error changes direction
+between sessions, so learning a bias can't fix it. No Quest 2 branch: `quest2` stays
+in the manifest, but nothing is tested or tuned for it. Liquid Glass polish waits for
+the first testers' comments and a release build frame rate reading.
+
+Batch H, in order, then round 9: `batchH-controller-setup`, `batchH-snap-glow`
+(the glass edge lights up instead of the snap bars), `batchH-hand-misses`
+(#6 Results card shows which hand missed), `batchH-readme` (#7 Write a README for
+judges, Ryan reads it before it is merged). Round 9 also checks a 20+ minute
+headset-off return (#3), 72 fps on a release build, and whether the stall after an
+attempt (#4) still shows in the log; #4 is fixed only if it does.
 
 After a test round, pull `files/logs/` from the headset first (dev builds save their
 log there; a headset restart wipes most of logcat). Set the metronome latency from
@@ -226,8 +233,9 @@ Ryan's eyes-closed test (Twinkle at 50%, eyes closed, playing only by the click;
 median press minus beat in real ms from the attempt files), not from phone videos. This
 is a deliberate test, not scores from normal play, so it fits the rule below.
 
-Next: the board's To do column, top to bottom. When Ryan says "do Batch X", follow
-"How a batch runs" in `docs/history.md`.
+Next: Batch H above, then the board's To do column, top to bottom. When Ryan says
+"do Batch X", follow "How a batch runs" in `docs/history.md`. Ask Ryan before
+creating any new issue.
 Rules that stay: the song clock is a `double` of seconds with a tempo multiplier, and note
 positions come from `(noteTime − songTime)`, never frame counts. Every attempt is written
 to JSON. Latency calibration is a system measurement, never the player's mean error.

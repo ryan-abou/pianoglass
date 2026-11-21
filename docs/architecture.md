@@ -6,7 +6,7 @@ Moved out of CLAUDE.md on 2026-11-07, word for word. Controls are in `docs/contr
 
 Mixed-reality piano trainer for **Meta Quest 3**. Notes fall onto the keys of a
 real 88-key piano seen through passthrough; a USB MIDI keyboard provides
-ground-truth input. Built by one student developer, ~7 hours a week.
+ground-truth input. Built by one student developer, ~14 hours a week.
 
 The product claim is **feedback, not price**: a video cannot tell you that you
 played D instead of D♯, or that bar 9 is where you keep falling apart. That is
