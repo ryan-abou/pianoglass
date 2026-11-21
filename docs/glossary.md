@@ -49,3 +49,4 @@ project. Add a word the first time it comes up.
 - **test**: a small piece of code that checks another piece of code gives the right answer. PianoGlass example: 727 tests check things like the scoring and calibration maths without opening the headset.
 - **tick**: the small step of time a MIDI file counts in, a slice of one beat. PianoGlass example: the Minuet file uses 480 ticks per beat.
 - **track**: one strand of a MIDI file, usually one staff of the sheet music. PianoGlass example: the Minuet file has a "Right Hand" track and a "Left Hand" track.
+- **worktree**: a second folder holding another branch of the same repo, so two branches can be worked on at once. PianoGlass example: the controller fix was written in `wt-controller` while Unity ran tests on the stall fix in the main folder.
