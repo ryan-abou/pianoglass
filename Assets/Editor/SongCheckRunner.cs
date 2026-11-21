@@ -346,6 +346,24 @@ namespace PianoGlass.EditorTools
             if (!Check(Logged("3/4 at 120 BPM"), "5 minuet", "the grid never drew 3/4")) yield break;
             Ok("5 minuet: 3 beats a bar, 32 bars, 100% over 75 notes");
 
+            // 5b. Both hands (#11): every note of the Minuet is yours.
+            _card.PressSongsForCheck();
+            yield return WaitFor(() => _picker.IsShowing, "5b both", "the picker to open from Songs");
+            if (_failed != null) yield break;
+            _picker.PressHandForCheck(PracticeHand.Both);
+            if (!Check(_picker.PressSongForCheck("Minuet"), "5b both", "no Minuet row")) yield break;
+            yield return null;
+            if (!Check(_current.Hand == PracticeHand.Both, "5b both", $"hand is {_current.Hand}")) yield break;
+            yield return PlayThrough("5b both");
+            if (_failed != null) yield break;
+            if (!Check(_score.Session.ScorableCount == 204, "5b both", $"{_score.Session.ScorableCount} notes, not 204")) yield break;
+            yield return WaitFor(() => _card.IsShowing, "5b both", "the results card");
+            if (_failed != null) yield break;
+            if (!Check(_card.Last.AccuracyText == "100%", "5b both", $"results card says {_card.Last.AccuracyText}")) yield break;
+            if (!Check(File.ReadAllText(_score.LastSavedPath).Contains("\"hand\": \"both\""), "5b both",
+                       "attempt file doesn't say both")) yield break;
+            Ok("5b both: 100% over all 204 notes, attempt file says both");
+
             // 6. Own files.
             _card.PressSongsForCheck();
             yield return WaitFor(() => _picker.IsShowing, "6 own files", "the picker");
@@ -392,9 +410,9 @@ namespace PianoGlass.EditorTools
         private IEnumerator Restored()
         {
             yield return null;
-            if (!Check(_current.Song.Title.Contains("Minuet") && _current.Hand == PracticeHand.Left, "7 restored",
+            if (!Check(_current.Song.Title.Contains("Minuet") && _current.Hand == PracticeHand.Both, "7 restored",
                        $"came back as '{_current.Song.Title}' {_current.Hand}")) yield break;
-            Ok("7 restored: the Minuet, left hand");
+            Ok("7 restored: the Minuet, both hands");
             Debug.Log("[SongCheck] PASS");
             SessionState.SetInt(StageKey, 3);
             EditorApplication.ExitPlaymode();

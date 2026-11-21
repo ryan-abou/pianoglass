@@ -54,6 +54,17 @@ namespace PianoGlass.Tests.EditMode
         }
 
         [Test]
+        public void WithBothAChordSplitAcrossHandsWaitsForEveryKey()
+        {
+            ScoringSession s = Wait(SplitChord(), PracticeHand.Both);
+            CollectionAssert.AreEquivalent(new[] { G4, C4 }, s.WaitingPitches());
+            s.OnNoteOn(G4, 0.0, 1.0);
+            Assert.AreEqual(0.0, s.NextDueTime, 1e-9, "still holding for the left hand's C4");
+            s.OnNoteOn(C4, 0.0, 1.0);
+            Assert.AreEqual(0.5, s.NextDueTime, 1e-9, "then the left hand's E4");
+        }
+
+        [Test]
         public void ASharedNoteIsOnePressInWaitMode()
         {
             var song = new SongData("shared", 120f, new[]
