@@ -2,6 +2,48 @@
 
 Batch plans, round results and the state of the project as CLAUDE.md said it, moved out word for word on 2026-11-07. Calibration rounds are in `docs/calibration-rounds.md`.
 
+## Batch G big rounds on the Quest 3 (2026-11-14 to 2026-11-21): waiting on round 8
+
+All tested together on `batchG-test` (a merge of the branches below, never merged
+itself). Milestones: `Milestones/2026-11-14-batchG/` (APKs, checklists, logs, videos,
+one folder per round). Merge through PRs once round 8 passes, in this order:
+`dev-checklist-panel`, `batchG-launch-position` (Closes #17), `both-hands` (Closes #11),
+`hand-menus` (Closes #5), `overlay-fade`, `wait-chords`, `metronome-retune` (#16),
+`batchG-notes` (these notes).
+
+- `dev-checklist-panel`: the headset checklist panel and recording mode, and since
+  2026-11-20 every dev build log also saved to `files/logs/` on the headset (an OS
+  update restart shrank logcat and lost round 6's log).
+- `batchG-launch-position`: ask the player to recenter at launch until the keys line
+  up (#17). Its pass marks aren't in the saved logs: confirm it before merging.
+- `both-hands`: Both in the song picker, each hand's notes in its own colour (#11).
+  Wait chords with Both passed in round 5; confirm the rest before merging.
+- `hand-menus` (#5): no controllers needed. Fingertip poke on Liquid Glass buttons,
+  the song panel and Settings, hand calibration by pressing A0 and C8, pinching
+  panels to move and tilt them. Round 7 (2026-11-21) passed: holding by the gap
+  between thumb and index tips (the Quest's own pinch signal blinked off and dropped
+  panels), following the wrist, putting the panel back where it was as the fingers
+  opened, moving panels with the controller ray and trigger, Settings keeping its
+  spot. After round 7: the let-go rewind went from 0.3 s to 0.15 s (it jumped back up
+  to 166 mm), and the snap bars were made brighter. Snapping needs 2.5 degrees now.
+- `overlay-fade`: keys fade in as their note comes, bigger note names. Passed in round 5.
+- `wait-chords`: wait mode chords need every key down together. Passed in round 5.
+- `metronome-retune`: see below.
+
+Hand calibration: holding the key worked (the fingertip stays within 4-6 mm over the
+quarter second it is read), but each calibration still needs about 8 mm of nudging,
+mostly up and down (round 7: +7.7 mm up). Round 5 needed 6-17 mm. The learned offset is
+now the average of the last 4. Not yet under the 5 mm goal; the open question for Ryan
+is making the controller tip the normal way to set up, and trying an 8-touch version.
+
+Metronome (#16): the right latency keeps moving. 240 ms (2026-11-14 videos), 190
+(2026-11-15 video), then a 2026-11-20 video said the click was 89 ms late and it was set
+to 280. That was wrong the other way: on 2026-11-21 Ryan played Twinkle at 50% five
+times with his eyes closed, going only by the click, and pressed 197 ms before the beat
+(134 presses, sd 39), so it is now 85. Use that eyes-closed test from now on, not phone
+videos. Horizon OS v210 arrived in between (2026-11-19); its log shows a new spatial
+audio step for apps.
+
 ## Metronome on the Quest 3 (#16, `batchG-metronome-q3`, 2026-11-14): passed
 
 Two fixes. The schedule only looked 300 ms ahead, so once the latency was over 300
