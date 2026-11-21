@@ -13,8 +13,9 @@ namespace PianoGlass.UI
     /// </summary>
     public static class SnapGlow
     {
-        /// <summary>How bright a snapped edge stays, and its flash on snapping.</summary>
-        public const float Settled = 0.45f, Flash = 1f;
+        /// <summary>How bright a snapped edge stays, and its flash on snapping.
+        /// Round 9 (2026-11-21): 0.45 and 1 were "barely visible".</summary>
+        public const float Settled = 1f, Flash = 1.8f;
         /// <summary>Seconds for the flash to settle, and to fade out.</summary>
         public const float FlashSeconds = 0.35f, FadeOutSeconds = 0.15f;
         /// <summary>Panel units (mm): a glass edge this close to the panel's

@@ -181,13 +181,16 @@ Shader "PianoGlass/LiquidGlass"
                 half chroma = lens * lower * lower * _ChromaStrength;
                 half3 fringe = Spectrum(p.x / max(halfSize.x, 1e-4) * 0.5 + 0.5) * chroma;
 
-                // Snap glow: a cool light in the edge on the sides that snapped,
-                // a little wider than the bevel, brightest in the hairline.
+                // Snap glow: a cyan light in the edge on the sides that snapped,
+                // about three bevels wide, brightest in the hairline. Round 9
+                // (2026-11-21): a pale 14 mm band was "barely visible" over
+                // passthrough, so it is wider, stronger, coloured, and dims the
+                // room behind it a little so it stands out.
                 // Corners take a share of both sides they join.
                 half4 sides = half4(saturate(-n.x), saturate(n.x), saturate(-n.y), saturate(n.y));
                 half glowAmount = dot(_EdgeGlow, sides);
-                half band = saturate(1.0 - inward / max(_BevelWidth * 1.6, aa));
-                half glow = glowAmount * (band * band * 0.6 + hair * 0.7);
+                half band = saturate(1.0 - inward / max(_BevelWidth * 3.0, aa));
+                half glow = glowAmount * (band * band * 1.1 + hair * 1.5);
                 // Body: premultiplied tint, lighter towards the top.
                 half a = _Tint.a;
                 half3 body = (_Tint.rgb + _TopGlow * y01) * a;
@@ -196,8 +199,8 @@ Shader "PianoGlass/LiquidGlass"
                 half3 light3 = (bevel + sheen + fresnel) * half3(1, 1, 1)
                              + _HairlineColor.rgb * (hair * _HairlineColor.a)
                              + fringe
-                             + glow * half3(0.80, 0.93, 1.0);
-                half alpha = saturate(a + hair * _HairlineColor.a * 0.5 + bevel * 0.25 + glow * 0.2);
+                             + glow * half3(0.45, 0.85, 1.0);
+                half alpha = saturate(a + hair * _HairlineColor.a * 0.5 + bevel * 0.25 + glow * 0.45);
 
                 return half4((body + light3) * coverage, alpha * coverage) * _Fade;
             }
