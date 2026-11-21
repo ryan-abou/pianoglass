@@ -98,12 +98,12 @@ namespace PianoGlass.Highway
         [SerializeField] private Color labelColor = new Color(0.04f, 0.07f, 0.12f, 0.92f);
         [Tooltip("TMP font size; auto-sized down from this only where a name is " +
                  "wider than its slab (two-character names on black keys).")]
-        [SerializeField] private float labelFontSize = 0.11f;
+        [SerializeField] private float labelFontSize = 0.18f;
         [Tooltip("Metres of wall the label takes up, along the wall.")]
-        [SerializeField] private float labelHeight = 0.011f;
+        [SerializeField] private float labelHeight = 0.018f;
         [Tooltip("Clear wall above and below the label; a slab shorter than " +
                  "labelHeight + 2 x this shows no name.")]
-        [SerializeField] private float labelPadding = 0.003f;
+        [SerializeField] private float labelPadding = 0.002f;
 
         [Header("Highway")]
         [Tooltip("Seconds of warning before a note is due -- how far up the wall it spawns.")]
@@ -473,7 +473,8 @@ namespace PianoGlass.Highway
                 }
 
                 Color color = mine
-                    ? OutcomeTint.FadedSlab(handColor, _outcome[index], now - _judgedAt[index],
+                    ? OutcomeTint.FadedSlab(_hand == PracticeHand.Both ? current.Palette.SolidColor(_hand, note.Hand) : handColor,
+                                            _outcome[index], now - _judgedAt[index],
                                             OutcomeTint.Hit, OutcomeTint.Missed, opacity)
                     : current.Palette.OutlineColor(note.Hand);
                 if (color != slab.Applied) SetSlabColor(slab, color);

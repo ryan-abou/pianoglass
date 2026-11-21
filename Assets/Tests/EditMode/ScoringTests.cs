@@ -81,9 +81,21 @@ namespace PianoGlass.Tests.EditMode
             Assert.AreEqual(4, s.ScorableCount);
         }
 
+        [Test]
+        public void BothScoresEveryNoteOfEitherHand()
+        {
+            var s = new ScoringSession(TwoHands(), TimingWindows.Default, hand: PracticeHand.Both);
+            Assert.AreEqual(4, s.ScorableCount);
+            s.OnNoteOn(72, 0.0, 1.0);
+            s.OnNoteOn(48, 0.0, 1.0);
+            Assert.AreEqual(2, s.NotesHit, "a left-hand and a right-hand note together");
+            Assert.AreEqual(0, s.WrongPitchCount);
+        }
+
         [TestCase(PracticeHand.Left, "left")]
         [TestCase(PracticeHand.Right, "right")]
         [TestCase(PracticeHand.All, "both")]
+        [TestCase(PracticeHand.Both, "both")]
         public void TheAttemptRecordsItsHand(PracticeHand hand, string expected)
         {
             var s = new ScoringSession(TwoHands(), TimingWindows.Default, hand: hand);

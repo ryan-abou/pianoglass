@@ -58,6 +58,33 @@ namespace PianoGlass.Tests.EditMode
         }
 
         [Test]
+        public void AKeyFadesInAsItsNoteComes()
+        {
+            Assert.AreEqual(0f, ActiveNoteSelector.FadeIn(0.5, 0.5f), 1e-6f, "just in the window: not lit yet");
+            Assert.AreEqual(0.5f, ActiveNoteSelector.FadeIn(0.25, 0.5f), 1e-6f);
+            Assert.AreEqual(0.96f, ActiveNoteSelector.FadeIn(0.02, 0.5f), 1e-6f, "20 ms away: nearly full");
+            Assert.AreEqual(1f, ActiveNoteSelector.FadeIn(0.0, 0.5f), 1e-6f, "due: full");
+            Assert.AreEqual(1f, ActiveNoteSelector.FadeIn(0.3, 0f), 1e-6f, "no window: full");
+        }
+
+        [Test]
+        public void CollectDueSoonKeepsTheSoonestNotePerPitch()
+        {
+            var notes = new List<SongNote>
+            {
+                new SongNote(pitch: 60, startTime: 1.0, duration: 0.1),
+                new SongNote(pitch: 60, startTime: 0.8, duration: 0.1),
+                new SongNote(pitch: 62, startTime: 3.0, duration: 0.1),
+            };
+            var due = new Dictionary<int, double> { { 99, 0.0 } };
+
+            ActiveNoteSelector.CollectDueSoon(notes, songTime: 0.6, lookaheadSeconds: 0.5f, due);
+
+            Assert.AreEqual(1, due.Count, "cleared first, far notes left out");
+            Assert.AreEqual(0.2, due[60], 1e-9);
+        }
+
+        [Test]
         public void CollectDueSoonPitchesReturnsOnlyPitchesWithANoteInTheWindow()
         {
             var notes = new List<SongNote>

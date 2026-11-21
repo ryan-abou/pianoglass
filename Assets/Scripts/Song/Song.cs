@@ -14,8 +14,11 @@ namespace PianoGlass.Song
         Shared,
     }
 
-    /// <summary>What the player chose to practice.</summary>
-    public enum PracticeHand { Left, Right, All }
+    /// <summary>What the player chose to practice. All is every note of a song
+    /// whose hands are unknown, in one neutral colour; Both is every note of a
+    /// song whose hands are known, each in its own hand's colour (#11). Saved
+    /// by name, so new values go at the end.</summary>
+    public enum PracticeHand { Left, Right, All, Both }
 
     /// <summary>One note: which key, when it starts, how long it's held. Seconds
     /// throughout -- SongClock is what those seconds are measured against.</summary>
@@ -40,7 +43,8 @@ namespace PianoGlass.Song
         /// hand. A note with no hand is everyone's.</summary>
         public bool BelongsTo(PracticeHand practice)
         {
-            if (practice == PracticeHand.All || Hand == NoteHand.None || Hand == NoteHand.Shared) return true;
+            if (practice == PracticeHand.All || practice == PracticeHand.Both ||
+                Hand == NoteHand.None || Hand == NoteHand.Shared) return true;
             return practice == PracticeHand.Left ? Hand == NoteHand.Left : Hand == NoteHand.Right;
         }
     }

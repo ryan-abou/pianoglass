@@ -1459,9 +1459,9 @@ MonoBehaviour:
   labelFont: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   labelMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   labelColor: {r: 0.04, g: 0.07, b: 0.12, a: 0.92}
-  labelFontSize: 0.11
-  labelHeight: 0.011
-  labelPadding: 0.003
+  labelFontSize: 0.18
+  labelHeight: 0.018
+  labelPadding: 0.002
   leadTimeSeconds: 3
   highwayHeight: 0.5
   depthOffset: 0.005
@@ -1543,7 +1543,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PianoGlass.Transport.Metronome
   clock: {fileID: 1285217052}
   current: {fileID: 1643479668}
-  outputLatencyMs: 240
+  outputLatencyMs: 85
   lookaheadSeconds: 0.3
   volume: 0.6
   accentVolume: 0.9
@@ -2785,8 +2785,9 @@ MonoBehaviour:
   slabThickness: 0.004
   surfaceOffset: 0.001
   displayMode: 2
-  translucentAlpha: 0.25
-  activeKeysAlpha: 0.55
+  fullOverlayAlpha: 0.55
+  translucentAlpha: 0.15
+  activeKeysAlpha: 0.35
   activeKeyLookaheadSeconds: 0.5
   edgeMarkerDepthFraction: 0.2
 --- !u!114 &2007997131

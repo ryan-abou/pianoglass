@@ -57,7 +57,7 @@ namespace PianoGlass.UI
         private bool _built, _wantOpen = true, _shown;
         private Color _primary, _secondary;
         private readonly RowView[] _rows = new RowView[SongLibrary.RowsPerPage];
-        private GlassButton _leftHand, _rightHand, _previous, _next;
+        private GlassButton _leftHand, _rightHand, _bothHands, _previous, _next;
         private TextMeshProUGUI _pageText;
         private PracticeHand _hand = PracticeHand.Right;
         private int _page;
@@ -190,6 +190,7 @@ namespace PianoGlass.UI
             NotePalette palette = current.Palette;
             _leftHand.SetFill(_hand == PracticeHand.Left ? Selected(palette.leftHand) : ButtonFill);
             _rightHand.SetFill(_hand == PracticeHand.Right ? Selected(palette.rightHand) : ButtonFill);
+            _bothHands.SetFill(_hand == PracticeHand.Both ? Selected(palette.allNotes) : ButtonFill);
         }
 
         private static Color Selected(Color hand) => new Color(hand.r, hand.g, hand.b, 0.62f);
@@ -231,11 +232,17 @@ namespace PianoGlass.UI
             Text(root, "Title", 26f, _primary, TextAlignmentOptions.TopLeft, new Vector2(Left, HeaderY + 17f), 200f, true)
                 .text = "Songs";
 
-            const float switchWidth = 92f;
-            _leftHand = Pill(root, "Left", new Vector2(Inner * 0.5f - switchWidth * 1.5f - 6f, HeaderY),
-                             new Vector2(switchWidth, PillHeight), "Left", () => OnHand(PracticeHand.Left));
-            _rightHand = Pill(root, "Right", new Vector2(Inner * 0.5f - switchWidth * 0.5f, HeaderY),
+            // Left | Right | Both, right-aligned (#11 added Both).
+            const float switchWidth = 92f, switchGap = 6f;
+            float x = Inner * 0.5f - switchWidth * 0.5f;
+            _bothHands = Pill(root, "Both", new Vector2(x, HeaderY),
+                              new Vector2(switchWidth, PillHeight), "Both", () => OnHand(PracticeHand.Both));
+            x -= switchWidth + switchGap;
+            _rightHand = Pill(root, "Right", new Vector2(x, HeaderY),
                               new Vector2(switchWidth, PillHeight), "Right", () => OnHand(PracticeHand.Right));
+            x -= switchWidth + switchGap;
+            _leftHand = Pill(root, "Left", new Vector2(x, HeaderY),
+                             new Vector2(switchWidth, PillHeight), "Left", () => OnHand(PracticeHand.Left));
 
             for (int i = 0; i < _rows.Length; i++) _rows[i] = BuildRow(root, i);
 
@@ -331,7 +338,8 @@ namespace PianoGlass.UI
             return list;
         }
 
-        public void PressHandForCheck(PracticeHand hand) => (hand == PracticeHand.Left ? _leftHand : _rightHand).Press();
+        public void PressHandForCheck(PracticeHand hand) =>
+            (hand == PracticeHand.Left ? _leftHand : hand == PracticeHand.Both ? _bothHands : _rightHand).Press();
 
         /// <summary>Goes to the song's page and presses its row. False if
         /// there is no such song or it can't be pressed.</summary>

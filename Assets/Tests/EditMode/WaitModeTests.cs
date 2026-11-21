@@ -54,6 +54,17 @@ namespace PianoGlass.Tests.EditMode
         }
 
         [Test]
+        public void WithBothAChordSplitAcrossHandsWaitsForEveryKey()
+        {
+            ScoringSession s = Wait(SplitChord(), PracticeHand.Both);
+            CollectionAssert.AreEquivalent(new[] { G4, C4 }, s.WaitingPitches());
+            s.OnNoteOn(G4, 0.0, 1.0);
+            Assert.AreEqual(0.0, s.NextDueTime, 1e-9, "still holding for the left hand's C4");
+            s.OnNoteOn(C4, 0.0, 1.0);
+            Assert.AreEqual(0.5, s.NextDueTime, 1e-9, "then the left hand's E4");
+        }
+
+        [Test]
         public void ASharedNoteIsOnePressInWaitMode()
         {
             var song = new SongData("shared", 120f, new[]
@@ -137,6 +148,84 @@ namespace PianoGlass.Tests.EditMode
             s.OnNoteOn(E4, 0.0, 1.0);
             Assert.AreEqual(0.5, s.NextDueTime, 1e-9, "chord done");
             CollectionAssert.AreEqual(new[] { D4 }, s.WaitingPitches());
+        }
+
+        [Test]
+        public void AChordPlayedOneKeyAtATimeDoesNotMoveOn()
+        {
+            var held = new HashSet<int>();
+            ScoringSession s = Wait(WithChord());
+            s.IsHeld = held.Contains;
+
+            // Each key pressed and let go before the next.
+            foreach (int pitch in new[] { C4, E4, G4 })
+            {
+                held.Add(pitch);
+                s.OnNoteOn(pitch, 0.0, 1.0);
+                held.Remove(pitch);
+            }
+            Assert.AreEqual(0.0, s.NextDueTime, 1e-9, "never all down together");
+            Assert.AreEqual(0, s.Correct);
+            Assert.AreEqual(0, s.WrongPitchCount, "the chord's own keys are not wrong");
+            CollectionAssert.AreEquivalent(new[] { C4, E4, G4 }, s.WaitingPitches());
+        }
+
+        [Test]
+        public void AChordHeldDownTogetherMovesOn()
+        {
+            var held = new HashSet<int>();
+            ScoringSession s = Wait(WithChord());
+            s.IsHeld = held.Contains;
+
+            held.Add(G4);
+            s.OnNoteOn(G4, 0.0, 1.0);
+            held.Add(C4);
+            s.OnNoteOn(C4, 0.0, 1.0);
+            CollectionAssert.AreEquivalent(new[] { E4 }, s.WaitingPitches(), "the two held are not waited for");
+            held.Add(E4);
+            s.OnNoteOn(E4, 0.0, 1.0);
+
+            Assert.AreEqual(0.5, s.NextDueTime, 1e-9);
+            Assert.AreEqual(3, s.Correct);
+        }
+
+        [Test]
+        public void LettingGoOfAChordKeyMeansPressingItAgain()
+        {
+            var held = new HashSet<int>();
+            ScoringSession s = Wait(WithChord());
+            s.IsHeld = held.Contains;
+
+            held.Add(C4); s.OnNoteOn(C4, 0.0, 1.0);
+            held.Add(E4); s.OnNoteOn(E4, 0.0, 1.0);
+            held.Remove(C4);
+            held.Add(G4); s.OnNoteOn(G4, 0.0, 1.0);
+            Assert.AreEqual(0.0, s.NextDueTime, 1e-9, "C let go before G came");
+
+            held.Add(C4); s.OnNoteOn(C4, 0.0, 1.0);
+            Assert.AreEqual(0.5, s.NextDueTime, 1e-9, "all three down now");
+        }
+
+        [Test]
+        public void AKeyHeldOverFromTheLastChordHasToBePressedAgain()
+        {
+            var held = new HashSet<int>();
+            var song = new SongData("again", 120f, new[]
+            {
+                new SongNote(C4, 0.0, 0.5), new SongNote(E4, 0.0, 0.5),
+                new SongNote(C4, 0.5, 0.5), new SongNote(G4, 0.5, 0.5),
+            });
+            ScoringSession s = Wait(song);
+            s.IsHeld = held.Contains;
+
+            held.Add(C4); s.OnNoteOn(C4, 0.0, 1.0);
+            held.Add(E4); s.OnNoteOn(E4, 0.0, 1.0);
+            Assert.AreEqual(0.5, s.NextDueTime, 1e-9);
+
+            held.Add(G4); s.OnNoteOn(G4, 0.5, 1.0);
+            Assert.AreEqual(0.5, s.NextDueTime, 1e-9, "C is still down from before, but not pressed for this chord");
+            s.OnNoteOn(C4, 0.5, 1.0);
+            Assert.AreEqual(double.PositiveInfinity, s.NextDueTime);
         }
 
         [Test]
