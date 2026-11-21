@@ -34,5 +34,14 @@ numpy, and ffmpeg (set `FFMPEG_BIN` to its `bin` folder if it isn't the default 
    The right latency is the current setting plus the median. A steady video gives a
    spread of under 10 ms; two videos from the same day agreed within 10 ms.
 
+If the phone was held by hand or moved between angles, use `beatfit.py` instead (same
+arguments; try 0.6 0.6 for before and after). It measures each line's distance from
+the key line in the same frame, so the phone moving doesn't count, and it decodes only
+the frames around each click. Pick a column for each angle and run it once per angle.
+
+Always clap a few times at the end, in view. The phone's own sound can lag its picture:
+on 2026-11-20 it was 75 ms behind (the hands stop moving 75 ms before the clap sound),
+and on 2026-11-15 it was within a frame. Take that lag off the result.
+
 Reading contact sheets by eye with only 3 beats was too coarse (it said 310, then
 200); this way said 238 and 248 for the same headset (2026-11-14).
