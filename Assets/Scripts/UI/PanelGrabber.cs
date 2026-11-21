@@ -396,7 +396,7 @@ namespace PianoGlass.UI
             {
                 at = then;
                 back = $"; put back {Vector3.Distance(then.position, panel.Current.position) * 1000f:0} mm to where it " +
-                       $"was {Time.realtimeSinceStartupAsDouble - s.Hold.ClosedAt:0.00} s before";
+                       $"was {System.Math.Min(Time.realtimeSinceStartupAsDouble - s.Hold.ClosedAt, PoseTrail.RewindAtMost):0.00} s before";
             }
             string lost = s.Losses > 0 ? $"; hand tracking dropped out {s.Losses} time(s), held still each time" : "";
             Debug.Log($"[Panels] let go of '{panel.name}' after {Time.realtimeSinceStartup - s.HeldSince:0.0} s: {why}{back}{lost}");

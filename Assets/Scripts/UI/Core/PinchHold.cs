@@ -25,8 +25,10 @@ namespace PianoGlass.UI
         /// <summary>Metres: never let go with the tips closer than this.</summary>
         public const float OpenAtLeast = 0.03f;
         public const float OpenSeconds = 0.05f;
-        /// <summary>Metres: within this of the tightest, the fingers are still together.</summary>
-        public const float TogetherWithin = 0.008f;
+        /// <summary>Metres: within this of the tightest, the fingers are still
+        /// together. 8 mm was too tight: a held pinch drifts that far, so letting
+        /// go rewound past where the panel was (2026-11-21, up to 166 mm).</summary>
+        public const float TogetherWithin = 0.012f;
         public const float LostSeconds = 1f;
 
         public enum Step { Hold, Lost, End }
