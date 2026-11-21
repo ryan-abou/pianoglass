@@ -119,7 +119,16 @@ namespace PianoGlass.Scoring
             if (current == null) current = FindAnyObjectByType<CurrentSong>();
             _song = current != null ? current.Song : null;
             PrepareClockFormatting();
+            Archive.StartLoading(AttemptsDirectory, a => Debug.Log(
+                a.LoadError != null
+                    ? $"[Score] earlier attempts: read stopped after {a.Count}: {a.LoadError}"
+                    : $"[Score] earlier attempts: {a.Count} read in {a.LoadMilliseconds} ms off the main thread" +
+                      (a.Unreadable > 0 ? $", {a.Unreadable} unreadable" : "")));
         }
+
+        /// <summary>Every saved attempt's header, for comparing with earlier
+        /// attempts without reading files when the card opens (#4).</summary>
+        public AttemptArchive Archive { get; } = new AttemptArchive();
 
         /// <summary>The first local time on the headset took about 380 ms
         /// (measured 2026-11-05), which froze the first press of play when
@@ -383,6 +392,7 @@ namespace PianoGlass.Scoring
                 Directory.CreateDirectory(Path.GetDirectoryName(_path));
                 File.WriteAllText(_path, JsonUtility.ToJson(rec, true));
                 LastSavedPath = _path;
+                Archive.Put(_path, rec);
             }
             catch (Exception e)
             {
