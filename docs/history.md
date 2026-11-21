@@ -2,6 +2,37 @@
 
 Batch plans, round results and the state of the project as CLAUDE.md said it, moved out word for word on 2026-11-07. Calibration rounds are in `docs/calibration-rounds.md`.
 
+## Batch H on the Quest 3 (2026-11-21): waiting on round 9
+
+All tested together on `batchH-test` (never merged itself). Milestones:
+`Milestones/2026-11-21-batchH/`. Merge through PRs once round 9 passes, in this order:
+`batchH-controller-setup`, `batchH-snap-glow`, `batchH-hand-misses` (Closes #6),
+`batchH-readme` (Closes #7, only after Ryan has read it), `batchH-notes`.
+
+- `batchH-controller-setup`: a hand calibration puts both ends at their average height
+  (`HandSpan.KeepLevel`; round 8's touches would have come out level instead of 14 mm
+  tilted). Settings says "Calibrate", and the prompts ask for the right controller's
+  tip first, with a finger press as the backup. The Middle C fix is controller only.
+- `batchH-snap-glow`: no more bars. A held panel's own glass edges glow where it
+  snapped (`_EdgeGlow` in `LiquidGlass.shader`, `SnapGlow` for which edges and how
+  bright): a flash, then a soft glow, fading out when the snap or the panel is let go.
+  Only the outer Panel glass glows, and only its outside edges.
+- `batchH-hand-misses` (#6): every judged note and wrong note in the attempt file says
+  its hand. A both-hands attempt shows "left hand" and "right hand" accuracy in place of
+  the best streak, and when one hand is under 75%, at least 15 points behind the other
+  and has 3 or more mistakes, the suggestion is "Left hand: 10 of 11 mistakes" with a
+  "Left hand alone" button, ahead of any weak bar. Preview pictures in the milestone
+  folder.
+- `batchH-readme` (#7): the README rewritten for judges: what it is and why, using
+  Ryan's headset or installing on their own Quest 3 (developer mode needs a verified
+  Meta developer account, 18 or older), calibrating, playing, and fixes.
+
+#4 Fix the stall after an attempt ends, from round 8's logcat (a development build):
+about 2 s after every one of the 4 results cards, one hitch of 11-14 stale frames in a
+row (150-190 ms), the frame rate 58-62 for that second. Worse than #4's 4-6 frames.
+Round 9's release build decides whether it is fixed. Not yet known why; the card reads
+all 101 attempt files when it opens, but the hitch comes 2 s later.
+
 ## Round 8 and what comes next (2026-11-21)
 
 Round 8 (Batch G's last round): 4 of 5 passed. The metronome at 85 ms felt on the beat
