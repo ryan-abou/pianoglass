@@ -226,12 +226,16 @@ between sessions, so learning a bias can't fix it. No Quest 2 branch: `quest2` s
 in the manifest, but nothing is tested or tuned for it. Liquid Glass polish waits for
 the first testers' comments and a release build frame rate reading.
 
-Waiting on round 10: `batchH-controller-setup` (the controller bias no longer keeps
-sideways noise), `batchH-snap-glow` (brighter), `batchH-attempt-cache` (#4 Fix the
-stall after an attempt ends, still there in round 9), and a release build frame rate
-reading. `batchH-readme` (#7 Write a README for judges) waits for Ryan to read it.
-Ryan wants a full visual overhaul for the Quest 3 later (the UI was made for the
-Quest 2's budget): plan it after round 10, not piecemeal before.
+Round 10 (2026-11-21) passed and was merged: the controller bias no longer keeps
+sideways noise (about 4 mm of nudging), a brighter snap glow, and no stall when the
+results card opens (#4, closed). `batchH-readme` (#7 Write a README for judges) waits
+for Ryan to read it.
+
+Next, in order: Batch I, ready for testers (anchored calibration in release builds,
+Midnight in Mondstadt out of the APK, the first GitHub release, a release build frame
+rate reading); then sessions with the first testers; then a full visual overhaul for
+the Quest 3 (the UI was made for the Quest 2's budget), with preview pictures Ryan
+approves before anything goes on the headset, and #10 Note color themes inside it.
 
 After a test round, pull `files/logs/` from the headset first (dev builds save their
 log there; a headset restart wipes most of logcat). Set the metronome latency from

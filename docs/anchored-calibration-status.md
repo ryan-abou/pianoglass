@@ -25,7 +25,8 @@ anything not yet tried on the headset is marked **PENDING DEVICE TEST**.
   round 4's +10.2 mm sideways, and Ryan nudged about 9 mm back. Every controller bias
   so far: toward the player 11.8 to 14.4 mm, sideways -4.7 to +10.2 mm. Now the
   sideways part is never learned and the rest is averaged over the last 4
-  calibrations (`AnchoredCalibrationSession.ControllerBiasMm`). Retest in round 10.
+  calibrations (`AnchoredCalibrationSession.ControllerBiasMm`). Round 10 passed:
+  about 4 mm of nudging, then about 6 mm on a second calibration.
 - Hand calibration: levelled as planned (10.7 mm of tilt taken out), still about
   9 mm off afterwards. That is the backup's known limit, so it stays.
 
