@@ -92,6 +92,33 @@ namespace PianoGlass.Tests.EditMode
             Assert.AreEqual(0, s.WrongPitchCount);
         }
 
+        [Test]
+        public void EachNoteAndWrongNoteKeepsItsHand()
+        {
+            var s = new ScoringSession(TwoHands(), TimingWindows.Default, hand: PracticeHand.Both);
+            s.OnNoteOn(72, 0.0, 1.0);   // right, hit
+            s.OnNoteOn(49, 2.0, 1.0);   // C#3 instead of the left hand's D3
+            s.OnNoteOn(90, 5.0, 1.0);   // nothing due: extra
+            s.Advance(10.0, 1.0);       // the rest missed
+            AttemptRecord rec = s.ToRecord(AttemptRecord.Completed, "a", "b", 1.0, 0.0);
+            var hands = new Dictionary<int, string>();
+            foreach (JudgementResult r in rec.notes) hands[r.pitch] = r.hand;
+            Assert.AreEqual("right", hands[72]);
+            Assert.AreEqual("left", hands[48]);
+            Assert.AreEqual("right", hands[74]);
+            Assert.AreEqual("left", hands[50]);
+            Assert.AreEqual("left", rec.wrongNotes[0].hand, "the wrong pitch counts against the hand it was due for");
+            Assert.AreEqual("", rec.wrongNotes[1].hand, "an extra press has no hand");
+        }
+
+        [Test]
+        public void ASongWithoutHandsLeavesThemEmpty()
+        {
+            var s = new ScoringSession(SongData.TwinkleTwinkleLittleStar(), TimingWindows.Default);
+            s.Advance(100.0, 1.0);
+            foreach (JudgementResult r in s.Results) Assert.AreEqual("", r.hand);
+        }
+
         [TestCase(PracticeHand.Left, "left")]
         [TestCase(PracticeHand.Right, "right")]
         [TestCase(PracticeHand.All, "both")]

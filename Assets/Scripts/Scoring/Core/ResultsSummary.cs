@@ -33,6 +33,13 @@ namespace PianoGlass.Scoring
         public int BestStreak { get; private set; }
         public string StreakText { get; private set; }
 
+        /// <summary>Left, then right, for a both-hands attempt of a song whose
+        /// hands are known; null otherwise (#6).</summary>
+        public HandResult[] Hands { get; private set; }
+        /// <summary>"82%" for each of <see cref="Hands"/>; null without them.</summary>
+        public string LeftHandText { get; private set; }
+        public string RightHandText { get; private set; }
+
         public IReadOnlyList<BarGroup> Groups { get; private set; }
         public Suggestion Suggestion { get; private set; }
 
@@ -92,11 +99,18 @@ namespace PianoGlass.Scoring
             s.BestStreak = current.bestStreak;
             s.StreakText = current.bestStreak == 1 ? "1 note" : $"{current.bestStreak} notes";
 
+            s.Hands = HandSplit.From(current);
+            if (s.Hands != null)
+            {
+                s.LeftHandText = $"{ResultRank.DisplayPercent(s.Hands[0].Accuracy)}%";
+                s.RightHandText = $"{ResultRank.DisplayPercent(s.Hands[1].Accuracy)}%";
+            }
+
             s.Groups = BarGrouping.Build(current.bars);
             string other = AttemptHands.Other(current.hand);
             s.Suggestion = SuggestionPicker.Pick(current.accuracy, tempoPercent, current.hand, s.Groups,
                                                  other != null && AttemptHistory.HasPerfectRun(previous, current.song, other),
-                                                 hasNextSong, current.mode);
+                                                 hasNextSong, current.mode, s.Hands);
 
             s.Perfect = current.perfect;
             s.Great = current.great;

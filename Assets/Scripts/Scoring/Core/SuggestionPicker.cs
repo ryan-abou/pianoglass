@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace PianoGlass.Scoring
 {
-    public enum SuggestionRule { WeakBars, PlayInTime, FasterTempo, NextRank, AwayFromPerfect, OtherHand, Mastered }
+    public enum SuggestionRule { WeakBars, PlayInTime, FasterTempo, NextRank, AwayFromPerfect, OtherHand, Mastered, WeakHand }
     public enum SuggestionAction { None, LoopBars, TryTempo, SwitchHand, NextSong }
 
     /// <summary>The one message of the suggestion row and its optional button.</summary>
@@ -38,10 +38,32 @@ namespace PianoGlass.Scoring
         /// until a song list exists: "mastered" then has no button.</param>
         /// <param name="mode">"wait" has no timing or tempo to improve, so a
         /// good run points at playing it in time instead.</param>
+        /// <param name="hands">A both-hands attempt's split (HandSplit), or
+        /// null. A clearly weaker hand comes first, before any bar: when one
+        /// hand trips all through the song, playing it alone helps more than
+        /// looping one bar with both (#6).</param>
         public static Suggestion Pick(double accuracy, int tempoPercent, string hand,
                                       IReadOnlyList<BarGroup> groups, bool otherHandPerfect, bool hasNextSong,
-                                      string mode = null)
+                                      string mode = null, HandResult[] hands = null)
         {
+            HandResult weakHand = HandSplit.Weaker(hands);
+            if (weakHand != null)
+            {
+                int all = hands[0].Mistakes + hands[1].Mistakes;
+                string name = AttemptHands.Label(weakHand.Hand);
+                return new Suggestion
+                {
+                    Rule = SuggestionRule.WeakHand,
+                    // Short: it shares the row with the button.
+                    Message = weakHand.Mistakes == all
+                        ? $"{name}: all {all} mistakes"
+                        : $"{name}: {weakHand.Mistakes} of {all} mistakes",
+                    Action = SuggestionAction.SwitchHand,
+                    ButtonText = $"{name} alone",
+                    TargetHand = weakHand.Hand,
+                };
+            }
+
             // a. A weak bar. The weakest group, the one the strip outlines.
             BarGroup weakest = null;
             if (groups != null)
