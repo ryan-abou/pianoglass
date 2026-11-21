@@ -111,9 +111,9 @@ asked for while waiting opens in front of you after the recenter.
 | Tempo −/+, metronome, wait mode, memory fade | Song panel buttons, only while stopped or paused, or the piano chords as before | `SongPanel` |
 | Songs, hand switch | Song panel "Songs", then poke the picker | `SongPanel`, `SongPicker` |
 | Settings | Song panel "Settings": shown in the song panel's place | `SettingsPanel` |
-| Calibrate | Settings "Calibrate", then pick up the right controller: touch the front of A0, then C8, with its tip and pull the trigger (about 1 mm). Backup with no controller: press and hold A0 and C8 at their front edges with one index finger (about 1 cm; the keys are levelled afterwards) | `OvrCalibrationInput`, `HandCalibration` |
+| Calibrate | Settings "Calibrate", then pick up the right controller: touch the middle of the front edge of A0, then C8, with its tip and pull the trigger (about 1 mm; the sideways part of the learned offset is not kept, since it is only where along the edge the tip went). Backup with no controller: press and hold A0 and C8 at their front edges with one index finger (about 1 cm; the keys are levelled afterwards) | `OvrCalibrationInput`, `HandCalibration` |
 | Looks right | Settings "Looks right" | `SettingsPanel` |
-| Middle C fix | Settings "Middle C fix", then touch the front of Middle C with the right controller's tip and pull the trigger. Controller only since 2026-11-21: by hand it moved the keys 12-19 mm by itself | `OvrCalibrationInput` |
+| Middle C fix | Settings "Middle C fix", then touch the middle of the front edge of Middle C with the right controller's tip and pull the trigger. Controller only since 2026-11-21: by hand it moved the keys 12-19 mm by itself | `OvrCalibrationInput` |
 | Nudge, turn, clear nudge | Settings nudge pad: 2 mm or 0.2 deg per poke, saved each time | `SettingsPanel` |
 | Display mode | Settings "Display" | `SettingsPanel` |
 | Move or tilt a panel | Pinch it and move your hand, or point at it from afar and pinch its glass. With a controller: ray on its glass, hold the right trigger | `PanelGrabber` |

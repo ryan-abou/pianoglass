@@ -334,23 +334,51 @@ namespace PianoGlass.Tests.EditMode
 
             Recalibrated(s);
 
-            Near(new Vector3(-8f, 0f, -5f), s.NudgeMm, 1e-3f, "starts from the bias");
-            Near(new Vector3(-8f, 0f, -5f), new PianoProfileSerializer(_path).Load().Store.calibrationBiasMm, 1e-3f, "saved");
+            // The sideways 8 mm is where along the edge the tip went that time:
+            // only the 5 mm toward the player carries over (round 9, 2026-11-21).
+            Near(new Vector3(0f, 0f, -5f), s.NudgeMm, 1e-3f, "starts from the bias");
+            Near(new Vector3(0f, 0f, -5f), new PianoProfileSerializer(_path).Load().Store.calibrationBiasMm, 1e-3f, "saved");
         }
 
         [Test]
-        public void AFreshCalibrationsOwnNudgeReplacesTheBias()
+        public void AFreshCalibrationsOwnNudgeIsAveragedIntoTheBias()
         {
             AnchoredCalibrationSession s = CalibratedWithError(Vector3.zero);
             MarkTipMeasured();
             Recalibrated(s);
-            s.Nudge(new Vector3(-0.008f, 0f, 0f));
+            s.Nudge(new Vector3(0f, 0f, -0.008f));
             s.Confirm();
             Recalibrated(s);
-            s.Nudge(new Vector3(0.002f, 0f, 0f));
+            s.Nudge(new Vector3(0f, 0f, 0.002f));
             s.Confirm();
 
-            Near(new Vector3(-6f, 0f, 0f), new PianoProfileSerializer(_path).Load().Store.calibrationBiasMm, 1e-3f, "updated");
+            // -8, then -6: the average of the two.
+            PianoProfileStore store = new PianoProfileSerializer(_path).Load().Store;
+            Near(new Vector3(0f, 0f, -7f), store.calibrationBiasMm, 1e-3f, "averaged");
+            Assert.AreEqual(2, store.calibrationBiasSamples);
+        }
+
+        [Test]
+        public void RoundNinesControllerBiasLosesItsSidewaysPart()
+        {
+            // The saved bias from round 4 had +10.2 mm sideways, and round 9's
+            // controller calibration started that far off (2026-11-21).
+            AnchoredCalibrationSession s = CalibratedWithError(Vector3.zero);
+            MarkTipMeasured();
+            PianoProfileStore store = new PianoProfileSerializer(_path).Load().Store;
+            store.calibrationBiasMm = new Vector3(10.2f, 14.3f, 13.7f);
+            Assert.IsTrue(new PianoProfileSerializer(_path).Save(store, out string error), error);
+
+            Recalibrated(s);
+            Near(new Vector3(0f, 14.3f, 13.7f), s.NudgeMm, 1e-3f, "no sideways at the start");
+
+            // Round 9 needed (+0.9, +14.3, +11.1): averaged with the old one,
+            // which counts as one calibration.
+            s.Nudge((new Vector3(0.9f, 14.3f, 11.1f) - s.NudgeMm) * 0.001f);
+            s.Confirm();
+            store = new PianoProfileSerializer(_path).Load().Store;
+            Near(new Vector3(0f, 14.3f, 12.4f), store.calibrationBiasMm, 1e-3f, "averaged, no sideways");
+            Assert.AreEqual(2, store.calibrationBiasSamples);
         }
 
         [Test]
@@ -371,7 +399,8 @@ namespace PianoGlass.Tests.EditMode
         /// <summary>Every touch lands <paramref name="touchMm"/> (keyboard
         /// frame) from where the player sees the key. Calibrated after the
         /// recenter with that error, nudged back by eye and confirmed, so the
-        /// calibration bias is -touchMm and the keys on show are right.
+        /// calibration bias is -touchMm (sideways left out for the controller)
+        /// and the keys on show are right.
         /// Returns the touch error in world metres.</summary>
         private Vector3 CalibratedWithTouchBias(out AnchoredCalibrationSession s, Vector3 touchMm, bool byHand = false)
         {
@@ -389,7 +418,8 @@ namespace PianoGlass.Tests.EditMode
             s.Nudge((-touchMm - s.NudgeMm) * 0.001f);
             s.Confirm();
 
-            Near(-touchMm, byHand ? OnDisk().handCalibrationBiasMm : OnDisk().calibrationBiasMm, 1e-3f, "bias learned");
+            Near(byHand ? -touchMm : AnchoredCalibrationSession.WithoutSideways(-touchMm),
+                 byHand ? OnDisk().handCalibrationBiasMm : OnDisk().calibrationBiasMm, 1e-3f, "bias learned");
             Near(RealMiddleC(), s.BuildLayout().FrontEdgeCenter(60), 1e-4f, "the keys look right");
             return touch;
         }
@@ -413,7 +443,7 @@ namespace PianoGlass.Tests.EditMode
         [Test]
         public void AMiddleCFixWithABiasStillCorrectsRealDrift()
         {
-            Vector3 touch = CalibratedWithTouchBias(out AnchoredCalibrationSession s, new Vector3(3f, 0f, -14f));
+            Vector3 touch = CalibratedWithTouchBias(out AnchoredCalibrationSession s, new Vector3(0f, 0f, -14f));
             // The anchor drifted: drawn 8 mm right and 6 mm away, 10 mm in all,
             // well past AlreadyRightMetres (6 mm).
             s.Nudge(new Vector3(0.008f, 0f, -0.006f));
@@ -481,11 +511,11 @@ namespace PianoGlass.Tests.EditMode
         {
             Vector3 b = Vector3.zero;
             int n = 0;
-            for (int i = 0; i < 10; i++) b = AnchoredCalibrationSession.AverageHandBias(b, n++, new Vector3(0f, 0f, 20f));
-            for (int i = 0; i < 10; i++) b = AnchoredCalibrationSession.AverageHandBias(b, n++, new Vector3(0f, 0f, 10f));
+            for (int i = 0; i < 10; i++) b = AnchoredCalibrationSession.AverageBias(b, n++, new Vector3(0f, 0f, 20f));
+            for (int i = 0; i < 10; i++) b = AnchoredCalibrationSession.AverageBias(b, n++, new Vector3(0f, 0f, 10f));
             Assert.AreEqual(10f, b.z, 1f, "after many at 10, close to 10, not stuck near 15");
             Assert.AreEqual(new Vector3(1f, 2f, 3f),
-                            AnchoredCalibrationSession.AverageHandBias(new Vector3(9f, 9f, 9f), 0, new Vector3(1f, 2f, 3f)),
+                            AnchoredCalibrationSession.AverageBias(new Vector3(9f, 9f, 9f), 0, new Vector3(1f, 2f, 3f)),
                             "the first one replaces what was there");
         }
 
@@ -525,7 +555,8 @@ namespace PianoGlass.Tests.EditMode
             Run(s.OnMiddleCTouchedAsync(RealMiddleC()));
             s.Confirm();
 
-            Near(-touchMm, OnDisk().calibrationBiasMm, 0.05f, "the fix is part of the steady offset");
+            Near(AnchoredCalibrationSession.WithoutSideways(-touchMm), OnDisk().calibrationBiasMm, 0.05f,
+                 "the fix is part of the steady offset, sideways left out");
         }
 
         [Test]

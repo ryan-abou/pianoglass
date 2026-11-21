@@ -37,6 +37,11 @@ namespace PianoGlass.Piano
         /// JsonUtility reads as zero.</summary>
         public Vector3 calibrationBiasMm;
 
+        /// <summary>How many controller calibrations <see cref="calibrationBiasMm"/>
+        /// is the average of (round 9, 2026-11-21). Absent in older files, which
+        /// read it as zero: a bias already saved then counts as one.</summary>
+        public int calibrationBiasSamples;
+
         /// <summary>The same for calibrations made by pressing keys with a
         /// fingertip (#5): a fingertip lands somewhere else on the key than the
         /// controller tip, so it learns its own steady offset. Absent in older
