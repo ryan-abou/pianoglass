@@ -199,7 +199,7 @@ namespace PianoGlass.Scoring
             // A loop pass: the next one is already coming, and the card would
             // cover it. The status panel shows how it went.
             if (rec.IsLoop) return;
-            Show(ResultsSummary.From(rec, LoadPrevious(path), HasSongs));
+            Show(ResultsSummary.From(rec, scoreKeeper.Archive.AllExcept(path), HasSongs));
         }
 
         /// <summary>One more fact for this result's line under the title.</summary>
@@ -348,29 +348,6 @@ namespace PianoGlass.Scoring
         private void SetGlass(bool on)
         {
             foreach (GlassPanel g in GetComponentsInChildren<GlassPanel>(true)) g.enabled = on;
-        }
-
-        private static List<AttemptRecord> LoadPrevious(string currentPath)
-        {
-            var list = new List<AttemptRecord>();
-            try
-            {
-                string dir = ScoreKeeper.AttemptsDirectory;
-                if (!Directory.Exists(dir)) return list;
-                foreach (string file in Directory.GetFiles(dir, "*.json"))
-                {
-                    if (currentPath != null && string.Equals(Path.GetFullPath(file), Path.GetFullPath(currentPath),
-                                                             StringComparison.OrdinalIgnoreCase))
-                        continue;
-                    AttemptRecord r = AttemptRecord.Parse(File.ReadAllText(file));
-                    if (r != null) list.Add(r);
-                }
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning($"[Results] could not read earlier attempts: {e.Message}");
-            }
-            return list;
         }
 
         // ------------------------------------------------------------------

@@ -173,6 +173,17 @@ namespace PianoGlass.Scoring
 
         public bool IsLoop => loopFromBar != NoLoop && loopToBar != NoLoop;
 
+        /// <summary>A copy with everything but the note lists, which are most
+        /// of a file: comparing attempts (AttemptHistory) only needs the rest.</summary>
+        public AttemptRecord HeaderOnly()
+        {
+            var copy = (AttemptRecord)MemberwiseClone();
+            copy.notes = new List<JudgementResult>();
+            copy.wrongNotes = new List<WrongNote>();
+            copy.bars = new List<BarStats>();
+            return copy;
+        }
+
         /// <summary>Reads an attempt file of any schema so far. Fields a file
         /// lacks keep their v1-meaning defaults; empty strings (a hand-edited
         /// or truncated file) get the same treatment. Null for unreadable JSON.</summary>
