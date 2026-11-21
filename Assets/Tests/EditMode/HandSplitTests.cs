@@ -88,7 +88,7 @@ namespace PianoGlass.Tests.EditMode
             Suggestion s = SuggestionPicker.Pick(80, 100, AttemptRecord.BothHands, BarGrouping.Build(bars),
                                                  false, false, null, split);
             Assert.AreEqual(SuggestionRule.WeakHand, s.Rule);
-            Assert.AreEqual("Your left hand made all 5 mistakes", s.Message);
+            Assert.AreEqual("Left hand: all 5 mistakes", s.Message);
             Assert.AreEqual(SuggestionAction.SwitchHand, s.Action);
             Assert.AreEqual("left", s.TargetHand);
             Assert.AreEqual("Left hand alone", s.ButtonText);
@@ -101,7 +101,7 @@ namespace PianoGlass.Tests.EditMode
             rec.wrongNotes.Add(new WrongNote { kind = WrongNote.WrongPitch, hand = "right" });
             Suggestion s = SuggestionPicker.Pick(70, 100, AttemptRecord.BothHands, new List<BarGroup>(),
                                                  false, false, null, HandSplit.From(rec));
-            Assert.AreEqual("Your left hand made 5 of 6 mistakes", s.Message);
+            Assert.AreEqual("Left hand: 5 of 6 mistakes", s.Message);
         }
 
         [Test]

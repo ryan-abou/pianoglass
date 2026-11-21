@@ -54,9 +54,10 @@ namespace PianoGlass.Scoring
                 return new Suggestion
                 {
                     Rule = SuggestionRule.WeakHand,
+                    // Short: it shares the row with the button.
                     Message = weakHand.Mistakes == all
-                        ? $"Your {weakHand.Hand} hand made all {all} mistakes"
-                        : $"Your {weakHand.Hand} hand made {weakHand.Mistakes} of {all} mistakes",
+                        ? $"{name}: all {all} mistakes"
+                        : $"{name}: {weakHand.Mistakes} of {all} mistakes",
                     Action = SuggestionAction.SwitchHand,
                     ButtonText = $"{name} alone",
                     TargetHand = weakHand.Hand,
