@@ -81,6 +81,43 @@ namespace PianoGlass.Tests.EditMode
         }
 
         [Test]
+        public void TheWeakerHandComesBeforeAWeakBar()
+        {
+            HandResult[] split = HandSplit.From(Attempt(leftMissed: 4, leftWrong: 1));
+            var bars = new List<BarStats> { new BarStats { bar = 3, notes = 4, perfect = 1, miss = 3, accuracy = 25 } };
+            Suggestion s = SuggestionPicker.Pick(80, 100, AttemptRecord.BothHands, BarGrouping.Build(bars),
+                                                 false, false, null, split);
+            Assert.AreEqual(SuggestionRule.WeakHand, s.Rule);
+            Assert.AreEqual("Your left hand made all 5 mistakes", s.Message);
+            Assert.AreEqual(SuggestionAction.SwitchHand, s.Action);
+            Assert.AreEqual("left", s.TargetHand);
+            Assert.AreEqual("Left hand alone", s.ButtonText);
+        }
+
+        [Test]
+        public void TheMessageCountsTheOtherHandsMistakesToo()
+        {
+            AttemptRecord rec = Attempt(leftMissed: 5);
+            rec.wrongNotes.Add(new WrongNote { kind = WrongNote.WrongPitch, hand = "right" });
+            Suggestion s = SuggestionPicker.Pick(70, 100, AttemptRecord.BothHands, new List<BarGroup>(),
+                                                 false, false, null, HandSplit.From(rec));
+            Assert.AreEqual("Your left hand made 5 of 6 mistakes", s.Message);
+        }
+
+        [Test]
+        public void TheSummaryShowsEachHandsAccuracy()
+        {
+            AttemptRecord rec = Attempt(leftMissed: 4);
+            rec.song = "Minuet";
+            rec.accuracy = 80;
+            ResultsSummary s = ResultsSummary.From(rec);
+            Assert.AreEqual("60%", s.LeftHandText);
+            Assert.AreEqual("100%", s.RightHandText);
+            Assert.AreEqual(SuggestionRule.WeakHand, s.Suggestion.Rule);
+            Assert.IsNull(ResultsSummary.From(Attempt(4, hand: "left")).Hands);
+        }
+
+        [Test]
         public void HandsThatDidAboutAsWellPickNeither()
         {
             Assert.IsNull(HandSplit.Weaker(HandSplit.From(Attempt(leftMissed: 2))), "80%: above the weak line");
