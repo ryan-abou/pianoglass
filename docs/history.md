@@ -2,6 +2,28 @@
 
 Batch plans, round results and the state of the project as CLAUDE.md said it, moved out word for word on 2026-11-07. Calibration rounds are in `docs/calibration-rounds.md`.
 
+## Round 10 (2026-11-21): 4 pass, 1 not run
+
+Development build of `batchH-test2`. Logs: `Milestones/2026-11-21-batchH/round10/`
+(`logs/20261121-214537Z.txt` and `logcat-full.txt`).
+
+1. Controller calibration, tip on the middle of the front edge: **pass**. It started
+   from the bias with no sideways part, (0, +14.3, +11.1) mm, and needed about 4 mm
+   (it settled on (-1.0, +18.1, +12.0)); a second one later needed about 6 mm. The
+   bias is now (0, +15.7, +10.2), the average of 3.
+2. Snap glow, brighter and cyan: **pass**.
+3. No stall when the results card comes up (#4): **pass**. From the attempt ending
+   to the card showing now takes 30-50 ms (was 150-200 ms), and the worst run of
+   stale frames after a card is 5-8, the same as normal play (was 17-20). The 126
+   earlier attempts are read at launch in 217 ms on a worker thread.
+4. Hand calibration, then the controller again: **pass** (level; 12.4 mm of tilt
+   taken out).
+5. Release build frame rate: not run. Moved to the next batch, whose release build
+   (with anchored calibration) is the one testers will get, so it is measured there.
+
+Merged after round 10: `batchH-controller-setup`, `batchH-snap-glow`,
+`batchH-attempt-cache` (Closes #4). `batchH-readme` (#7) still waits for Ryan.
+
 ## Round 9 (2026-11-21): 4 pass, 2 fail, 1 not run
 
 Development build of `batchH-test`. Logs: `Milestones/2026-11-21-batchH/round9/`
