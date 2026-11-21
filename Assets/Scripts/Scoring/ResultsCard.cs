@@ -99,7 +99,12 @@ namespace PianoGlass.Scoring
         private Color _primary, _secondary;
 
         private TextMeshProUGUI _title, _sub, _rank, _accuracy, _accuracyLine, _suggestion;
-        private readonly TextMeshProUGUI[] _stats = new TextMeshProUGUI[3];
+        // Stat strip: three cells, or four with a hand each for a both-hands attempt (#6).
+        private readonly TextMeshProUGUI[] _stats = new TextMeshProUGUI[4];
+        private readonly TextMeshProUGUI[] _statLabels = new TextMeshProUGUI[4];
+        private readonly GameObject[] _dividers = new GameObject[3];
+        private static readonly string[] StripLabels = { "timing", "wrong notes", "best streak" };
+        private static readonly string[] HandStripLabels = { "timing", "wrong notes", "left hand", "right hand" };
         private GameObject _chip;
         private GlassButton _suggestionButton, _retry, _songs, _moreInfo;
         private TextMeshProUGUI _suggestionButtonText, _moreInfoText;
@@ -222,9 +227,12 @@ namespace PianoGlass.Scoring
             _accuracyLine.text = "accuracy" + ChangeSuffix(s);
 
             // Stat strip
+            bool hands = s.Hands != null;
+            ArrangeStrip(hands);
             _stats[0].text = s.TimingText;
             _stats[1].text = s.WrongNotes.ToString();
-            _stats[2].text = s.StreakText;
+            _stats[2].text = hands ? s.LeftHandText : s.StreakText;
+            _stats[3].text = hands ? s.RightHandText : "";
 
             FillPills(s.Groups);
 
@@ -240,7 +248,9 @@ namespace PianoGlass.Scoring
             _hasResult = true;
             ApplyVisibility();
             Debug.Log($"[Results] {s.AccuracyText} {s.Rank} | {s.ChangeText ?? "first"} | {s.TimingText} | " +
-                      $"{s.WrongNotes} wrong | streak {s.BestStreak} | {s.Suggestion.Message}");
+                      $"{s.WrongNotes} wrong | streak {s.BestStreak} | " +
+                      (hands ? $"left {s.LeftHandText} ({s.Hands[0].Mistakes} mistakes), right {s.RightHandText} ({s.Hands[1].Mistakes}) | " : "") +
+                      s.Suggestion.Message);
         }
 
         private void ApplySuggestion(Suggestion suggestion)
@@ -442,20 +452,18 @@ namespace PianoGlass.Scoring
             _accuracyLine = Text(root, "AccuracyLine", 14f, _secondary, TextAlignmentOptions.TopLeft,
                                  new Vector2(heroLeft, HeroY - 21f), 300f);
 
-            // Stat strip: three items, label over value, hairline dividers.
+            // Stat strip: label over value, hairline dividers. Three items, or
+            // four when a both-hands attempt shows each hand (ArrangeStrip).
             Glass(root, "Strip", GlassStyle.Row, new Vector2(0f, StripY), new Vector2(Inner, StripHeight), RowDepth, null);
-            string[] labels = { "timing", "wrong notes", "best streak" };
-            float third = Inner / 3f;
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < 4; i++)
             {
-                float x = Left + third * i;
-                Text(root, $"Label_{i}", 13f, _secondary, TextAlignmentOptions.Top, new Vector2(x, StripY + 20f), third)
-                    .text = labels[i];
-                _stats[i] = Text(root, $"Stat_{i}", 19f, _primary, TextAlignmentOptions.Top, new Vector2(x, StripY + 4f), third, true);
+                _statLabels[i] = Text(root, $"Label_{i}", 13f, _secondary, TextAlignmentOptions.Top, new Vector2(Left, StripY + 20f), 100f);
+                _stats[i] = Text(root, $"Stat_{i}", 19f, _primary, TextAlignmentOptions.Top, new Vector2(Left, StripY + 4f), 100f, true);
                 if (i > 0)
-                    Glass(root, $"Divider_{i}", GlassStyle.Pill, new Vector2(x, StripY), new Vector2(0.8f, 30f),
-                          PillDepth, new Color(1f, 1f, 1f, 0.22f));
+                    _dividers[i - 1] = Glass(root, $"Divider_{i}", GlassStyle.Pill, new Vector2(Left, StripY), new Vector2(0.8f, 30f),
+                                             PillDepth, new Color(1f, 1f, 1f, 0.22f)).gameObject;
             }
+            ArrangeStrip(false);
 
             // The pills are made per result; the % labels share one group so
             // they fade in together when the details panel opens.
@@ -474,6 +482,41 @@ namespace PianoGlass.Scoring
             _suggestionButton = Button(root, "SuggestionButton", new Vector2(Right - 4f - 73f, SuggestionY),
                                        new Vector2(146f, SuggestionHeight - 8f), PillDepth, 14f, true,
                                        out _suggestionButtonText, OnSuggestion);
+        }
+
+        /// <summary>Three equal cells, or four with <paramref name="hands"/>:
+        /// the hands take the best streak's place.</summary>
+        private void ArrangeStrip(bool hands)
+        {
+            string[] labels = hands ? HandStripLabels : StripLabels;
+            int count = labels.Length;
+            float cell = Inner / count;
+            for (int i = 0; i < 4; i++)
+            {
+                bool on = i < count;
+                _statLabels[i].gameObject.SetActive(on);
+                _stats[i].gameObject.SetActive(on);
+                if (i > 0) _dividers[i - 1].SetActive(on);
+                if (!on) continue;
+                float x = Left + cell * i;
+                _statLabels[i].text = labels[i];
+                Place(_statLabels[i], x, cell);
+                Place(_stats[i], x, cell);
+                // "37 ms late" fits a quarter of the strip one size down.
+                _stats[i].fontSize = hands ? 17f : 19f;
+                if (i > 0)
+                {
+                    var rt = (RectTransform)_dividers[i - 1].transform;
+                    rt.anchoredPosition = new Vector2(x, StripY);
+                }
+            }
+        }
+
+        private static void Place(TextMeshProUGUI text, float x, float width)
+        {
+            var rt = (RectTransform)text.transform;
+            rt.anchoredPosition = new Vector2(x, rt.anchoredPosition.y);
+            rt.sizeDelta = new Vector2(width, rt.sizeDelta.y);
         }
 
         private void FillPills(IReadOnlyList<BarGroup> groups)
