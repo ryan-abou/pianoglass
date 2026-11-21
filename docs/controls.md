@@ -111,9 +111,9 @@ asked for while waiting opens in front of you after the recenter.
 | Tempo −/+, metronome, wait mode, memory fade | Song panel buttons, only while stopped or paused, or the piano chords as before | `SongPanel` |
 | Songs, hand switch | Song panel "Songs", then poke the picker | `SongPanel`, `SongPicker` |
 | Settings | Song panel "Settings": shown in the song panel's place | `SettingsPanel` |
-| Calibrate | Settings "Calibrate with hands", then press and hold A0 and C8 at their front edges with one index finger (the touch is where the fingertip rests while the key is down) | `HandCalibration` |
+| Calibrate | Settings "Calibrate", then pick up the right controller: touch the front of A0, then C8, with its tip and pull the trigger (about 1 mm). Backup with no controller: press and hold A0 and C8 at their front edges with one index finger (about 1 cm; the keys are levelled afterwards) | `OvrCalibrationInput`, `HandCalibration` |
 | Looks right | Settings "Looks right" | `SettingsPanel` |
-| Middle C fix | Settings "Middle C fix", then press and hold Middle C with one index finger | `HandCalibration` |
+| Middle C fix | Settings "Middle C fix", then touch the front of Middle C with the right controller's tip and pull the trigger. Controller only since 2026-11-21: by hand it moved the keys 12-19 mm by itself | `OvrCalibrationInput` |
 | Nudge, turn, clear nudge | Settings nudge pad: 2 mm or 0.2 deg per poke, saved each time | `SettingsPanel` |
 | Display mode | Settings "Display" | `SettingsPanel` |
 | Move or tilt a panel | Pinch it and move your hand, or point at it from afar and pinch its glass. With a controller: ray on its glass, hold the right trigger | `PanelGrabber` |
@@ -129,6 +129,8 @@ before "Looks right" is learned along with the nudge. The hand bias is the avera
 of the last 4 hand calibrations, since each one's nudge is partly its own error. A hand calibration keeps the
 last calibration's white key width (within 6%) and turn (within 2.5 degrees), since
 hand tracking measures the span short and two presses at different depths turn it.
+It also puts both ends at their average height, since the piano is level and a
+fingertip is only good to about 1 cm up and down (round 8 came out 14 mm tilted).
 
 ### Target: hand-tracked Liquid Glass menus (Phase 4)
 
