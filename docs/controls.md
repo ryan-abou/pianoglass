@@ -31,7 +31,7 @@ on them and none can be played by accident.
 | Restart from the top and play | left Y | A0 + A♯0 | `OvrSongTransport`, `SongTransport` | The chord works whenever calibrated, playing or not. Also how a practice loop is left. Not while the left grip is held (that Y is recording mode's) |
 | Start a practice loop | right controller ray + right trigger on the results card's "Loop bars" button | — | `ResultsCard` → `PracticeLoop` | The button shows when a bar is under 75%: that bar, and a neighbour under 90% |
 | Choose bars to loop | right controller ray + right trigger on a bar pill | — | `ResultsCard`, `BarSelection` | One pill, then another for a range; the suggestion's button becomes "Loop bars 3–5". The same pill again, alone, clears it |
-| Press a results card button (Retry, Songs, More/Less info, the suggestion's button) | right controller ray + right trigger | — | `OvrUiPointer`, `GlassButton` | Stopgap until hand poke (Phase 4). The ray shows only while a button is pressable; the trigger goes to calibration unless the ray is on a button |
+| Press a results card button (Retry, Songs, More/Less info, the suggestion's button) | right controller ray + right trigger | — | `OvrUiPointer`, `GlassButton` | Stopgap until hand poke (Phase 4). The ray shows only while a button is pressable, or on a panel's glass; the trigger goes to calibration unless the ray is on a button or a panel |
 | Open the song picker | right controller ray + right trigger on the results card's Songs button | — | `ResultsCard` → `SongPicker` | The picker also opens by itself at launch, once the keys are placed |
 | Choose which hand to practice | right controller ray + right trigger on the picker's Left or Right pill | — | `SongPicker` | Songs marked hands unknown ignore it and play All notes |
 | Pick a song | right controller ray + right trigger on a picker row | — | `SongPicker` → `CurrentSong` | Loads it stopped at the top; press play as usual. Greyed rows can't be pressed |
@@ -81,14 +81,23 @@ hand when you point at it: pinch with the ray on a button to press it, or on
 the glass to move the panel, pulling your hand back to bring it closer. Where
 you put a panel is saved relative to the keys, so it comes back there after a
 relaunch and moves with the keys when they are nudged. Off while a song plays,
-so a thumb passing under can't grab anything. Letting go: the panel stops
-moving the moment the pinch loosens, and is let go once the fingers are clearly
-open, so it doesn't slide while you let go (2026-11-15).
+so a thumb passing under can't grab anything. A held panel follows your wrist,
+and stays held as long as thumb and index stay together, measured from how far
+apart they are, not the Quest's own pinch signal, which blinks off mid-move. If the
+hand stops being tracked, the panel stays still for up to a second. Letting go:
+once the fingers are clearly apart, the panel goes back to where it was the moment
+they began to open, so it never slides while you let go (2026-11-20).
 
-A held panel never leans sideways. It snaps straight up once within 4 degrees of
-it, and square to the keys once within 4 degrees of that, and stays snapped until
-9 degrees away. While snapped, a very faint square much bigger than the panel
-shows the flat plane it is locked into, a little brighter when both snap. Settings and the song
+With a controller in hand, point the right controller's ray at a panel's glass (not a
+button) and hold the right trigger to move it the same way as a far pinch; let go of
+the trigger to put it down. Only once the keys are calibrated and no Middle C fix is
+waiting, so the trigger still places calibration points.
+
+A held panel never leans sideways. It snaps straight up once within 2.5 degrees
+of it, and square to the keys once within 2.5 degrees of that, and stays snapped
+until 6 degrees away. Snapping straight up lights soft bars along the panel's two
+upright edges; square to the keys lights its top and bottom edges. They flash on
+snapping, then stay faint. Settings and the song
 panel share one spot: moving either moves both. While controllers are down, the
 controller buttons are ignored (a pinch reads as a trigger pull).
 
@@ -107,7 +116,7 @@ asked for while waiting opens in front of you after the recenter.
 | Middle C fix | Settings "Middle C fix", then press and hold Middle C with one index finger | `HandCalibration` |
 | Nudge, turn, clear nudge | Settings nudge pad: 2 mm or 0.2 deg per poke, saved each time | `SettingsPanel` |
 | Display mode | Settings "Display" | `SettingsPanel` |
-| Move or tilt a panel | Pinch it and move your hand, or point at it from afar and pinch its glass | `PanelGrabber` |
+| Move or tilt a panel | Pinch it and move your hand, or point at it from afar and pinch its glass. With a controller: ray on its glass, hold the right trigger | `PanelGrabber` |
 | Press a button out of reach | Point at it (a ray shows) and pinch | `PanelGrabber` |
 | Put every panel back | Settings "Reset panels" | `GrabbablePanel` |
 | Recenter (the keys a piano width off at launch, #17) | Look at your palm, pinch and hold | Quest system gesture |

@@ -42,6 +42,7 @@ project. Add a word the first time it comes up.
 - **RMS**: a kind of average size of the errors, where big errors count extra. PianoGlass example: the controller tip measurement reported RMS 1.3 mm on the Quest 3, so its samples agreed closely.
 - **scrcpy**: a free PC program that shows the headset's screen live in a window and can record it. PianoGlass example: it's one way to record the overlay lining up with the real keys, since the Quest's own recorder leaves passthrough out.
 - **shader**: a small program that tells the graphics chip how to colour something. PianoGlass example: `NoteOutline.shader` draws only the edge of the other hand's notes.
+- **spatial audio**: sound the headset shapes so it seems to come from a place around you. PianoGlass example: since the Horizon OS v210 update, the headset's log shows it running the app's sound through a spatial audio step, a likely reason the metronome click got about 90 ms later.
 - **tag**: a name stuck on one commit so you can find it again, like a bookmark. PianoGlass example: `milestone-slice-playable` marks the first version where a song could be played.
 - **tempo map**: the list of where every beat of a song falls in seconds, worked out once from the MIDI file. PianoGlass example: it keeps bar lines on the notes in a song that slows down part-way.
 - **test**: a small piece of code that checks another piece of code gives the right answer. PianoGlass example: 727 tests check things like the scoring and calibration maths without opening the headset.
