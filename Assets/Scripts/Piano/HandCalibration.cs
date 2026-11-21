@@ -10,8 +10,10 @@ namespace PianoGlass.Piano
     /// highest key with an index finger, and the fingertip that pressed each
     /// one is the touch (PressingFinger tells which hand that was). MIDI says exactly which key went down and when, and
     /// the tracked fingertip says where, which the press probe found accurate
-    /// along the keys (within a few mm; 328 presses, 2026-11-05). A Middle C
-    /// fix works the same way: start it, then press Middle C.
+    /// along the keys (within a few mm; 328 presses, 2026-11-05). It is the
+    /// backup: the controller tip is the normal way to calibrate, because a
+    /// fingertip is only good to about 1 cm up and down (round 8). The Middle
+    /// C fix is controller only: by hand it moved the keys 12-19 mm by itself.
     ///
     /// Only while hands are tracked, so a controller tip that happens to press
     /// a key never counts twice. Touches are marked as by hand, so they learn
@@ -22,10 +24,7 @@ namespace PianoGlass.Piano
     /// </summary>
     public sealed class HandCalibration : MonoBehaviour
     {
-        private const int MiddleC = 60;
-
         private KeyboardCalibration _calibration;
-        private CalibrationFlowController _flow;
         private bool _settling;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -40,7 +39,6 @@ namespace PianoGlass.Piano
         private void Start()
         {
             _calibration = FindAnyObjectByType<KeyboardCalibration>();
-            _flow = FindAnyObjectByType<CalibrationFlowController>();
             if (_calibration == null || MidiInput.Instance == null)
             {
                 Debug.LogWarning("[HandCalibration] off: no calibration or MIDI");
@@ -93,9 +91,7 @@ namespace PianoGlass.Piano
 
         private bool Wanted(int note, KeyboardCalibration.Stage stage) =>
             (stage == KeyboardCalibration.Stage.AwaitingLowest && note == _calibration.LowestNote) ||
-            (stage == KeyboardCalibration.Stage.AwaitingHighest && note == _calibration.HighestNote) ||
-            (stage == KeyboardCalibration.Stage.Calibrated && note == MiddleC &&
-             _flow != null && _flow.Active && _flow.IsCorrecting);
+            (stage == KeyboardCalibration.Stage.AwaitingHighest && note == _calibration.HighestNote);
 
         /// <summary>Follows the pressing fingertip while the key stays down,
         /// then captures where it rested.</summary>

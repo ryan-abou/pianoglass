@@ -233,19 +233,38 @@ namespace PianoGlass.Piano
         /// (2026-11-14). The first hand calibration's own nudge replaces it.</summary>
         public static readonly Vector3 DefaultHandBiasMm = new Vector3(0f, -21f, 22f);
 
-        /// <summary>The hand bias is the average of this many of the latest
-        /// hand calibrations. Each one's nudge is part steady offset and part
-        /// that calibration's own error (two in a row: 9 mm apart sideways and
-        /// 10 mm up and down, 2026-11-15), so keeping only the newest one
-        /// chased the error.</summary>
-        public const int HandBiasAverageOf = 4;
+        /// <summary>Each bias is the average of this many of the latest
+        /// calibrations. Each one's nudge is part steady offset and part
+        /// that calibration's own error (two hand ones in a row: 9 mm apart
+        /// sideways and 10 mm up and down, 2026-11-15), so keeping only the
+        /// newest one chased the error. The controller's did the same until
+        /// round 9 (2026-11-21).</summary>
+        public const int BiasAverageOf = 4;
 
-        /// <summary>The hand bias after one more calibration that needed
+        /// <summary>A bias after one more calibration that needed
         /// <paramref name="learned"/>: a running average, the newest counting
-        /// 1 / (samples + 1), but never less than 1 / <see cref="HandBiasAverageOf"/>,
+        /// 1 / (samples + 1), but never less than 1 / <see cref="BiasAverageOf"/>,
         /// so old ones fade out.</summary>
-        public static Vector3 AverageHandBias(Vector3 old, int samples, Vector3 learned) =>
-            samples <= 0 ? learned : Vector3.Lerp(old, learned, 1f / Mathf.Min(samples + 1, HandBiasAverageOf));
+        public static Vector3 AverageBias(Vector3 old, int samples, Vector3 learned) =>
+            samples <= 0 ? learned : Vector3.Lerp(old, learned, 1f / Mathf.Min(samples + 1, BiasAverageOf));
+
+        /// <summary>The controller bias without its sideways part. Every one
+        /// saved on the Quest 3 so far was 11.8 to 14.4 mm toward the player,
+        /// but -4.7 to +10.2 mm sideways: sideways is only where along the key's
+        /// edge the tip went that time, so carrying it over added round 4's
+        /// +10 mm to round 9 (2026-11-21).</summary>
+        public static Vector3 WithoutSideways(Vector3 mm) => new Vector3(0f, mm.y, mm.z);
+
+        /// <summary>Where a controller calibration starts and what a controller
+        /// Middle C touch takes off: the learned bias, sideways left out.</summary>
+        public static Vector3 ControllerBiasMm(PianoProfileStore store) => WithoutSideways(store.calibrationBiasMm);
+
+        /// <summary>How many calibrations the controller bias is the average
+        /// of. A file from before averaging has a bias but no count: that bias
+        /// counts as one.</summary>
+        public static int ControllerBiasSamples(PianoProfileStore store) =>
+            store.calibrationBiasSamples > 0 ? store.calibrationBiasSamples
+                : store.calibrationBiasMm != Vector3.zero ? 1 : 0;
 
         /// <summary>The learned hand bias, or <see cref="DefaultHandBiasMm"/>
         /// while none has been (an exact zero is never learned).</summary>
@@ -745,7 +764,7 @@ namespace PianoGlass.Piano
                     _learningBias = true;
                     _learningBiasByHand = TouchesByHand;
                     _fixesSinceFreshMm = Vector3.zero;
-                    Vector3 bias = TouchesByHand ? HandBiasMm(store) : store.calibrationBiasMm;
+                    Vector3 bias = TouchesByHand ? HandBiasMm(store) : ControllerBiasMm(store);
                     if (NudgeMm != bias)
                     {
                         Log($"fresh calibration{(TouchesByHand ? " by hand" : "")}: nudge {Mm(NudgeMm)} -> calibration bias {Mm(bias)}");
@@ -831,20 +850,24 @@ namespace PianoGlass.Piano
                     if (_learningBiasByHand)
                     {
                         int n = Mathf.Max(0, store.handBiasSamples);
-                        Vector3 average = AverageHandBias(HandBiasMm(store), n, learned);
+                        Vector3 average = AverageBias(HandBiasMm(store), n, learned);
                         store.handCalibrationBiasMm = average;
                         store.handBiasSamples = n + 1;
                         Log($"{which} now {Mm(average)}: this one needed {Mm(learned)}{from}, " +
-                            $"averaged over {Mathf.Min(n + 1, HandBiasAverageOf)}");
+                            $"averaged over {Mathf.Min(n + 1, BiasAverageOf)}");
                     }
                     else
                     {
-                        store.calibrationBiasMm = learned;
-                        Log($"{which} now {Mm(learned)}{from}");
+                        int n = ControllerBiasSamples(store);
+                        Vector3 average = AverageBias(ControllerBiasMm(store), n, WithoutSideways(learned));
+                        store.calibrationBiasMm = average;
+                        store.calibrationBiasSamples = n + 1;
+                        Log($"{which} now {Mm(average)}: this one needed {Mm(learned)}{from}, " +
+                            $"sideways left out, averaged over {Mathf.Min(n + 1, BiasAverageOf)}");
                     }
                 }
                 else Log($"shift {Mm(learned)}{from} is too big to be a steady offset: {which} stays " +
-                         $"{Mm(_learningBiasByHand ? HandBiasMm(store) : store.calibrationBiasMm)}");
+                         $"{Mm(_learningBiasByHand ? HandBiasMm(store) : ControllerBiasMm(store))}");
             }
             if (!_serializer.Save(store, out error)) { Log("verified not recorded: " + error); return; }
             Log($"verified by the player: lastVerifiedUtc={utc}");
@@ -881,7 +904,7 @@ namespace PianoGlass.Piano
             PianoProfileStore store = _serializer.Load().Store;
             if (store == null) return Vector3.zero;
             if (TouchesByHand) return HandBiasMm(store);
-            return store.hasTipOffset ? store.calibrationBiasMm : Vector3.zero;
+            return store.hasTipOffset ? ControllerBiasMm(store) : Vector3.zero;
         }
 
         /// <summary>The store as it is on disk right now, for a
