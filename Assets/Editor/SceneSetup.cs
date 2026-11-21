@@ -876,11 +876,27 @@ namespace PianoGlass.EditorTools
         ///   2026-11-14, 200 ms set: +38 ms late (15 beats, sd 6)  -> 238
         ///   2026-11-14, 310 ms set: -62 ms early (4 clean beats)  -> 248
         ///   2026-11-13, 140 ms set: +150 ms late (30 beats)       -> 290
-        /// The two from the same day agree, so 240. The first readings, by eye
+        /// The two from the same day agree, so 240.
+        ///   2026-11-15, 240 ms set: -55 ms early (14 beats, sd 30; the 4
+        ///   steadiest -44), held by hand; a clap on the same video put the
+        ///   phone's sound within a frame of its picture        -> 190
+        ///   2026-11-20, 190 ms set, after Horizon OS v210 (its log shows a
+        ///   new spatial audio step for apps): +164 ms on the video
+        ///   (two far angles, 14 beats, sd 6 and 14; close up agreed within
+        ///   about 20 ms), but this phone's sound was 75 ms behind its
+        ///   picture (two claps), so +89 ms late (beatfit.py)   -> 280
+        ///   That was wrong the other way. 2026-11-21, 280 ms set: Ryan played
+        ///   Twinkle at 50% five times with his eyes closed, going only by the
+        ///   click; his presses came 197 ms before the beat (134 presses,
+        ///   run medians -183 to -217, sd 39), so the click was that early.
+        ///   That includes the little a player naturally leads a click by,
+        ///   so the real figure may be 20-50 ms higher                -> 85
+        ///   Trust this test over a phone video from now on (Ryan's call).
+        /// The first readings, by eye
         /// from contact sheets of 3 beats, gave 310 and then 200: too coarse.
         /// The log reads "DSP buffer 512 x 4 @ 24000 Hz". Quest 2, 2026-11-03:
         /// 141 ms (median 140, sd 11, 8 bars), then 17 ms early on a retest.</summary>
-        private const float MetronomeOutputLatencyMs = 240f;
+        private const float MetronomeOutputLatencyMs = 85f;
 
         /// <summary>
         /// The metronome (Batch B3, F27): a Metronome on its own object, its
