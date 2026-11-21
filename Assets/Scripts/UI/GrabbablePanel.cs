@@ -107,6 +107,25 @@ namespace PianoGlass.UI
             }
         }
 
+        /// <summary>Its glass surfaces this frame (shown or not), for the snap glow.</summary>
+        public IReadOnlyList<GlassPanel> Glass
+        {
+            get
+            {
+                UpdateRect();
+                return _glass;
+            }
+        }
+
+        /// <summary>Where <paramref name="glass"/> sits in this panel's own units (mm).</summary>
+        public Rect RectOf(GlassPanel glass)
+        {
+            var corners = new Vector3[4];
+            ((RectTransform)glass.transform).GetWorldCorners(corners);
+            Vector3 a = transform.InverseTransformPoint(corners[0]), b = transform.InverseTransformPoint(corners[2]);
+            return Rect.MinMaxRect(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y), Mathf.Max(a.x, b.x), Mathf.Max(a.y, b.y));
+        }
+
         /// <summary>The panel's outline in its own units (mm): all its glass,
         /// so a results card with its details open counts as one.</summary>
         public Rect Outline

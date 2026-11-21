@@ -61,8 +61,23 @@ namespace PianoGlass.UI
         private static readonly int HalfSizeId = Shader.PropertyToID("_HalfSize");
         private static readonly int RadiusId = Shader.PropertyToID("_Radius");
         private static readonly int FadeId = Shader.PropertyToID("_Fade");
+        private static readonly int EdgeGlowId = Shader.PropertyToID("_EdgeGlow");
+        private Vector4 _edgeGlow;
 
         public GlassTokens Tokens => tokens;
+        public GlassStyle Style => style;
+
+        /// <summary>The snap glow per edge (x left, y right, z bottom, w top),
+        /// 0 to 1, from SnapGuide. Kept through rebuilds.</summary>
+        public void SetEdgeGlow(Vector4 glow)
+        {
+            if (glow == _edgeGlow) return;
+            _edgeGlow = glow;
+            if (_renderer == null) return;
+            _renderer.GetPropertyBlock(_block);
+            _block.SetVector(EdgeGlowId, glow);
+            _renderer.SetPropertyBlock(_block);
+        }
 
         /// <summary>For glass added from code (rows and cells a card builds):
         /// call straight after AddComponent, before the first frame.</summary>
@@ -209,6 +224,7 @@ namespace PianoGlass.UI
 
             _renderer.GetPropertyBlock(_block);
             Apply(_block, tokens, style, half, _tintOverride);
+            _block.SetVector(EdgeGlowId, _edgeGlow);
             if (_plain)
             {
                 _block.SetColor(HairlineColorId, Color.clear);
