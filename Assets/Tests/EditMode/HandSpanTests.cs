@@ -51,6 +51,28 @@ namespace PianoGlass.Tests.EditMode
         }
 
         [Test]
+        public void ATiltedHandCalibrationComesOutLevel()
+        {
+            // Round 8, 2026-11-21: A0 pressed 14 mm higher than C8.
+            Vector3 low = new Vector3(-0.612f, 2.254f, 0.471f), high = new Vector3(0.569f, 2.240f, 0.532f);
+            Vector3 middle = (low + high) * 0.5f;
+            Assert.IsTrue(HandSpan.KeepLevel(ref low, ref high, Vector3.up));
+            Assert.AreEqual(low.y, high.y, 1e-6f, "both ends at the same height");
+            Assert.AreEqual(2.247f, low.y, 1e-5f, "the average height");
+            Assert.Less(Vector3.Distance(middle, (low + high) * 0.5f), 1e-6f, "the middle stays");
+            Assert.AreEqual(-0.612f, low.x, 1e-6f, "only the height moves");
+            Assert.AreEqual(0.532f, high.z, 1e-6f, "only the height moves");
+        }
+
+        [Test]
+        public void ALevelHandCalibrationIsLeftAlone()
+        {
+            Vector3 low = new Vector3(-0.6f, 0.7002f, 0.47f), high = new Vector3(0.6f, 0.7f, 0.47f);
+            Assert.IsFalse(HandSpan.KeepLevel(ref low, ref high, Vector3.up));
+            Assert.AreEqual(0.7002f, low.y, 1e-7f);
+        }
+
+        [Test]
         public void NoLastWidthChangesNothing()
         {
             Vector3 low = A0, high = C8;

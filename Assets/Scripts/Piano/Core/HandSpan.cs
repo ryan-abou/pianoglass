@@ -12,8 +12,8 @@ namespace PianoGlass.Piano
     /// calibration's, the last width is kept: both touched points move apart
     /// (or together) evenly about their middle, keeping the hand's direction
     /// and the middle where the hand put it. Further off than that, the hand
-    /// is believed (a different keyboard, or a wrong key). Pure, so it is
-    /// tested without a headset.
+    /// is believed (a different keyboard, or a wrong key). It also levels the
+    /// two ends (KeepLevel). Pure, so it is tested without a headset.
     /// </summary>
     public static class HandSpan
     {
@@ -44,6 +44,29 @@ namespace PianoGlass.Piano
             Vector3 middle = (low + high) * 0.5f;
             low = middle + turn * (low - middle);
             high = middle + turn * (high - middle);
+            return true;
+        }
+
+        /// <summary>Metres: ends closer in height than this are left alone.</summary>
+        public const float LevelToleranceMetres = 0.0005f;
+
+        /// <summary>
+        /// The keyboard's height (round 8, 2026-11-21): a fingertip pressed A0
+        /// 14 mm higher than C8, and the piano came out tilted by that much. A
+        /// real piano is level (both controller calibrations put the ends at
+        /// the same height), and one hand press is only good to about 1 cm up
+        /// and down, either way round. So both ends go to their average height,
+        /// keeping the middle where the hand put it. True when the points were
+        /// moved.
+        /// </summary>
+        public static bool KeepLevel(ref Vector3 low, ref Vector3 high, Vector3 up)
+        {
+            up = up.normalized;
+            float lowHeight = Vector3.Dot(low, up), highHeight = Vector3.Dot(high, up);
+            if (Mathf.Abs(highHeight - lowHeight) < LevelToleranceMetres) return false;
+            float middle = (lowHeight + highHeight) * 0.5f;
+            low += up * (middle - lowHeight);
+            high += up * (middle - highHeight);
             return true;
         }
 
