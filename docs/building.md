@@ -36,6 +36,30 @@ adb install -r Builds\PianoGlass.apk
 adb logcat -s PianoGlassMidi Unity
 ```
 
+## Signing key and version numbers
+
+Every build (dev and release) is signed with PianoGlass's own key, made on
+2026-11-21. It lives outside the repo in `C:\Dev\PianoGlass\Signing\`:
+`pianoglass.keystore` and `keystore-password.txt` (alias `pianoglass`). Never
+commit them. `BuildScript.cs` reads them for the build only and puts the
+settings back, so `ProjectSettings.asset` never holds the password.
+
+- **Keep a backup** of the whole `Signing` folder off this PC (USB stick or a
+  password manager). An update only installs over an app signed with the same
+  key: lose it and every tester has to uninstall, which wipes their
+  calibration and scores.
+- A release build with no key **fails**; a dev build with no key warns and uses
+  Unity's debug key (it then won't install over a release build).
+- The first install after switching keys needs `adb uninstall
+  com.ryanabourjeili.pianoglass`, which wipes the app's files: pull
+  `files/` first and push `files/Songs/` back afterwards.
+
+Version numbers are in Player Settings (`bundleVersion`, and
+`AndroidBundleVersionCode` in `ProjectSettings.asset`). Before each GitHub
+release, raise both: the version name (0.1.0, 0.2.0 for new features, 0.1.1
+for fixes only, 1.0.0 for the version judges see) and the version code by 1.
+The headset refuses to install a lower version code over a higher one.
+
 ## The in-headset test checklist (development builds)
 
 Every post-build test checklist is also a file the headset shows on a Liquid Glass

@@ -93,7 +93,13 @@ namespace PianoGlass.EditorTools
                           $"(was {previousCodeGen} + {previousConfig}, restored after the build)");
             }
 
-            int code = BuildAndReport(development);
+            var signing = new SigningSettings();
+            int code;
+            if (!signing.UseOwnKey(development, out string signingProblem))
+                code = Fail(signingProblem);
+            else
+                code = BuildAndReport(development);
+            signing.Restore();
 
             if (development)
             {
@@ -102,6 +108,93 @@ namespace PianoGlass.EditorTools
             }
 
             Exit(code);
+        }
+
+        // ------------------------------------------------------------------
+        // Signing
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// Every build is signed with PianoGlass's own key, kept outside the
+        /// repo in ..\Signing (pianoglass.keystore and keystore-password.txt).
+        /// An update only installs over an app signed with the same key, and
+        /// Unity's default debug key lives on one PC: lose the PC and a tester
+        /// would have to uninstall, losing their calibration. Dev builds use it
+        /// too, so switching between dev and release on the headset needs no
+        /// uninstall.
+        ///
+        /// A release build with no key fails rather than quietly using the
+        /// debug key. A development build with no key warns and uses the debug
+        /// key. The password is set only for the build and never saved:
+        /// everything is put back afterwards, so ProjectSettings.asset is
+        /// unchanged. PIANOGLASS_SIGNING_DIR overrides the folder.
+        /// </summary>
+        private sealed class SigningSettings
+        {
+            public const string KeystoreFile = "pianoglass.keystore";
+            public const string PasswordFile = "keystore-password.txt";
+            public const string Alias = "pianoglass";
+
+            // The raw values as ProjectSettings.asset stores them: setting
+            // keystoreName back to "" through PlayerSettings writes
+            // "{inproject}: " instead (round 11), so they go back this way.
+            private readonly SerializedObject _settings =
+                new SerializedObject(Unsupported.GetSerializedAssetInterfaceSingleton("PlayerSettings"));
+            private readonly bool _useCustom = PlayerSettings.Android.useCustomKeystore;
+            private readonly string _keystoreName;
+            private readonly string _aliasName;
+
+            public SigningSettings()
+            {
+                _keystoreName = _settings.FindProperty("AndroidKeystoreName")?.stringValue;
+                _aliasName = _settings.FindProperty("AndroidKeyaliasName")?.stringValue;
+            }
+
+            private static string Folder =>
+                Environment.GetEnvironmentVariable("PIANOGLASS_SIGNING_DIR") is string dir && dir.Length > 0
+                    ? dir
+                    : Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..", "Signing"));
+
+            public bool UseOwnKey(bool development, out string problem)
+            {
+                problem = null;
+                string keystore = Path.Combine(Folder, KeystoreFile);
+                string passwordFile = Path.Combine(Folder, PasswordFile);
+                if (!File.Exists(keystore) || !File.Exists(passwordFile))
+                {
+                    string missing = $"no signing key at {keystore} (with {PasswordFile} next to it)";
+                    if (development)
+                    {
+                        Debug.LogWarning($"{ResultTag} {missing}: signed with the debug key, so it will not " +
+                                         "install over a release build");
+                        return true;
+                    }
+                    problem = missing + ". Copy the Signing folder back from the backup.";
+                    return false;
+                }
+
+                string password = File.ReadAllText(passwordFile).Trim();
+                PlayerSettings.Android.useCustomKeystore = true;
+                PlayerSettings.Android.keystoreName = keystore;
+                PlayerSettings.Android.keystorePass = password;
+                PlayerSettings.Android.keyaliasName = Alias;
+                PlayerSettings.Android.keyaliasPass = password;
+                Debug.Log($"{ResultTag} signed with {keystore} (alias {Alias})");
+                return true;
+            }
+
+            public void Restore()
+            {
+                PlayerSettings.Android.useCustomKeystore = _useCustom;
+                PlayerSettings.Android.keystorePass = "";
+                PlayerSettings.Android.keyaliasPass = "";
+                _settings.Update();
+                SerializedProperty keystore = _settings.FindProperty("AndroidKeystoreName");
+                SerializedProperty alias = _settings.FindProperty("AndroidKeyaliasName");
+                if (keystore != null && _keystoreName != null) keystore.stringValue = _keystoreName;
+                if (alias != null && _aliasName != null) alias.stringValue = _aliasName;
+                _settings.ApplyModifiedPropertiesWithoutUndo();
+            }
         }
 
         /// <summary>Runs the build and returns the exit code: 0 succeeded, 1 failed.</summary>
