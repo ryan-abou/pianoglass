@@ -46,14 +46,18 @@ namespace PianoGlass.Song
         /// <summary>
         /// Like <see cref="CollectDueSoonPitches"/>, but with how long until
         /// each pitch's soonest due note, for <see cref="FadeIn"/>. Reuses
-        /// the dictionary: allocates nothing per frame.
+        /// the dictionary: allocates nothing per frame. <paramref name="handOf"/>,
+        /// if given, gets that note's hand, so the key fades in in its hand's
+        /// colour (round 14: it faded in green, the idle colour, then turned
+        /// orange or blue as the note was due).
         /// </summary>
         public static void CollectDueSoon(
             IReadOnlyList<SongNote> notes, double songTime, float lookaheadSeconds, Dictionary<int, double> untilDue,
             double from = double.NegativeInfinity, double until = double.PositiveInfinity,
-            PracticeHand hand = PracticeHand.All)
+            PracticeHand hand = PracticeHand.All, Dictionary<int, NoteHand> handOf = null)
         {
             untilDue.Clear();
+            handOf?.Clear();
             for (int i = 0; i < notes.Count; i++)
             {
                 SongNote note = notes[i];
@@ -61,7 +65,11 @@ namespace PianoGlass.Song
                     !IsDueSoon(note.StartTime, songTime, lookaheadSeconds))
                     continue;
                 double t = note.StartTime - songTime;
-                if (!untilDue.TryGetValue(note.Pitch, out double soonest) || t < soonest) untilDue[note.Pitch] = t;
+                if (!untilDue.TryGetValue(note.Pitch, out double soonest) || t < soonest)
+                {
+                    untilDue[note.Pitch] = t;
+                    if (handOf != null) handOf[note.Pitch] = note.Hand;
+                }
             }
         }
 

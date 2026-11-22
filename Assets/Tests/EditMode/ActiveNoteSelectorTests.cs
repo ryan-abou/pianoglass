@@ -85,6 +85,25 @@ namespace PianoGlass.Tests.EditMode
         }
 
         [Test]
+        public void CollectDueSoonGivesTheSoonestNotesHand()
+        {
+            var notes = new List<SongNote>
+            {
+                new SongNote(pitch: 60, startTime: 1.0, duration: 0.1, hand: NoteHand.Right),
+                new SongNote(pitch: 60, startTime: 0.8, duration: 0.1, hand: NoteHand.Left),
+                new SongNote(pitch: 64, startTime: 0.9, duration: 0.1, hand: NoteHand.Right),
+            };
+            var due = new Dictionary<int, double>();
+            var hands = new Dictionary<int, NoteHand> { { 99, NoteHand.Left } };
+
+            ActiveNoteSelector.CollectDueSoon(notes, songTime: 0.6, lookaheadSeconds: 0.5f, due, handOf: hands);
+
+            Assert.AreEqual(2, hands.Count, "cleared first");
+            Assert.AreEqual(NoteHand.Left, hands[60], "the sooner of the two notes on that key");
+            Assert.AreEqual(NoteHand.Right, hands[64]);
+        }
+
+        [Test]
         public void CollectDueSoonPitchesReturnsOnlyPitchesWithANoteInTheWindow()
         {
             var notes = new List<SongNote>
