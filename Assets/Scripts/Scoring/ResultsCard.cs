@@ -293,6 +293,11 @@ namespace PianoGlass.Scoring
                 ApplyVisibility();
         }
 
+        /// <summary>Whether a status panel may show now: not while the card,
+        /// the song picker or the launch recenter prompt is up. The status
+        /// strip (#37) reads it.</summary>
+        public static bool StatusShown { get; private set; } = true;
+
         private bool PickerUp => picker != null && picker.IsShowing;
 
         private bool CalibrationNeedsPlayer =>
@@ -310,6 +315,7 @@ namespace PianoGlass.Scoring
             _recenterWas = waiting;
             bool card = _hasResult && !CalibrationNeedsPlayer && !pickerUp && !waiting;
             bool status = !card && !pickerUp && !waiting;
+            StatusShown = status;
             if (!card)
             {
                 if (_details != null) _details.SetInstant(false);
