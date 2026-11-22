@@ -29,7 +29,7 @@ namespace PianoGlass.UI
         /// <summary>Tipped back so its face points up toward the eyes.</summary>
         private const float TiltDegrees = -30f;
 
-        private static readonly Vector2 Size = new Vector2(240f, 340f);
+        private static readonly Vector2 Size = new Vector2(240f, 360f);
         private const float Col = 56f, BtnW = 104f, BtnH = 48f;
 
         public static SongPanel Instance { get; private set; }
@@ -42,6 +42,7 @@ namespace PianoGlass.UI
         private SongClock _clock;
         private Metronome _metronome;
         private SongPicker _picker;
+        private PracticeLoop _loop;
 
         private RectTransform _canvas;
         private TextMeshProUGUI _status, _playLabel;
@@ -71,6 +72,7 @@ namespace PianoGlass.UI
             _clock = FindAnyObjectByType<SongClock>();
             _metronome = FindAnyObjectByType<Metronome>();
             _picker = FindAnyObjectByType<SongPicker>(FindObjectsInactive.Include);
+            _loop = FindAnyObjectByType<PracticeLoop>();
             if (_calibration == null || _transport == null || _clock == null || _picker == null)
             {
                 Debug.LogWarning("[SongPanel] off: no calibration, transport, clock or song picker in the scene");
@@ -86,8 +88,10 @@ namespace PianoGlass.UI
             Transform root = _canvas;
             _status = g.Text(root, "Status", 15f, g.Secondary, TextAlignmentOptions.TopLeft,
                              new Vector2(-Size.x * 0.5f + 16f, Size.y * 0.5f - 12f), Size.x - 32f);
+            // Two lines: playing or stopped, then a loop's pass or the fade step (#37).
+            ((RectTransform)_status.transform).sizeDelta = new Vector2(Size.x - 32f, 44f);
 
-            float y = Size.y * 0.5f - 66f;
+            float y = Size.y * 0.5f - 86f;
             _play = g.Pill(root, "PlayPause", new Vector2(0f, y), new Vector2(BtnW * 2f + 8f, BtnH), "Play",
                            () => _transport.TogglePlayPause(), out _playLabel, 20f);
             y -= BtnH + 10f;
@@ -168,6 +172,21 @@ namespace PianoGlass.UI
             _grab.PutAt(new Pose(position, other.rotation));
         }
 
+        /// <summary>A loop's bars and pass, and the memory fade step, moved
+        /// here from the old status panel (#37); null when neither is on.</summary>
+        private string PracticeLine()
+        {
+            string fade = _clock.IsFading
+                ? $"{MemoryFade.Label(_clock.Fade.ShownStep)}{(_clock.Fade.Help > 0 ? " (helping)" : "")}"
+                : null;
+            if (_loop != null && _loop.IsActive)
+            {
+                string loop = $"Looping {_loop.Range.Value.Label}, pass {_loop.Pass}";
+                return fade != null ? $"{loop}, {fade}" : loop;
+            }
+            return fade != null ? $"Memory fade: {fade}" : null;
+        }
+
         /// <summary>Labels and which buttons work, only when something changed:
         /// a glass tint change rebuilds its quad.</summary>
         private void Refresh()
@@ -175,13 +194,15 @@ namespace PianoGlass.UI
             SongTransport.State state = _transport.CurrentState;
             bool running = state == SongTransport.State.Playing || state == SongTransport.State.CountingIn;
             bool metro = _metronome != null && _metronome.IsOn;
-            string key = $"{state}|{_clock.TempoMultiplier:0.00}|{metro}|{_transport.WaitMode}|{_clock.MemoryFadeOn}";
+            string practice = PracticeLine();
+            string key = $"{state}|{_clock.TempoMultiplier:0.00}|{metro}|{_transport.WaitMode}|{_clock.MemoryFadeOn}|{practice}";
             if (key == _shown) return;
             _shown = key;
 
             _playLabel.text = running ? "Pause" : "Play";
             _status.text = $"{(running ? "Playing" : state == SongTransport.State.Finished ? "Finished" : "Stopped")}" +
-                           $"   {TempoStep.Label(_clock.TempoMultiplier)}";
+                           $"   {TempoStep.Label(_clock.TempoMultiplier)}" +
+                           (practice != null ? $"\n<size=87%>{practice}</size>" : "");
             GlassBuilder.Set(_play, true);
             GlassBuilder.Set(_restart, true);
             GlassBuilder.Set(_songs, !running);
