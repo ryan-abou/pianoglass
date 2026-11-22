@@ -1,14 +1,16 @@
-#if DEVELOPMENT_BUILD
 using System;
 using System.IO;
 using System.Text;
 using UnityEngine;
 
-namespace PianoGlass.DevTools
+namespace PianoGlass.Diagnostics
 {
     /// <summary>
-    /// Development builds on the headset write every log line to a file of
-    /// their own, files/logs/&lt;start time&gt;.txt, as well as logcat. The
+    /// Every build on the headset, release too, writes every log line to a
+    /// file of its own, files/logs/&lt;start time&gt;.txt, as well as logcat.
+    /// Release builds were left out until round 11 (2026-11-21), when logcat
+    /// held only the last 20 seconds and the reason for a bad recenter (#38)
+    /// was lost. The file stays on the headset. The
     /// Quest's logcat is cut back to 256 KB whenever the headset restarts
     /// (an OS update did, 2026-11-19), and round 6's results were lost with
     /// it. The newest <see cref="KeepFiles"/> files are kept. Pull them with
@@ -106,4 +108,3 @@ namespace PianoGlass.DevTools
         }
     }
 }
-#endif
