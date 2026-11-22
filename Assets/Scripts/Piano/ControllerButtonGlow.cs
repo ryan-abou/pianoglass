@@ -4,10 +4,11 @@ using UnityEngine;
 namespace PianoGlass.Piano
 {
     /// <summary>
-    /// Makes one button on Meta's controller model light up (#42), the way
-    /// VR tutorials point at a button: the controller is drawn over the real
-    /// one as a see-through ghost, and the button's own part of the model
-    /// glows and pulses, with a soft halo around it.
+    /// Makes one button on the real controller light up (#42): Meta's
+    /// controller model is lined up with the real one but not drawn, and only
+    /// the button's own part of it glows and pulses, with a soft halo, right
+    /// on top of the real button. (Round 13 had the whole model as a
+    /// see-through ghost; Ryan wanted just the button.)
     ///
     /// Meta's models are one skinned mesh, with a bone for each button
     /// (right_b_button_oculus on the Quest 3's Touch Plus). The button's part
@@ -26,7 +27,6 @@ namespace PianoGlass.Piano
         public static readonly string[] MetaButtonBones = { "right_b_button_oculus", "b_button_oculus", "b_button03" };
 
         public static readonly Color Glow = new Color(0.45f, 0.88f, 1f, 1f);
-        private static readonly Color Ghost = new Color(0.16f, 0.18f, 0.22f, 0.55f);
         private const float HaloMetres = 0.034f, PulseHz = 1.1f;
         /// <summary>A triangle belongs to the button when all three corners
         /// follow its bone at least this much.</summary>
@@ -38,9 +38,8 @@ namespace PianoGlass.Piano
         private SkinnedMeshRenderer _cap;
         private Transform _halo;
         private Material _capMaterial, _haloMaterial;
+        /// <summary>The model's own renderers, kept switched off.</summary>
         private readonly List<Renderer> _model = new List<Renderer>();
-        private readonly List<Material[]> _modelWas = new List<Material[]>();
-        private Material _ghostMaterial;
 
         /// <summary>Which bone it lit, for the log.</summary>
         public string BoneName { get; private set; }
@@ -48,7 +47,7 @@ namespace PianoGlass.Piano
         /// <summary>Lights the first of <paramref name="boneNames"/> found
         /// in an active part of <paramref name="modelRoot"/>. Null if none is.</summary>
         /// <param name="translucent">An unlit, alpha-blended material
-        /// (KeyOverlayTranslucent): copied for the ghost, the button and the halo.</param>
+        /// (KeyOverlayTranslucent): copied for the button and the halo.</param>
         /// <param name="cap">The button's part, from <see cref="BuildCap"/>; used
         /// only if it was cut from this very mesh (same vertex count).</param>
         public static ControllerButtonGlow Add(GameObject modelRoot, Material translucent, Mesh cap, params string[] boneNames)
@@ -113,18 +112,10 @@ namespace PianoGlass.Piano
         {
             _bone = source.bones[bone];
 
-            // The ghost: every renderer of this model, see-through.
-            _ghostMaterial = new Material(translucent) { name = "ControllerGhost" };
-            _ghostMaterial.SetColor(BaseColorId, Ghost);
+            // The model itself is not drawn: only the button glows.
             Transform model = source.transform.parent != null ? source.transform.parent : source.transform;
-            foreach (Renderer r in model.GetComponentsInChildren<Renderer>(false))
-            {
-                _model.Add(r);
-                _modelWas.Add(r.sharedMaterials);
-                var mats = new Material[r.sharedMaterials.Length];
-                for (int i = 0; i < mats.Length; i++) mats[i] = _ghostMaterial;
-                r.sharedMaterials = mats;
-            }
+            _model.AddRange(model.GetComponentsInChildren<Renderer>(true));
+            HideModel();
 
             // The button: its saved part, or cut now if this mesh can be read (the editor).
             Mesh mesh = source.sharedMesh;
@@ -184,7 +175,17 @@ namespace PianoGlass.Piano
             return sum;
         }
 
-        private void LateUpdate() => Pulse(Time.unscaledTime);
+        private void LateUpdate()
+        {
+            HideModel(); // in case Meta's helper switches it back on
+            Pulse(Time.unscaledTime);
+        }
+
+        private void HideModel()
+        {
+            foreach (Renderer r in _model)
+                if (r != null && r.enabled) r.enabled = false;
+        }
 
         /// <summary>Glow strength at <paramref name="time"/> seconds, and the halo on the eye.</summary>
         public void Pulse(float time)
@@ -204,11 +205,8 @@ namespace PianoGlass.Piano
             _halo.SetPositionAndRotation(centre + toEye * 0.002f, Quaternion.LookRotation(-toEye, Vector3.up));
         }
 
-        /// <summary>Puts the model's own materials back.</summary>
         private void OnDestroy()
         {
-            for (int i = 0; i < _model.Count; i++)
-                if (_model[i] != null) _model[i].sharedMaterials = _modelWas[i];
             if (_cap != null) Destroy(_cap.gameObject);
         }
 

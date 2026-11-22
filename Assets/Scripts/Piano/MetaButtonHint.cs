@@ -7,9 +7,10 @@ namespace PianoGlass.Piano
     /// Shows where the Meta button is while the launch prompt asks for a
     /// recenter (#42): someone new, like a judge, doesn't know the button.
     ///
-    /// Done the way VR tutorials do it: Meta's own controller model is drawn
-    /// over the real right controller as a see-through ghost, and its Meta
-    /// button glows and pulses (ControllerButtonGlow). OVRControllerPrefab
+    /// Meta's own controller model is lined up with the real right controller
+    /// but not drawn; only its Meta button glows and pulses, on top of the
+    /// real button (ControllerButtonGlow; round 13: just the button, no
+    /// model, Ryan). OVRControllerPrefab
     /// picks the model for the headset and lines it up with the real
     /// controller, so the glow is on the real button, not at a guessed spot
     /// (round 12: the first version, a ring at a guessed offset, was about
