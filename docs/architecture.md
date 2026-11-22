@@ -102,7 +102,7 @@ Assets/
                                       windows, ratings, the attempt JSON schema
     ScoreKeeper.cs                    Unity shell: MIDI → session, attempt files, restart = abandoned
   Scripts/Transport/
-    SongTransport.cs                  play/pause/restart + MIDI chord + transport state (Meta-free)
+    SongTransport.cs                  play/pause/restart, tempo, toggles + transport state (Meta-free)
     OvrSongTransport.cs               transport's OVRInput code
   Tests/EditMode/                     270 tests (layout, calibration, clock, slabs, scoring, latency filter, beat grid), run headlessly
 ```
