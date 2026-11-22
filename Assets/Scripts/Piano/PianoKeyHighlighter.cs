@@ -246,6 +246,49 @@ namespace PianoGlass.Piano
             if (clock != null && current != null && (displayMode == DisplayMode.ActiveKeysOnly || displayMode == DisplayMode.EdgeMarkers))
                 UpdateDueKeys();
             UpdateWrongPulses();
+            UpdatePlayAlong();
+        }
+
+        // ---- No-piano mode (#44) -------------------------------------------
+
+        private readonly Dictionary<int, Color> _playAlong = new Dictionary<int, Color>();
+        private readonly HashSet<int> _playAlongLit = new HashSet<int>();
+        private readonly List<int> _playAlongDone = new List<int>();
+
+        /// <summary>
+        /// Without a piano nothing is pressed, so nothing lights a key. Here a
+        /// key lights in its note's hand colour for as long as the note
+        /// sounds, the cue to play it on the real piano, and goes back to rest
+        /// after. Only in no-piano mode while the song plays.
+        /// </summary>
+        private void UpdatePlayAlong()
+        {
+            _playAlong.Clear();
+            if (SongTransport.NoPiano && clock != null && clock.IsPlaying && current != null && current.Song != null)
+            {
+                double t = clock.DisplaySongTime;
+                NotePalette palette = NotePalette.Active;
+                foreach (SongNote n in current.Song.Notes)
+                {
+                    if (n.StartTime > t || n.EndTime <= t || !n.BelongsTo(current.Hand)) continue;
+                    _playAlong[n.Pitch] = palette != null ? palette.SolidColor(current.Hand, n.Hand) : Color.white;
+                }
+            }
+
+            foreach (var kv in _playAlong)
+            {
+                SetColor(kv.Key, kv.Value, forceVisible: true);
+                _playAlongLit.Add(kv.Key);
+            }
+            if (_playAlongLit.Count == _playAlong.Count) return;
+            _playAlongDone.Clear();
+            foreach (int note in _playAlongLit)
+                if (!_playAlong.ContainsKey(note)) _playAlongDone.Add(note);
+            foreach (int note in _playAlongDone)
+            {
+                _playAlongLit.Remove(note);
+                ApplyRestState(note, PianoKeyLayout.IsBlackKey(note));
+            }
         }
 
         private void UpdateDueKeys()
