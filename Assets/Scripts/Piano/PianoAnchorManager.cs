@@ -39,7 +39,22 @@ namespace PianoGlass.Piano
         /// <summary>Slow movement adds up to this before it is logged.</summary>
         private const float RefinedMetres = 0.005f;
 
+        /// <summary>After a jump, the keys are checked this much later, once
+        /// the runtime has settled (#38).</summary>
+        private const float CheckDelaySeconds = 1f;
+        private float _checkAt = -1f;
+
         public IPianoAnchorHandle BoundAnchor => _bound;
+
+        /// <summary>Set when a recenter or relocalization left the keys
+        /// somewhere no piano can be (KeyPlacementCheck): what to tell the
+        /// player. Null otherwise, and cleared by a new anchor.</summary>
+        public string PlacementWarning { get; private set; }
+
+        public const string LookWrongLine = "The keys look wrong. Press B to set up again.";
+
+        /// <summary>The player asked to set up again: the warning has done its job.</summary>
+        public void ClearPlacementWarning() => PlacementWarning = null;
 
         public void Bind(AnchoredCalibrationSession session, KeyboardCalibration calibration)
         {
@@ -66,6 +81,9 @@ namespace PianoGlass.Piano
             {
                 _bound = anchor;
                 _dirty = true;
+                _checkAt = -1f;
+                if (PlacementWarning != null) Debug.Log("[AnchorFlow] new anchor: keys warning cleared");
+                PlacementWarning = null;
                 if (anchor != null)
                 {
                     _lastFrame = anchor.Pose;
@@ -88,6 +106,24 @@ namespace PianoGlass.Piano
             }
 
             _calibration.SetExternalPlacementValid(_session.IsOverlayVisible);
+
+            if (_checkAt > 0f && Time.realtimeSinceStartup >= _checkAt && _session.IsOverlayVisible)
+            {
+                _checkAt = -1f;
+                CheckPlacement();
+            }
+        }
+
+        private void CheckPlacement()
+        {
+            PianoKeyLayout layout = _calibration.Layout;
+            Camera head = Camera.main;
+            if (layout == null || head == null) return;
+            Vector3 centre = (layout.LowFrontEdge + layout.HighFrontEdge) * 0.5f;
+            bool wrong = KeyPlacementCheck.LooksWrong(centre, layout.Forward, layout.Up, head.transform.position,
+                                                      out string measured);
+            Debug.Log($"[AnchorFlow] keys after the jump: {measured}: {(wrong ? "LOOK WRONG, asking to set up again" : "fine")}");
+            PlacementWarning = wrong ? LookWrongLine : null;
         }
 
         private void LogJumps(Pose pose)
@@ -98,6 +134,7 @@ namespace PianoGlass.Piano
             {
                 Debug.Log($"[AnchorFlow] anchor world pose jumped {moved * 1000f:0} mm / {turned:0.0} deg in one frame " +
                           "(tracking space re-based -- recenter or relocalization); layout rebuilt");
+                _checkAt = Time.realtimeSinceStartup + CheckDelaySeconds;
                 _lastLogged = pose;
             }
             else

@@ -101,7 +101,31 @@ namespace PianoGlass.Piano
 
         private void Update()
         {
-            if (Active) Session.UpdateTracking();
+            if (!Active) return;
+            Session.UpdateTracking();
+            ShowPlacementWarning();
+        }
+
+        private RecenterPromptView _warningView;
+        private string _warningShown;
+
+        /// <summary>The "keys look wrong" warning goes on the banner in the
+        /// middle of the view, not the status panel: the panel sits on the
+        /// keys, and the keys are the thing that is wrong (#38).</summary>
+        private void ShowPlacementWarning()
+        {
+            string warning = PlacementWarning;
+            if (warning == _warningShown) return;
+            _warningShown = warning;
+            if (warning == null)
+            {
+                if (_warningView != null) _warningView.Hide();
+                return;
+            }
+            if (_warningView == null)
+                _warningView = RecenterPromptView.Create(
+                    FindAnyObjectByType<PianoGlass.UI.SongPicker>(FindObjectsInactive.Include), warning);
+            if (_warningView != null) _warningView.Show();
         }
 
         /// <summary>For the panel: the anchor line, and the last problem if any.</summary>
@@ -111,6 +135,9 @@ namespace PianoGlass.Piano
             : "off";
         public AnchorPanelStatus Status => Session != null ? Session.Status : AnchorPanelStatus.Starting;
         public string LastProblem => Session?.LastProblem;
+        /// <summary>The keys came back somewhere no piano can be after a
+        /// recenter (#38): what to tell the player, or null.</summary>
+        public string PlacementWarning => anchorManager != null ? anchorManager.PlacementWarning : null;
         /// <summary>What the last Middle C fix applied; null if none on this anchor.</summary>
         public string CorrectionNote => Session?.CorrectionNote;
 
@@ -132,7 +159,11 @@ namespace PianoGlass.Piano
             Run(Session.OnCapturedAsync(captured.LowFrontEdge, captured.HighFrontEdge, captured.Forward,
                                         captured.LowestNote, captured.HighestNote, captured.WhiteKeyDepth));
 
-        public void OnRecalibrateRequested() => Run(Session.RecalibrateAsync());
+        public void OnRecalibrateRequested()
+        {
+            anchorManager.ClearPlacementWarning();
+            Run(Session.RecalibrateAsync());
+        }
 
         public void OnTriggerWhileWaiting() => Run(Session.RetryAsync());
 
