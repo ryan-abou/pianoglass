@@ -12,10 +12,11 @@ namespace PianoGlass.Piano
     /// the session and the flow; this only forwards input, starts the async
     /// work, and reports.
     ///
-    /// Behind useAnchoredCalibration, which only takes effect in development
-    /// builds (and the editor). In a release build this disables itself in
-    /// Awake, before KeyboardCalibration.Start, and calibration behaves
-    /// exactly as it did before Phase 4 -- keyboard_calibration.json and all.
+    /// Behind useAnchoredCalibration, in every build since Batch I
+    /// (2026-11-21; before that, development builds only). Unticked, this
+    /// disables itself in Awake, before KeyboardCalibration.Start, and
+    /// calibration behaves exactly as it did before Phase 4 --
+    /// keyboard_calibration.json and all.
     ///
     /// Meta-free. On the headset the real anchor service arrives through
     /// ServiceFactory, set by OvrAnchorServiceRegistration; in the editor it
@@ -35,9 +36,8 @@ namespace PianoGlass.Piano
         [SerializeField] private PianoAnchorManager anchorManager;
 
         [Tooltip("Place the keyboard from a spatial anchor saved at calibration " +
-                 "time instead of from tracking-space points. Honoured in " +
-                 "development builds and the editor only; release builds always " +
-                 "use the legacy calibration.")]
+                 "time instead of from tracking-space points. Unticked, every " +
+                 "build uses the legacy calibration.")]
         [SerializeField] private bool useAnchoredCalibration = true;
 
         [SerializeField] private double localizeTimeoutSeconds = 10;
@@ -52,10 +52,9 @@ namespace PianoGlass.Piano
             if (calibration == null) calibration = GetComponent<KeyboardCalibration>();
             if (anchorManager == null) anchorManager = GetComponent<PianoAnchorManager>();
 
-            if (!useAnchoredCalibration || !Debug.isDebugBuild)
+            if (!useAnchoredCalibration)
             {
-                Debug.Log($"[AnchorFlow] off ({(Debug.isDebugBuild ? "useAnchoredCalibration unticked" : "release build")}) " +
-                          "-- legacy calibration");
+                Debug.Log("[AnchorFlow] off (useAnchoredCalibration unticked) -- legacy calibration");
                 enabled = false;
                 return;
             }
@@ -86,7 +85,8 @@ namespace PianoGlass.Piano
             Active = true;
             calibration.SetPlacementOwner(this);
             anchorManager.Bind(Session, calibration);
-            Debug.Log($"[AnchorFlow] on ({service.GetType().Name}, profile {serializer.Path})");
+            Debug.Log($"[AnchorFlow] on ({service.GetType().Name}, {(Debug.isDebugBuild ? "development" : "release")} build, " +
+                      $"profile {serializer.Path})");
         }
 
         private void OnDestroy()
