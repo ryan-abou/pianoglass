@@ -249,28 +249,33 @@ namespace PianoGlass.Piano
             UpdatePlayAlong();
         }
 
-        // ---- No-piano mode (#44) -------------------------------------------
+        // ---- Keys lit in time (#44; all the time since round 13) ------------
 
         private readonly Dictionary<int, Color> _playAlong = new Dictionary<int, Color>();
         private readonly HashSet<int> _playAlongLit = new HashSet<int>();
         private readonly List<int> _playAlongDone = new List<int>();
 
         /// <summary>
-        /// Without a piano nothing is pressed, so nothing lights a key. Here a
-        /// key lights in its note's hand colour for as long as the note
-        /// sounds, the cue to play it on the real piano, and goes back to rest
-        /// after. Only in no-piano mode while the song plays.
+        /// A key lights in its note's hand colour for as long as the note
+        /// sounds, the cue to play it, and goes back to rest after. Made for
+        /// no-piano mode (#44), where nothing is pressed; Ryan liked it enough
+        /// to have it with a piano too (round 13). A key being held keeps its
+        /// press colour and a wrong key its coral pulse: those are feedback,
+        /// and come first. Off while memory fade hides the notes: a lit key
+        /// would give the note away.
         /// </summary>
         private void UpdatePlayAlong()
         {
             _playAlong.Clear();
-            if (SongTransport.NoPiano && clock != null && clock.IsPlaying && current != null && current.Song != null)
+            if (clock != null && clock.IsPlaying && !clock.IsFading && current != null && current.Song != null)
             {
                 double t = clock.DisplaySongTime;
                 NotePalette palette = NotePalette.Active;
                 foreach (SongNote n in current.Song.Notes)
                 {
                     if (n.StartTime > t || n.EndTime <= t || !n.BelongsTo(current.Hand)) continue;
+                    if (MidiInput.Instance != null && MidiInput.Instance.IsHeld(n.Pitch)) continue;
+                    if (_wrongAt.ContainsKey(n.Pitch)) continue;
                     _playAlong[n.Pitch] = palette != null ? palette.SolidColor(current.Hand, n.Hand) : Color.white;
                 }
             }
@@ -287,7 +292,9 @@ namespace PianoGlass.Piano
             foreach (int note in _playAlongDone)
             {
                 _playAlongLit.Remove(note);
-                ApplyRestState(note, PianoKeyLayout.IsBlackKey(note));
+                // A held key keeps its press colour (ApplyRestState skips it);
+                // a wrong one is UpdateWrongPulses' to fade.
+                if (!_wrongAt.ContainsKey(note)) ApplyRestState(note, PianoKeyLayout.IsBlackKey(note));
             }
         }
 
