@@ -117,8 +117,8 @@ namespace PianoGlass.Song
 
         public string Title => Popup switch
         {
-            PianoPopup.Connect => "Connect your piano keyboard",
-            PianoPopup.Unplugged => "Your piano keyboard was unplugged",
+            PianoPopup.Connect => "Connect your piano",
+            PianoPopup.Unplugged => "Your piano was unplugged",
             PianoPopup.Reconnected => "Your piano is connected again",
             _ => null,
         };

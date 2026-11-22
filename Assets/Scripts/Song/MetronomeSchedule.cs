@@ -54,6 +54,10 @@ namespace PianoGlass.Song
         /// <summary>Forget what was scheduled: after a pause, restart or seek.</summary>
         public void Reset() => _lastScheduled = double.NegativeInfinity;
 
+        /// <summary>Beats up to this song time were clicked elsewhere (the
+        /// resume count-in): don't click them again.</summary>
+        public void MarkScheduledThrough(double songTime) => _lastScheduled = songTime;
+
         /// <summary>The clicks to schedule now, appended to <paramref name="into"/>
         /// (cleared first). <paramref name="earliest"/>/<paramref name="latest"/>
         /// bound the song in song seconds: -leadIn and the song's end.</summary>

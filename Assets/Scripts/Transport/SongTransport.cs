@@ -131,9 +131,27 @@ namespace PianoGlass.Transport
         }
 
         /// <summary>Only a song paused part-way counts down; from the top it
-        /// has its lead-in already.</summary>
+        /// has its lead-in already.
+        /// With the metronome on it is a count-in in the song's tempo, a click
+        /// a number, landing the song on its next beat (round 13).</summary>
         private void StartCountdown(string why)
         {
+            SongData song = Song;
+            if (metronome != null && metronome.IsOn && song != null && song.TempoMap.HasBeats && clock.TempoMultiplier > 0f)
+            {
+                TempoMap map = song.TempoMap;
+                double pausedAt = clock.SongTime;
+                long k = map.FirstBeatAtOrAfter(pausedAt);
+                BeatLine next = map.Beat(k);
+                double beat = map.Beat(k + 1).Time - next.Time;
+                (double step, double total) = ResumeCountdown.Plan(pausedAt, next.Time, beat, clock.TempoMultiplier);
+                double delay = metronome.OutputLatencySeconds;
+                _countdown.Start(Now, delay, step, total);
+                metronome.CountIn(new[] { delay, delay + step, delay + 2 * step, delay + 3 * step }, next.IsBarLine, next.Time);
+                Debug.Log($"[Transport] resume count-in ({why}) at t = {pausedAt:0.00}s: {step * 1000:0} ms a beat, " +
+                          $"back in on the beat at {next.Time:0.00}s");
+                return;
+            }
             _countdown.Start(Now);
             Debug.Log($"[Transport] resume countdown ({why}) at t = {clock.SongTime:0.00}s");
         }
@@ -142,6 +160,7 @@ namespace PianoGlass.Transport
         {
             if (!_countdown.Running) return;
             _countdown.Cancel();
+            if (metronome != null) metronome.StopCountIn();
             Debug.Log($"[Transport] resume countdown cancelled: {why}");
         }
 
