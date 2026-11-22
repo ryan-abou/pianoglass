@@ -68,16 +68,27 @@ namespace PianoGlass.Piano
             gameObject.SetActive(false);
         }
 
-        /// <summary>OVRControllerHelper switches on the right model in its
-        /// Start: light it a couple of frames later.</summary>
+        /// <summary>Tries again until OVRControllerHelper has switched the right
+        /// model on: it isn't always ready a couple of frames in (round 13: no
+        /// glow on 2 of 5 launches, when that was all it waited).</summary>
         private IEnumerator LightWhenReady()
         {
-            yield return null;
-            yield return null;
-            _glow = ControllerButtonGlow.Add(_model, _assets.translucent, _assets.touchPlusRightCap,
-                                             ControllerButtonGlow.MetaButtonBones);
-            if (_glow == null) Debug.LogWarning("[MetaButton] no Meta button bone on the controller model shown");
+            float started = Time.unscaledTime;
+            while (_glow == null)
+            {
+                yield return new WaitForSecondsRealtime(RetrySeconds);
+                _glow = ControllerButtonGlow.Add(_model, _assets.translucent, _assets.touchPlusRightCap,
+                                                 ControllerButtonGlow.MetaButtonBones);
+                if (_glow == null && Time.unscaledTime - started > GiveUpSeconds)
+                {
+                    Debug.LogWarning($"[MetaButton] no Meta button bone on the controller model after {GiveUpSeconds:0} s");
+                    yield break;
+                }
+            }
+            Debug.Log($"[MetaButton] glowing {Time.unscaledTime - started:0.0} s after the prompt");
         }
+
+        private const float RetrySeconds = 0.1f, GiveUpSeconds = 30f;
 
         private void OnDisable() => StopBuzz();
 
