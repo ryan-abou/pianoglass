@@ -57,8 +57,9 @@ namespace PianoGlass.Piano
                 _model = Instantiate(_assets.controllerPrefab, transform, false);
                 var helper = _model.GetComponent<OVRControllerHelper>();
                 if (helper != null) helper.m_controller = OVRInput.Controller.RTouch;
-                StartCoroutine(LightWhenReady());
             }
+            // Hiding stops the coroutine: start it again if it hadn't lit yet.
+            if (_glow == null) StartCoroutine(LightWhenReady());
             Debug.Log("[MetaButton] shown");
         }
 
