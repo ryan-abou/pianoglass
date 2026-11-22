@@ -18,7 +18,7 @@ namespace PianoGlass.UI
     ///   playing          the score like a game: points, accuracy, the
     ///                    perfect/great/good/miss/wrong counts, the last hit,
     ///                    and a wrong note's name for a few seconds
-    ///   no keyboard      a reminder to plug it in
+    ///   no piano         that there is no score (#44)
     ///
     /// It replaces the old status panel for players: release builds switch
     /// that panel off, and development builds keep it as test info (hidden
@@ -156,7 +156,7 @@ namespace PianoGlass.UI
             bool setup = AddSetup();
             if (ShowKeys(setup)) AddKeys();
             if (!setup) AddScore();
-            if (!setup) AddKeyboardMissing();
+            if (!setup) AddNoPiano();
         }
 
         /// <summary>The next step, and any problem. True while setting up.</summary>
@@ -263,14 +263,12 @@ namespace PianoGlass.UI
                 _lines.Add(StatusStripText.Colour($"Last pass: {_loop.LastPassLine}", StatusStripText.Yellow));
         }
 
-        private void AddKeyboardMissing()
+        /// <summary>No-piano mode (#44), while a song is under way: why
+        /// there is no score. The piano popup does the asking.</summary>
+        private void AddNoPiano()
         {
-            MidiInput midi = MidiInput.Instance;
-            if (midi == null || Application.isEditor) return;
-            if (!midi.IsSupported)
-                _lines.Add(StatusStripText.Colour("This headset can't read a MIDI keyboard right now.", StatusStripText.Red));
-            else if (!midi.IsConnected)
-                _lines.Add(StatusStripText.Colour("Plug your piano keyboard into the headset's USB-C port.", StatusStripText.Yellow));
+            if (!SongTransport.NoPiano || _transport == null || !_transport.SongUnderWay) return;
+            _lines.Add(StatusStripText.Colour("No piano: follow along, no score", StatusStripText.Yellow));
         }
 
         // ------------------------------------------------------------------

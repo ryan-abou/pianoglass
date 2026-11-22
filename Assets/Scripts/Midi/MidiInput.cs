@@ -158,7 +158,10 @@ namespace PianoGlass.Midi
 #if UNITY_ANDROID && !UNITY_EDITOR
             if (_bridge == null) return;
             Status = _bridge.CallStatic<string>("getStatus");
-            IsConnected = _bridge.CallStatic<bool>("isConnected");
+            bool connected = _bridge.CallStatic<bool>("isConnected");
+            if (connected != IsConnected)
+                Debug.Log($"[MidiInput] keyboard {(connected ? "connected" : "disconnected")} ({Status})");
+            IsConnected = connected;
 #endif
         }
 
