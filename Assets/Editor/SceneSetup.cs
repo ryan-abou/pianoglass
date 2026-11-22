@@ -1171,6 +1171,63 @@ namespace PianoGlass.EditorTools
             return mat;
         }
 
+        private const string ControllerPrefabPath = "Packages/com.meta.xr.sdk.core/Prefabs/OVRControllerPrefab.prefab";
+        private const string TouchPlusRightPath = "Packages/com.meta.xr.sdk.core/Meshes/MetaQuestTouchPlus/MetaQuestTouchPlus_Right.fbx";
+        private const string TouchPlusCapPath = "Assets/Meshes/MetaButtonCap_TouchPlusRight.asset";
+
+        /// <summary>
+        /// The Meta button highlight (#42): cuts the Meta button's part out of
+        /// the Quest 3 right controller model (a build can't read Meta's
+        /// mesh), saves it as an asset, and points a MetaButtonHintAssets in
+        /// the scene at it, at OVRControllerPrefab and at the see-through
+        /// material.
+        /// </summary>
+        [MenuItem("PianoGlass/Scene/Configure Meta Button Hint")]
+        public static void ConfigureMetaButtonHint()
+        {
+            Scene scene = OpenScene();
+
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(ControllerPrefabPath);
+            var model = AssetDatabase.LoadAssetAtPath<GameObject>(TouchPlusRightPath);
+            var translucent = AssetDatabase.LoadAssetAtPath<Material>(TranslucentMaterialPath);
+            if (prefab == null || model == null || translucent == null)
+            {
+                Debug.LogError($"[SceneSetup] Meta button hint needs {ControllerPrefabPath}, {TouchPlusRightPath} and {TranslucentMaterialPath}.");
+                return;
+            }
+
+            Mesh cap = null;
+            foreach (SkinnedMeshRenderer smr in model.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            {
+                if (smr.sharedMesh == null || smr.bones == null) continue;
+                int bone = System.Array.FindIndex(smr.bones, b => b != null && b.name == ControllerButtonGlow.MetaButtonBones[0]);
+                if (bone < 0) continue;
+                cap = ControllerButtonGlow.BuildCap(smr.sharedMesh, bone, "MetaButtonCap_TouchPlusRight");
+                break;
+            }
+            if (cap == null || cap.GetIndexCount(0) == 0)
+            {
+                Debug.LogError("[SceneSetup] no Meta button triangles found on the Touch Plus right model.");
+                return;
+            }
+            if (!AssetDatabase.IsValidFolder("Assets/Meshes")) AssetDatabase.CreateFolder("Assets", "Meshes");
+            AssetDatabase.DeleteAsset(TouchPlusCapPath);
+            AssetDatabase.CreateAsset(cap, TouchPlusCapPath);
+            AssetDatabase.SaveAssets();
+
+            var assets = GetOrAdd<MetaButtonHintAssets>("MetaButtonHint");
+            var so = new SerializedObject(assets);
+            so.FindProperty("controllerPrefab").objectReferenceValue = prefab;
+            so.FindProperty("translucent").objectReferenceValue = translucent;
+            so.FindProperty("touchPlusRightCap").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Mesh>(TouchPlusCapPath);
+            so.ApplyModifiedProperties();
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            Debug.Log($"[SceneSetup] Meta button hint: {cap.GetIndexCount(0) / 3} button triangles saved to {TouchPlusCapPath}, " +
+                      "OVRControllerPrefab and the see-through material wired.");
+        }
+
         [MenuItem("PianoGlass/Scene/Remove Test Cube")]
         public static void RemoveTestCube()
         {
