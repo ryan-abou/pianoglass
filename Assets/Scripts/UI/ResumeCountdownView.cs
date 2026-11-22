@@ -5,14 +5,15 @@ using PianoGlass.Transport;
 namespace PianoGlass.UI
 {
     /// <summary>
-    /// Shows the resume countdown (#44): a big 3, 2, 1 on the same glass
-    /// banner as the launch recenter prompt, gliding after the head the same
-    /// way, so it is in view wherever the player looks. SongTransport runs the
+    /// Shows the resume countdown (#44): a big 3, 2, 1 in a glass circle
+    /// (round 13: not the long banner), gliding after the head the same way
+    /// as the launch recenter prompt, so it is in view wherever the player looks. SongTransport runs the
     /// countdown; this only draws it. Builds itself after the scene loads.
     /// </summary>
     public sealed class ResumeCountdownView : MonoBehaviour
     {
-        private const float NumberSize = 96f;
+        private const float NumberSize = 110f;
+        private static readonly Vector2 Circle = new Vector2(190f, 190f);
 
         private SongTransport _transport;
         private SongPicker _style;
@@ -39,7 +40,7 @@ namespace PianoGlass.UI
                 if (_view != null) _view.Hide();
                 return;
             }
-            if (_view == null) _view = RecenterPromptView.Create(_style, "");
+            if (_view == null) _view = RecenterPromptView.Create(_style, "", Circle);
             if (_view == null) return;
             _view.SetText(n.ToString(), NumberSize);
             if (!_view.Shown) _view.Show();

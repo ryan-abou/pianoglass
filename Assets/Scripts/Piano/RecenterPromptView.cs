@@ -33,7 +33,9 @@ namespace PianoGlass.Piano
         private TextMeshProUGUI _label;
 
         /// <summary>Built hidden. Null if the scene has no song picker.</summary>
-        public static RecenterPromptView Create(SongPicker styleSource, string text)
+        /// <param name="size">Canvas millimetres; square makes a circle (the
+        /// resume countdown, round 13). The banner's size if left out.</param>
+        public static RecenterPromptView Create(SongPicker styleSource, string text, Vector2? size = null)
         {
             if (styleSource == null) return null;
             (TMP_FontAsset font, Material textMaterial, Material glassMaterial, GlassTokens tokens) = styleSource.Style;
@@ -45,7 +47,7 @@ namespace PianoGlass.Piano
             canvas.renderMode = RenderMode.WorldSpace;
             canvas.sortingOrder = 50; // over the other glass when they overlap
             go.transform.localScale = Vector3.one * 0.001f;
-            ((RectTransform)go.transform).sizeDelta = Size;
+            ((RectTransform)go.transform).sizeDelta = size ?? Size;
 
             var glass = go.AddComponent<GlassPanel>();
             glass.Init(glassMaterial, tokens, GlassStyle.Pill, new Vector2(0.01f, 0.01f), 0.002f);
