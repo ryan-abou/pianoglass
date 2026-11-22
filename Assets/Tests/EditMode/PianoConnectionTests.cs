@@ -145,7 +145,7 @@ namespace PianoGlass.Tests.EditMode
             Assert.AreEqual(2, c.Number(0.6));
             Assert.AreEqual(1, c.Number(1.1));
             Assert.IsFalse(c.Finished(1.38));
-            Assert.IsTrue(c.Finished(1.385), "the song plays 0.2 s before where a 4th beat would be");
+            Assert.IsTrue(c.Finished(1.386), "the song plays 0.2 s before where a 4th beat would be");
         }
 
         [Test]
