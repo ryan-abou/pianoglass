@@ -174,7 +174,6 @@ namespace PianoGlass.Scoring
             if (clock == null || !clock.IsPlaying) return;
             // Mid-calibration, or the A that confirms the keys: not playing yet.
             if (calibration != null && (!calibration.IsPlacementValid || calibration.AwaitingConfirmation)) return;
-            if (transport != null && transport.IsRestartChordNote(note) && !SongUses(note)) return;
             _pending.Add((note, MidiInput.Instance.ToRealtime(time)));
         }
 
@@ -399,13 +398,6 @@ namespace PianoGlass.Scoring
                 Debug.LogError($"[Score] attempt not saved to {_path}: {e.Message}");
             }
             return rec;
-        }
-
-        private bool SongUses(int pitch)
-        {
-            PracticeHand hand = current != null ? current.Hand : PracticeHand.All;
-            foreach (SongNote n in _song.Notes) if (n.Pitch == pitch && n.BelongsTo(hand)) return true;
-            return false;
         }
 
         private static string Slug(string title)

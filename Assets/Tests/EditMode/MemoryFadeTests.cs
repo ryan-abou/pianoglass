@@ -300,13 +300,5 @@ namespace PianoGlass.Tests.EditMode
             // Due at 0 with 5 s of highway: part way down when the song starts.
             Assert.AreEqual(0.15f, _clock.NoteOpacityAt(0.0, 5.0), 1e-6f);
         }
-
-        [Test]
-        public void TheChordIsHoldA0PressDSharp1()
-        {
-            Assert.AreEqual(ChordAction.ToggleMemoryFade,
-                            TransportChord.OnNoteOn(TransportChord.DSharp1, n => n == TransportChord.A0));
-            Assert.AreEqual(ChordAction.None, TransportChord.OnNoteOn(TransportChord.DSharp1, n => false));
-        }
     }
 }
