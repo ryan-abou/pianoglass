@@ -215,6 +215,21 @@ namespace PianoGlass.Piano
                 Debug.LogWarning($"[TipCal] profile file invalid ({r.Reason}); moved to {r.RenamedTo ?? "(could not move)"}");
 
             PianoProfileStore store = r.Store;
+            if (r.Status == ProfileLoadStatus.Missing ||
+                (r.Status == ProfileLoadStatus.Loaded && !store.hasTipOffset))
+            {
+                // A new install: nobody can measure the tip without the dev
+                // controls, so start from the built-in one (Batch I).
+                store ??= new PianoProfileStore();
+                if (PianoProfileEdits.SeedControllerDefaults(store))
+                {
+                    if (Serializer.Save(store, out string error))
+                        Debug.Log($"[TipCal] new install: built-in tip and calibration bias saved " +
+                                  $"({Mm(store.tipOffsetController)}, bias {store.calibrationBiasMm} mm)");
+                    else
+                        Debug.LogWarning($"[TipCal] built-in tip not saved ({error}); using it this session");
+                }
+            }
             if (store == null || !store.hasTipOffset) return;
 
             if (store.tipOffsetController.magnitude > maxOffsetMetres)
@@ -224,7 +239,9 @@ namespace PianoGlass.Piano
             }
 
             Apply(store.tipOffsetController, store.tipOffsetRmsMm);
-            Debug.Log($"[TipCal] loaded saved tip (RMS {store.tipOffsetRmsMm:0.0} mm, {store.tipOffsetUtc})");
+            Debug.Log(store.tipOffsetUtc == PianoProfileEdits.BuiltInTipUtc
+                ? "[TipCal] using the built-in Quest 3 tip"
+                : $"[TipCal] loaded saved tip (RMS {store.tipOffsetRmsMm:0.0} mm, {store.tipOffsetUtc})");
         }
 
         private bool Save(Vector3 offset, float rmsMm, out string error)
