@@ -20,10 +20,14 @@ namespace PianoGlass.Piano
     /// </summary>
     public sealed class LaunchResync : MonoBehaviour
     {
-        /// <summary>Both ways to recenter: the Meta button on a controller, or,
-        /// with hands, looking at a palm and pinching and holding (#5).</summary>
+        /// <summary>Both ways to recenter: the Meta button on the right
+        /// controller, said where it is (#42), or, with hands, looking at a
+        /// palm and pinching and holding (#5). A ring and a buzz on the
+        /// controller point at the button too (MetaButtonHint).</summary>
         public const string PromptLine =
-            "Hold the Meta button, or look at your palm and pinch and hold, to line up the keys";
+            "Hold the Meta button on your right controller\n" +
+            "It's the round button under the thumbstick\n" +
+            "<size=80%>Or look at your palm, then pinch and hold</size>";
 
         /// <summary>Show <see cref="PromptLine"/> now.</summary>
         public static bool WaitingForRecenter { get; private set; }
@@ -36,6 +40,7 @@ namespace PianoGlass.Piano
         private bool _hasLastHead;
         private float _askedAt;
         private RecenterPromptView _view;
+        private MetaButtonHint _hint;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Add()
@@ -54,6 +59,7 @@ namespace PianoGlass.Piano
             if (_session != null) _session.Transitioned -= OnTransitioned;
             WaitingForRecenter = false;
             if (_view != null) Destroy(_view.gameObject);
+            if (_hint != null) Destroy(_hint.gameObject);
         }
 
         private void LateUpdate()
@@ -86,6 +92,7 @@ namespace PianoGlass.Piano
             {
                 WaitingForRecenter = false;
                 if (_view != null) _view.Hide();
+                if (_hint != null) _hint.Hide();
                 Debug.Log($"[LaunchResync] recentered {Time.realtimeSinceStartup - _askedAt:0.0} s after asking: " +
                           "prompt cleared, the keys line up now");
             }
@@ -110,6 +117,14 @@ namespace PianoGlass.Piano
                 _view = RecenterPromptView.Create(FindAnyObjectByType<PianoGlass.UI.SongPicker>(FindObjectsInactive.Include),
                                                   PromptLine);
             if (_view != null) _view.Show();
+            if (_hint == null)
+            {
+                var pointer = FindAnyObjectByType<PianoGlass.UI.OvrUiPointer>(FindObjectsInactive.Include);
+                LineRenderer line = pointer != null ? pointer.GetComponentInChildren<LineRenderer>(true) : null;
+                _hint = MetaButtonHint.Create(line != null ? line.sharedMaterial : null);
+                if (_hint == null) Debug.LogWarning("[MetaButton] no rig or line material: no ring on the controller");
+            }
+            if (_hint != null) _hint.Show();
             else Debug.LogWarning("[LaunchResync] no song picker to borrow the glass from: no banner, only this log");
             Debug.Log($"[LaunchResync] saved anchor loaded with the head " +
                       $"{new Vector2(head.position.x, head.position.z).magnitude:0.00} m / " +
