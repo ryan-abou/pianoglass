@@ -11,7 +11,8 @@ namespace PianoGlass.UI
 {
     /// <summary>
     /// The song list on Liquid Glass: a Left | Right switch, one row per song,
-    /// and five rows to a page. Shows at launch once the keys are placed, and
+    /// and five rows to a page. Songs from the player's own Songs folder
+    /// carry a "Your song" tag (#40). Shows at launch once the keys are placed, and
     /// from the results card's Songs button. It hides while a song plays, and
     /// steps aside for calibration instructions the same way the results card
     /// does. SceneSetup makes the Canvas and its wiring; the rest is built
@@ -46,12 +47,17 @@ namespace PianoGlass.UI
         private static readonly Color RowFill = new Color(0.55f, 0.60f, 0.66f, 0.16f);
         private static readonly Color CurrentFill = new Color(1f, 1f, 1f, 0.20f);
         private static readonly Color GreyedFill = new Color(0.40f, 0.42f, 0.45f, 0.10f);
+        private static readonly Color YourSongFill = new Color(0.40f, 0.68f, 0.95f, 0.40f);
 
         private sealed class RowView
         {
             public GlassButton Button;
             public TextMeshProUGUI Title, Detail;
+            /// <summary>"Your song": a song from the player's own Songs folder (#40).</summary>
+            public GameObject OwnTag;
         }
+
+        private const float TagWidth = 100f, TagHeight = 26f;
 
         private Canvas _canvas;
         private bool _built, _wantOpen = true, _shown;
@@ -158,6 +164,10 @@ namespace PianoGlass.UI
                 SongRow row = library.Rows[index];
                 bool isCurrent = current.Row != null && current.Row.Key == row.Key;
                 view.Title.text = row.Title;
+                view.OwnTag.SetActive(!row.IsBuiltIn);
+                float titleWidth = Inner - 32f - (row.IsBuiltIn ? 0f : TagWidth + 12f);
+                var titleRect = (RectTransform)view.Title.transform;
+                titleRect.sizeDelta = new Vector2(titleWidth, titleRect.sizeDelta.y);
                 view.Title.color = row.CanLoad ? _primary : _secondary;
                 view.Detail.text = row.Detail;
                 view.Detail.color = isCurrent ? _primary : _secondary;
@@ -270,6 +280,16 @@ namespace PianoGlass.UI
             view.Detail = Text(glass.transform, "Detail", 14f, _secondary, TextAlignmentOptions.TopLeft,
                                new Vector2(-Inner * 0.5f + 16f, RowHeight * 0.5f - 28f), Inner - 32f);
             view.Detail.overflowMode = TextOverflowModes.Ellipsis;
+
+            // Level with the title, at the row's right end.
+            GlassPanel tag = Glass(glass.transform, "YourSong", GlassStyle.Pill,
+                                   new Vector2(Inner * 0.5f - 16f - TagWidth * 0.5f, RowHeight * 0.5f - 4f - 12f),
+                                   new Vector2(TagWidth, TagHeight), PillDepth);
+            tag.SetSortingOrder(OrderPill);
+            tag.SetTint(YourSongFill);
+            Text(tag.transform, "Label", 13f, _primary, TextAlignmentOptions.Center,
+                 new Vector2(-TagWidth * 0.5f, 9.1f), TagWidth, true).text = "Your song";
+            view.OwnTag = tag.gameObject;
             return view;
         }
 
