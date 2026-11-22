@@ -194,12 +194,14 @@ namespace PianoGlass.UI
             bool running = state == SongTransport.State.Playing || state == SongTransport.State.CountingIn;
             bool metro = _metronome != null && _metronome.IsOn;
             string practice = PracticeLine();
-            string key = $"{state}|{_clock.TempoMultiplier:0.00}|{metro}|{_transport.WaitMode}|{_clock.MemoryFadeOn}|{practice}";
+            bool counting = _transport.CountingDownToResume;
+            bool noPiano = SongTransport.NoPiano;
+            string key = $"{state}|{_clock.TempoMultiplier:0.00}|{metro}|{_transport.WaitMode}|{_clock.MemoryFadeOn}|{practice}|{counting}|{noPiano}";
             if (key == _shown) return;
             _shown = key;
 
-            _playLabel.text = running ? "Pause" : "Play";
-            _status.text = $"{(running ? "Playing" : state == SongTransport.State.Finished ? "Finished" : "Stopped")}" +
+            _playLabel.text = running || counting ? "Pause" : "Play";
+            _status.text = $"{(counting ? "Resuming" : running ? "Playing" : state == SongTransport.State.Finished ? "Finished" : "Stopped")}" +
                            $"   {TempoStep.Label(_clock.TempoMultiplier)}" +
                            (practice != null ? $"\n<size=87%>{practice}</size>" : "");
             GlassBuilder.Set(_play, true);
@@ -208,8 +210,9 @@ namespace PianoGlass.UI
             GlassBuilder.Set(_slower, !running);
             GlassBuilder.Set(_faster, !running);
             GlassBuilder.Set(_metro, !running, metro);
-            GlassBuilder.Set(_wait, !running, _transport.WaitMode);
-            GlassBuilder.Set(_fade, !running, _clock.MemoryFadeOn);
+            // Both go by what was played: nothing to go by without a piano (#44).
+            GlassBuilder.Set(_wait, !running && !noPiano, _transport.WaitMode);
+            GlassBuilder.Set(_fade, !running && !noPiano, _clock.MemoryFadeOn);
             GlassBuilder.Set(_settings, !running);
         }
     }

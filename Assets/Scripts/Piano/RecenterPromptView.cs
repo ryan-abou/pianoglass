@@ -30,6 +30,7 @@ namespace PianoGlass.Piano
 
         private Transform _head;
         private bool _placed;
+        private TextMeshProUGUI _label;
 
         /// <summary>Built hidden. Null if the scene has no song picker.</summary>
         public static RecenterPromptView Create(SongPicker styleSource, string text)
@@ -68,7 +69,9 @@ namespace PianoGlass.Piano
             t.color = c;
             t.raycastTarget = false;
 
-            return go.AddComponent<RecenterPromptView>();
+            var view = go.AddComponent<RecenterPromptView>();
+            view._label = t;
+            return view;
         }
 
         public void Show()
@@ -78,6 +81,16 @@ namespace PianoGlass.Piano
         }
 
         public void Hide() => gameObject.SetActive(false);
+
+        public bool Shown => gameObject.activeSelf;
+
+        /// <summary>New words, and their size (the resume countdown's big number, #44).</summary>
+        public void SetText(string text, float fontSize)
+        {
+            if (_label == null) return;
+            _label.text = text;
+            _label.fontSize = fontSize;
+        }
 
         private void LateUpdate()
         {

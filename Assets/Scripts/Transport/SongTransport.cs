@@ -54,6 +54,32 @@ namespace PianoGlass.Transport
         /// <summary>The song loaded.</summary>
         public SongData Song => current != null ? current.Song : null;
 
+        // ---- Resuming, and playing without a piano (#44) ------------------
+
+        /// <summary>A piano popup is up (PianoConnection): nothing starts
+        /// playing until the player answers it.</summary>
+        public static bool PlayBlocked { get; set; }
+
+        /// <summary>No-piano mode: notes fall and keys light up, nothing is
+        /// scored, and wait mode and memory fade are off (both need to hear
+        /// what was played).</summary>
+        public static bool NoPiano { get; private set; }
+
+        private readonly ResumeCountdown _countdown = new ResumeCountdown();
+        /// <summary>Played since the top: a stop now is a pause part-way.</summary>
+        private bool _underWay;
+
+        private static double Now => Time.realtimeSinceStartupAsDouble;
+
+        /// <summary>3, 2, 1 before a paused song goes on.</summary>
+        public bool CountingDownToResume => _countdown.Running;
+        /// <summary>3, 2 or 1 while counting down, else 0.</summary>
+        public int CountdownNumber => _countdown.Number(Now);
+
+        /// <summary>Playing, counting down, or paused part-way: an unplug interrupts something.</summary>
+        public bool SongUnderWay =>
+            clock != null && (clock.IsPlaying || (_underWay && CurrentState != State.Finished));
+
         private void Awake()
         {
             if (clock == null) clock = FindAnyObjectByType<SongClock>();
@@ -95,6 +121,37 @@ namespace PianoGlass.Transport
             if (current != null) current.SongChanged -= StopAtTop;
         }
 
+        private void Update()
+        {
+            if (_countdown.Finished(Now) && clock != null)
+            {
+                clock.Play();
+                Debug.Log($"[Transport] resumed at t = {clock.SongTime:0.00}s after the countdown");
+            }
+        }
+
+        /// <summary>Only a song paused part-way counts down; from the top it
+        /// has its lead-in already.</summary>
+        private void StartCountdown(string why)
+        {
+            _countdown.Start(Now);
+            Debug.Log($"[Transport] resume countdown ({why}) at t = {clock.SongTime:0.00}s");
+        }
+
+        private void CancelCountdown(string why)
+        {
+            if (!_countdown.Running) return;
+            _countdown.Cancel();
+            Debug.Log($"[Transport] resume countdown cancelled: {why}");
+        }
+
+        private bool Blocked(string what)
+        {
+            if (!PlayBlocked) return false;
+            Debug.Log($"[Transport] {what} ignored: the piano popup is up");
+            return true;
+        }
+
         /// <summary>False while the keyboard's placement isn't trustworthy --
         /// mid-calibration, or (later) while an anchor is unresolved. There's
         /// no visible highway to control then, and calibration owns the
@@ -109,19 +166,67 @@ namespace PianoGlass.Transport
             // fixed: before the confirm it is still awaited, after it the
             // confirm happened this frame.
             if (calibration.AwaitingConfirmation || calibration.ConfirmedThisFrame) return;
-            if (clock.IsPlaying) clock.Pause(); else clock.Play();
+            if (_countdown.Running)
+            {
+                CancelCountdown("paused again");
+                return;
+            }
+            if (clock.IsPlaying)
+            {
+                clock.Pause();
+                return;
+            }
+            if (Blocked("play")) return;
+            if (_underWay && CurrentState != State.Finished)
+            {
+                StartCountdown("Play");
+                return;
+            }
+            clock.Play();
+            _underWay = true;
         }
 
-        /// <summary>Stops the clock where it is.</summary>
+        /// <summary>Stops the clock where it is, and any resume countdown.</summary>
         public void Pause()
         {
+            CancelCountdown("paused");
             if (clock != null) clock.Pause();
+        }
+
+        /// <summary>The popup's Resume (or Continue without piano): from
+        /// exactly where it stopped, after the countdown.</summary>
+        public void ResumeAfterPopup()
+        {
+            if (!CanAcceptInput || clock == null || clock.IsPlaying || _countdown.Running) return;
+            if (_underWay && CurrentState != State.Finished) StartCountdown("piano popup");
+        }
+
+        /// <summary>Turns no-piano mode on or off. On also turns wait mode and
+        /// memory fade off: both go by what was played.</summary>
+        public void SetNoPiano(bool on)
+        {
+            if (NoPiano == on) return;
+            NoPiano = on;
+            if (on && WaitMode)
+            {
+                WaitMode = false;
+                PlayerPrefs.SetInt(WaitPrefsKey, 0);
+            }
+            if (on && clock != null && clock.MemoryFadeOn)
+            {
+                clock.MemoryFadeOn = false;
+                PlayerPrefs.SetInt(MemoryFadePrefsKey, 0);
+            }
+            PlayerPrefs.Save();
+            Debug.Log($"[Transport] no-piano mode {(on ? "on: follow along, no score, wait mode and memory fade off" : "off")}");
         }
 
         /// <summary>A new song is loaded: stopped at the top, out of any loop.</summary>
         private void StopAtTop()
         {
             if (clock == null) return;
+            CancelCountdown("a new song");
+            _underWay = false;
             if (clock.Loop.HasValue) clock.TempoMultiplier = _chosenTempo;
             clock.Pause();
             clock.Restart();
@@ -129,10 +234,12 @@ namespace PianoGlass.Transport
 
         public void RestartAndPlay()
         {
-            if (!CanAcceptInput || clock == null) return;
+            if (!CanAcceptInput || clock == null || Blocked("restart")) return;
+            CancelCountdown("restarted");
             if (clock.Loop.HasValue) clock.TempoMultiplier = _chosenTempo;
             clock.Restart();
             clock.Play();
+            _underWay = true;
         }
 
         /// <summary>Restart from the top at this tempo, saved like any tempo
@@ -155,9 +262,11 @@ namespace PianoGlass.Transport
         /// the loop (SongClock.Restart).</summary>
         public bool StartLoop(int fromBar, int toBar)
         {
-            if (!CanAcceptInput || clock == null || Song == null) return false;
+            if (!CanAcceptInput || clock == null || Song == null || Blocked("loop")) return false;
+            CancelCountdown("a loop started");
             clock.StartLoop(LoopRange.Between(Song, fromBar, toBar));
             clock.Play();
+            _underWay = true;
             return true;
         }
 
@@ -205,6 +314,11 @@ namespace PianoGlass.Transport
         public void ToggleWaitMode()
         {
             if (!CanAcceptInput) return;
+            if (NoPiano)
+            {
+                Debug.Log("[Transport] wait mode needs a piano keyboard");
+                return;
+            }
             if (clock != null && clock.IsPlaying)
             {
                 Debug.Log("[Transport] wait mode toggle ignored while playing");
@@ -220,6 +334,11 @@ namespace PianoGlass.Transport
         public void ToggleMemoryFade()
         {
             if (!CanAcceptInput || clock == null) return;
+            if (NoPiano)
+            {
+                Debug.Log("[Transport] memory fade needs a piano keyboard");
+                return;
+            }
             if (clock.IsPlaying)
             {
                 Debug.Log("[Transport] memory fade toggle ignored while playing");
