@@ -32,6 +32,10 @@ namespace PianoGlass.UI
         private Canvas _canvas;
         private System.Action _placeHome;
         private bool _hasSaved;
+        /// <summary>Let go of while the keys were not placed: saved, relative
+        /// to the keys, as soon as they are (round 11: a panel moved then
+        /// went back to its old spot).</summary>
+        private bool _pendingSave;
         private Pose _saved;
         private Pose _target;
         private float _rate;
@@ -47,6 +51,8 @@ namespace PianoGlass.UI
         public event System.Action<GrabbablePanel> Released;
         /// <summary>It has a spot of its own: whoever places it by default leaves it alone.</summary>
         public bool HasSaved => _hasSaved;
+        /// <summary>Saved, or waiting to be: whoever places it by default leaves it alone.</summary>
+        public bool KeepsItsOwnSpot => _hasSaved || _pendingSave;
         public string Key => _key;
 
         /// <summary>Makes <paramref name="go"/> movable. <paramref name="key"/>
@@ -74,6 +80,7 @@ namespace PianoGlass.UI
                 if (p == null || p._key == null) continue;
                 PlayerPrefs.DeleteKey(Prefix + p._key);
                 p._hasSaved = false;
+                p._pendingSave = false;
                 p._placeHome?.Invoke();
             }
             PlayerPrefs.Save();
@@ -213,7 +220,14 @@ namespace PianoGlass.UI
 
         private void Save()
         {
-            if (_key == null || !TryKeyboard(out Pose frame)) return;
+            if (_key == null) return;
+            if (!TryKeyboard(out Pose frame))
+            {
+                _pendingSave = true;
+                Debug.Log($"[Panels] '{_key}' moved before the keys are placed: saved once they are");
+                return;
+            }
+            _pendingSave = false;
             _saved = PanelPose.ToFrame(frame, Current);
             _hasSaved = true;
             PlayerPrefs.SetString(Prefix + _key, PanelPose.Format(_saved));
@@ -229,6 +243,7 @@ namespace PianoGlass.UI
                 transform.SetPositionAndRotation(p.position, p.rotation);
                 return;
             }
+            if (_pendingSave && TryKeyboard(out _)) Save();
             TryPlaceSaved();
         }
 
