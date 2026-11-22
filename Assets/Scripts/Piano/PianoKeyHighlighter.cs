@@ -184,8 +184,14 @@ namespace PianoGlass.Piano
 
         /// <summary>Nothing is drawn at a placement the calibration does not
         /// vouch for -- not even a pressed key. Read live rather than cached,
-        /// so the initial state needs no special handling in OnEnable.</summary>
-        private bool PlacementValid => calibration != null && calibration.IsPlacementValid;
+        /// so the initial state needs no special handling in OnEnable. Nor
+        /// before a launch recenter: until then the keys are a piano width
+        /// off, like the highway (#17), and Ryan wants them hidden too (round 12).</summary>
+        private bool PlacementValid => calibration != null && calibration.IsPlacementValid &&
+                                       !LaunchResync.WaitingForRecenter;
+
+        /// <summary>WaitingForRecenter is a flag, not an event: watched here.</summary>
+        private bool _waitingWas;
 
         private void OnEnable()
         {
@@ -229,6 +235,13 @@ namespace PianoGlass.Piano
         /// </summary>
         private void Update()
         {
+            bool waiting = LaunchResync.WaitingForRecenter;
+            if (waiting != _waitingWas)
+            {
+                _waitingWas = waiting;
+                OnPlacementValidChanged(PlacementValid);
+                Debug.Log($"[Highlighter] keys {(waiting ? "hidden until the launch recenter" : "shown: recentered")}");
+            }
             if (_renderers.Count == 0 || !PlacementValid) return;
             if (clock != null && current != null && (displayMode == DisplayMode.ActiveKeysOnly || displayMode == DisplayMode.EdgeMarkers))
                 UpdateDueKeys();
