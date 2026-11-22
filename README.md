@@ -1,108 +1,106 @@
-# PianoGlass — MIDI bridge and keyboard calibration
+# PianoGlass
 
-Drop-in scripts for days 3 and 4 of the week-one spike. Target: Unity 6, Meta
-Quest 3, Meta XR All-in-One SDK.
+PianoGlass is a piano trainer for the Meta Quest 3. You sit at a real piano and
+the headset shows notes falling onto your real keys, like the falling note piano
+videos on YouTube. The keyboard is plugged into the headset with USB, so the app
+knows which key you pressed and when.
 
-## Files and where they go
+Video: _(a 30 second clip from the headset goes here)_
 
-Copy the `Assets` folder into your Unity project so the paths match exactly.
+## Why I made it
 
-| File | Purpose |
-|---|---|
-| `Assets/Plugins/Android/MidiBridge.java` | Receives MIDI on Android and buffers it for Unity |
-| `Assets/Scripts/Midi/MidiInput.cs` | Drains the bridge each frame, raises C# events |
-| `Assets/Scripts/Midi/MidiDebugPanel.cs` | World-space HUD proving notes arrive |
-| `Assets/Scripts/Midi/MidiEditorSimulator.cs` | Fake keyboard for editor work (editor-only) |
-| `Assets/Scripts/Piano/PianoKeyLayout.cs` | Two points in, every key position out |
-| `Assets/Scripts/Piano/KeyboardCalibration.cs` | Capture the two points, save and load them |
-| `Assets/Scripts/Piano/PianoKeyHighlighter.cs` | Real key pressed, virtual key lights up |
-| `Assets/Scripts/Piano/OvrCalibrationInput.cs.txt` | Trigger input for calibration. **Rename to .cs after installing the Meta XR SDK** |
-| `MANIFEST-additions.txt` | The one manifest line to add by hand |
+I wanted something that tells you what you got wrong while you learn a song, which
+a video can't do. Since the app gets every key press from the keyboard, it can:
 
-## The step everyone misses
+- If you play D instead of D sharp, the key turns red and the app says which note it
+  wanted.
+- Every note is judged on timing (Perfect, Great, Good or Miss), and it shows how
+  early or late you were in milliseconds.
+- After each try, a results card shows your accuracy, your timing and your wrong
+  notes. It also has a row with one box per bar, coloured by how well you played
+  that bar.
+- It suggests what to do next, like "Bar 9 needs work" with a button to loop that bar,
+  or playing your weaker hand alone when one hand made most of the mistakes.
+- There are practice tools too. You can slow the tempo down, turn on a metronome,
+  loop bars, use wait mode (the song waits for you to press the right key), play one
+  hand or both, and use memory fade, which fades the notes out so you have to remember
+  them.
 
-Unity does not compile a `.java` file just because it is in the project.
+The menus are styled after Apple's Liquid Glass.
 
-1. Select `MidiBridge.java` in the Project window.
-2. In the Inspector, under **Select platforms for plugin**, tick **Android**.
-3. Click **Apply**.
+## What you need
 
-Without this, the build succeeds, the app runs, and `MidiInput` reports
-`bridge failed to load: ClassNotFoundException`. Nothing else about the failure
-hints at the checkbox.
+- A Meta Quest 3.
+- An 88-key keyboard or digital piano with USB MIDI.
+- A cable from the keyboard to the headset's USB-C port. If the keyboard's cable ends
+  in a normal USB-A plug, you need a USB-C to USB-A adapter.
+- A room with decent light.
 
-## Scene setup
+## Trying it
 
-1. Empty GameObject `MidiInput` → add `MidiInput` component.
-2. Empty GameObject `Calibration` → add `KeyboardCalibration`.
-   - `Key Count`: set to your keyboard's key count. The note range fills itself in.
-   - `Pointer Tip`: an empty child of the right controller anchor, moved to the
-     physical tip of the controller.
-   - `Head Transform`: your centre eye anchor (found automatically if left empty).
-3. Same or another GameObject → add `PianoKeyHighlighter`, assign the
-   calibration reference and a material you created in the editor.
-4. World-space Canvas with a TextMeshPro text → add `MidiDebugPanel`, assign the text.
+### Using my headset
 
-## Using it
+If I left you my Quest 3, the app is already installed and set up for my piano.
 
-**Calibrate.** Touch the front edge of the lowest key with the controller tip,
-pull the trigger. Do the same on the highest key. Every key appears. The
-calibration is saved and reloads on next launch.
+1. Put the headset on and open **Library**, then the **Unknown Sources** tab, then
+   **PianoGlass**.
+2. Plug the keyboard into the headset's USB-C port.
+3. If the app asks you to recenter, hold the **Meta button** on the right controller
+   until the keys line up with the piano.
 
-**Check it.** With `Show Idle Keys` on, the virtual keys should sit on your real
-ones. If the derived key width is not near 23.5 mm, the console warns you — that
-warning almost always means you touched the wrong two keys.
+### On your own Quest 3
 
-**Redo it.** Hold the left trigger and pull the right one.
+Installing an app that isn't from the store needs developer mode.
 
-Until the Meta XR SDK is installed, use the `Capture point` context menu on the
-KeyboardCalibration component instead of the trigger — right-click the component
-header in the Inspector. `OnCaptureButton()` is also public, so a UI button works.
+1. In the Meta Horizon phone app, tap the headset icon, tap your headset, then
+   **Headset Settings**, then **Developer Mode**, and turn it on.
+2. Download `PianoGlass.apk` from this repo's Releases page.
+3. Plug the headset into your computer with a USB-C data cable and put it on. When it
+   asks to allow USB debugging, choose **Always allow from this computer**.
+4. On the computer, run `adb install -r PianoGlass.apk` (`adb` comes with the Android
+   SDK).
+5. Open **Library**, then **Unknown Sources**, then **PianoGlass**.
 
-## Reading notes in your own scripts
+Then calibrate (below), once for your piano.
 
-```csharp
-void OnEnable()  => MidiInput.Instance.NoteOn += HandleNoteOn;
-void OnDisable() => MidiInput.Instance.NoteOn -= HandleNoteOn;
+## Calibrating (once per piano)
 
-void HandleNoteOn(int note, int velocity, double time)
-{
-    Debug.Log($"{MidiInput.NoteName(note)} at velocity {velocity}");
-}
-```
+Calibration tells the app where your real keys are. You need the right controller.
 
-`MidiInput.Instance.IsHeld(note)` is what wait-mode needs.
+1. Poke **Settings** on the glass panel at the left end of the keyboard, then
+   **Calibrate**.
+2. Pick up the right controller. Touch the tip to the **middle of the front edge of the
+   lowest key** (A0, far left) and pull the trigger.
+3. Do the same on the **highest key** (C8, far right).
+4. The keys appear on your piano. If they are a little off, use the arrows under
+   **Move the keys** in Settings. Poke **Looks right** when they line up.
 
-## Things already handled for you
+No controller? Press and hold A0, then C8, with one finger instead. You will probably
+need to move the keys a little afterwards.
 
-- **Note-on with velocity 0 is a note-off.** Most keyboards send these instead
-  of real note-offs. Missed, every note sticks on forever.
-- **Running status.** Keyboards omit the status byte on repeated messages.
-- **Split messages and real-time bytes.** The parser is a proper state machine.
-- **The port direction trap.** To receive from a keyboard you open its *output*
-  port, not its input port.
-- **Thread safety.** MIDI arrives on a Java thread; Unity objects are only
-  touched on the main thread.
+## Playing a song
 
-## If nothing arrives
+Put the controllers down. Poke buttons with your index finger, or pinch a panel to
+move it.
 
-Work down this list in order. Every item has caught someone before.
+1. On the song panel at the left end of the keyboard, poke **Songs** and pick one.
+   Twinkle Twinkle Little Star is the easiest. You can pick the left hand, the right
+   hand, or both.
+2. Poke **Play**. Press each key as its note reaches the line on the key.
+3. When the song ends, the results card comes up. Poke **Retry** to go again, or
+   **More info** to see each note's timing.
 
-1. `adb shell pm list features | grep midi` — no `android.software.midi` means
-   the standard route is closed and you need the UsbManager fallback.
-2. `adb shell dumpsys usb` with the keyboard plugged in — if your keyboard is
-   not listed, it is a cable, power or host-mode problem, not a code problem.
-3. Did you tick **Android** on the .java file and press Apply?
-4. Is the keyboard on its own power supply rather than drawing from the headset?
-5. Check `adb logcat -s PianoGlassMidi` — the bridge logs every device it sees,
-   opens, and rejects.
-6. Are you testing a **standalone build**? Over Quest Link this runs on your
-   PC's MIDI stack and proves nothing.
+Before you press Play, the song panel also has **Tempo -** and **Tempo +**, the
+**Metronome**, **Wait mode** and **Memory fade**.
 
-## Known limits
+## If something goes wrong
 
-- One keyboard at a time. Enough for this project.
-- Sustain pedal is parsed (`MidiMessage.IsSustainDown`) but not acted on.
-- Black key positions are geometric midpoints. Add per-pitch-class nudges in
-  `PianoKeyLayout.BlackKeyNudge` if your keyboard visibly disagrees.
-- Calibration assumes the keyboard is level. True for a keyboard on a table.
+- **The keys are in the wrong place.** Recenter by holding the Meta button. If they
+  are still off, calibrate again.
+- **Nothing happens when I press keys.** Unplug the keyboard, plug it back in, and
+  check it's on. The app only works with USB MIDI, not Bluetooth.
+- **I can't find the app.** Look in Library under Unknown Sources.
+
+Still stuck? Open an issue on this repo's Issues tab.
+
+Made by Ryan, a high school student.
