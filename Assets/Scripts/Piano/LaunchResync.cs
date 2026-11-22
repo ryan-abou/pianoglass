@@ -22,7 +22,7 @@ namespace PianoGlass.Piano
     {
         /// <summary>Both ways to recenter: the Meta button on the right
         /// controller, said where it is (#42), or, with hands, looking at a
-        /// palm and pinching and holding (#5). A ring and a buzz on the
+        /// palm and pinching and holding (#5). A glow and a buzz on the
         /// controller point at the button too (MetaButtonHint).</summary>
         public const string PromptLine =
             "Hold the Meta button on your right controller\n" +
@@ -117,13 +117,7 @@ namespace PianoGlass.Piano
                 _view = RecenterPromptView.Create(FindAnyObjectByType<PianoGlass.UI.SongPicker>(FindObjectsInactive.Include),
                                                   PromptLine);
             if (_view != null) _view.Show();
-            if (_hint == null)
-            {
-                var pointer = FindAnyObjectByType<PianoGlass.UI.OvrUiPointer>(FindObjectsInactive.Include);
-                LineRenderer line = pointer != null ? pointer.GetComponentInChildren<LineRenderer>(true) : null;
-                _hint = MetaButtonHint.Create(line != null ? line.sharedMaterial : null);
-                if (_hint == null) Debug.LogWarning("[MetaButton] no rig or line material: no ring on the controller");
-            }
+            if (_hint == null) _hint = MetaButtonHint.Create();
             if (_hint != null) _hint.Show();
             else Debug.LogWarning("[LaunchResync] no song picker to borrow the glass from: no banner, only this log");
             Debug.Log($"[LaunchResync] saved anchor loaded with the head " +
