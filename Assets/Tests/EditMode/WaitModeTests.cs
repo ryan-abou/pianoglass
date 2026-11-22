@@ -318,7 +318,8 @@ namespace PianoGlass.Tests.EditMode
         {
             Suggestion s = SuggestionPicker.Pick(100, 80, AttemptRecord.BothHands, new List<BarGroup>(), false, false, AttemptRecord.Wait);
             Assert.AreEqual(SuggestionRule.PlayInTime, s.Rule);
-            Assert.AreEqual(SuggestionAction.None, s.Action);
+            Assert.AreEqual(SuggestionAction.PlayInTime, s.Action);
+            StringAssert.DoesNotContain("A0", s.Message, "the piano shortcuts are gone (#41)");
         }
 
         [Test]

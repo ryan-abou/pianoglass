@@ -39,6 +39,7 @@ them. Tempo, metronome, wait mode and memory fade are song panel buttons only.
 | Next or previous page of songs | right controller ray + right trigger on Prev or Next | `SongPicker` | Five songs a page. Only there when there are more than five |
 | Close the picker, keeping the current song | right controller ray + right trigger on Close | `SongPicker` | Playing a song also hides it |
 | Switch to the other hand and restart | right controller ray + right trigger on the results card's "Switch to left hand" | `ResultsCard` → `CurrentSong` | Offered after a perfect run at full speed. Not offered after All notes |
+| Play in time after wait mode | right controller ray + right trigger on the results card's "Play in time" | `ResultsCard` → `SongTransport.PlayInTime` | Offered after a good wait mode run: wait mode off, and the song from the top |
 | Display mode (cycle) | left X | `OvrKeyOverlayInput` | FullOverlay / Translucent / ActiveKeysOnly / EdgeMarkers, saved. Not while the left grip is held (that X is the checklist's) |
 | Passthrough on/off | left stick click | `OvrKeyOverlayInput` | A/B test tool |
 

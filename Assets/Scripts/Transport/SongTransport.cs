@@ -257,6 +257,23 @@ namespace PianoGlass.Transport
             RestartAndPlay();
         }
 
+        /// <summary>The results card's "Play in time": wait mode off, and the
+        /// song again from the top. Like RestartAtTempo it works while the
+        /// clock is still running past the last note, which ToggleWaitMode
+        /// would refuse, because restarting ends that anyway.</summary>
+        public void PlayInTime()
+        {
+            if (!CanAcceptInput || clock == null) return;
+            if (WaitMode)
+            {
+                WaitMode = false;
+                PlayerPrefs.SetInt(WaitPrefsKey, 0);
+                PlayerPrefs.Save();
+                Debug.Log("[Transport] wait mode off: playing in time");
+            }
+            RestartAndPlay();
+        }
+
         /// <summary>Loop these bars, starting from the count-in before them.
         /// False if the keys are not ready. Restarting from the top leaves
         /// the loop (SongClock.Restart).</summary>
