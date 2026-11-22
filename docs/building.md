@@ -98,11 +98,19 @@ Marks survive a relaunch (`checklist_ticks.json`) and are logged as `[Checklist]
 or `FAIL` lines, so they sit on the logcat timeline next to everything else. Start the
 marks over: `adb shell rm /sdcard/Android/data/com.ryanabourjeili.pianoglass/files/checklist_ticks.json`.
 
+**The status strip and the test info panel (#37).** Players see one small
+status strip (`StatusStrip`): setup steps and problems, the keys' numbers while
+setting up (key width, span, nudge, turn), and the score like a game while
+playing (points, accuracy, perfect/great/good/miss/wrong, the last hit, a wrong
+note's name for 4 s). It is hidden when it has nothing to say and never follows
+the head. The old status panel (MIDI bridge, calibration readout) is now test
+info: release builds switch it off, and dev builds put it right of C8.
+
 **Recording mode** (hold the left grip, then press Y) switches off every debug
-overlay for milestone videos: the status panel (MIDI bridge, calibration readout)
-and this checklist; turning it off brings back whatever was showing. It is remembered across launches,
-so check you have turned it off before a test round: the calibration prompts are on
-the status panel. Unity's "Development Build" watermark does not show in the headset.
+overlay for milestone videos: the test info panel and this checklist; turning it
+off brings back whatever was showing. The strip stays, so recording mode shows
+exactly what a player sees. It is remembered across launches.
+Unity's "Development Build" watermark does not show in the headset.
 
 All of it is compiled out of release builds (`#if DEVELOPMENT_BUILD || UNITY_EDITOR`
 in `Assets/Scripts/DevTools/`), so it can never reach a study participant.
