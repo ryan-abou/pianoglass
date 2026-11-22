@@ -243,6 +243,21 @@ namespace PianoGlass.Scoring
                 _pending.Clear();
             }
 
+            // No-piano mode (#44): nothing can be heard, so nothing is scored.
+            // An attempt under way when the player chose it is kept as abandoned.
+            if (SongTransport.NoPiano)
+            {
+                if (Session != null && !AttemptSaved)
+                {
+                    if (Session.JudgedCount + Session.WrongNotes.Count > 0) Save(AttemptRecord.Abandoned);
+                    Debug.Log("[Score] no piano: nothing scored from here");
+                    Session = null;
+                    AttemptReset?.Invoke();
+                }
+                _pending.Clear();
+                return;
+            }
+
             if (Session == null) Begin(songTime, tempo);
             if (metronome != null && metronome.IsOn) _metronomeUsed = true;
 
