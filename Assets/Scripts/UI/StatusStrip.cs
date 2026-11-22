@@ -93,11 +93,24 @@ namespace PianoGlass.UI
         /// hides it, so recording mode shows what a player sees.</summary>
         private static void HideOldPanelForPlayers()
         {
-            if (Debug.isDebugBuild) return;
             var old = FindAnyObjectByType<CalibrationPanel>(FindObjectsInactive.Include);
             Canvas canvas = old != null ? old.GetComponentInParent<Canvas>(true) : null;
-            if (canvas != null) canvas.gameObject.SetActive(false);
+            if (canvas == null) return;
+            if (!Debug.isDebugBuild)
+            {
+                canvas.gameObject.SetActive(false);
+                return;
+            }
+            // Development builds: off to the right of C8, clear of the strip.
+            var follower = canvas.GetComponent<CanvasCalibrationFollower>();
+            if (follower == null) return;
+            follower.ExtraRight = OldPanelRight;
+            follower.PlaceNow();
         }
+
+        /// <summary>The old panel's centre, metres right of the keyboard's
+        /// centre: past C8, as it is 0.6 m wide.</summary>
+        private const float OldPanelRight = 0.95f;
 
         private void Build(GlassBuilder g)
         {

@@ -36,18 +36,12 @@ namespace PianoGlass.Piano
                  "authored in the scene.")]
         [SerializeField] private float fallbackHeight = 1.2f;
 
-        [Tooltip("When placement becomes invalid (recalibrating), the panel " +
-                 "moves this far in front of the head, so the instructions " +
-                 "stay readable instead of hanging at the old keyboard's spot.")]
-        [SerializeField] private float invalidDistance = 0.8f;
-        [Tooltip("...and this far below eye level, in metres.")]
-        [SerializeField] private float invalidDrop = 0.15f;
-        [Tooltip("While placement is invalid, re-place the panel in front of the " +
-                 "head once it is more than this many degrees out of view. Wide " +
-                 "enough that reaching for the lowest or highest key does not " +
-                 "make it jump; there so a launch facing away from the piano " +
-                 "still shows 'localizing' somewhere you can read it.")]
-        [SerializeField] private float invalidRefollowDegrees = 70f;
+        /// <summary>Metres to the right of the keyboard's centre. 0 for the
+        /// usual spot; the status strip (#37) moves the old status panel, now
+        /// development-only test info, off to the side so the two don't overlap.</summary>
+        public float ExtraRight { get; set; }
+
+        private PianoGlass.UI.GrabbablePanel _grab;
 
         private void OnEnable()
         {
@@ -70,64 +64,20 @@ namespace PianoGlass.Piano
         public void PlaceNow()
         {
             if (calibration != null && calibration.IsPlacementValid && calibration.Layout != null)
-                OnCalibrated(calibration.Layout);
-        }
-
-        private void OnPlacementValidChanged(bool valid)
-        {
-            if (valid)
-            {
-                if (calibration.Layout != null) OnCalibrated(calibration.Layout);
-                return;
-            }
-            PlaceInFrontOfHead();
+                Place(calibration.Layout);
         }
 
         /// <summary>
-        /// Anchored mode starts every launch with placement invalid (the
-        /// anchor is still localizing) and the head not yet tracked, so the
-        /// one-off placement below is often behind the player or at the
-        /// origin. Re-place only when the panel is well out of view -- never
-        /// a panel glued to the head.
+        /// Losing the keys leaves the panel where it is. It used to jump in
+        /// front of the head, and follow it whenever it was 70 degrees out of
+        /// view, until the keys came back; in round 11 (2026-11-21) that read
+        /// as the panel moving around by itself when the head tilted. Ryan:
+        /// it shouldn't move by itself. The status strip (#37) shows the
+        /// setup steps instead.
         /// </summary>
-        private void LateUpdate()
+        private void OnPlacementValidChanged(bool valid)
         {
-            if (calibration == null || calibration.IsPlacementValid) return;
-            Camera head = Camera.main;
-            if (head == null) return;
-
-            Vector3 toPanel = transform.position - head.transform.position;
-            Vector3 forward = head.transform.forward;
-            toPanel.y = 0f;
-            forward.y = 0f;
-            if (toPanel.sqrMagnitude < 1e-4f || forward.sqrMagnitude < 1e-4f) return;
-
-            if (Vector3.Angle(forward, toPanel) > invalidRefollowDegrees || toPanel.magnitude > 3f)
-                PlaceInFrontOfHead();
-        }
-
-        /// <summary>Placed once at the moment placement is lost (and again by
-        /// LateUpdate only if it ends up far out of view), not every frame: a
-        /// panel glued to the head is uncomfortable, and during a
-        /// recalibration the player is facing the piano anyway.</summary>
-        private void PlaceInFrontOfHead()
-        {
-            Camera head = Camera.main;
-            if (head == null)
-            {
-                ApplyFallbackHeight();
-                return;
-            }
-
-            Vector3 forward = head.transform.forward;
-            forward.y = 0f;
-            if (forward.sqrMagnitude < 1e-4f) forward = Vector3.forward;
-            forward.Normalize();
-
-            Vector3 pos = head.transform.position + forward * invalidDistance + Vector3.down * invalidDrop;
-
-            // Local +Z away from the player, the same convention OnCalibrated uses.
-            transform.SetPositionAndRotation(pos, Quaternion.LookRotation(forward, Vector3.up));
+            if (valid && calibration.Layout != null) OnCalibrated(calibration.Layout);
         }
 
         private void ApplyFallbackHeight()
@@ -137,7 +87,15 @@ namespace PianoGlass.Piano
             transform.position = p;
         }
 
+        /// <summary>A spot of its own (moved by hand) wins: GrabbablePanel puts it there.</summary>
         private void OnCalibrated(PianoKeyLayout layout)
+        {
+            if (_grab == null) _grab = GetComponent<PianoGlass.UI.GrabbablePanel>();
+            if (_grab != null && _grab.KeepsItsOwnSpot) return;
+            Place(layout);
+        }
+
+        private void Place(PianoKeyLayout layout)
         {
             if (layout == null) return;
             if (!layout.TryGetKey(layout.LowestNote, out PianoKey low) ||
@@ -151,7 +109,7 @@ namespace PianoGlass.Piano
             Vector3 spanCentre = (low.Center + high.Center) * 0.5f;
             float depthBack = layout.WhiteKeyDepth * 0.5f + depthOffset;
             Vector3 wallDepth = spanCentre - layout.Forward * depthBack;
-            Vector3 pos = wallDepth + layout.Up * heightAboveKeys;
+            Vector3 pos = wallDepth + layout.Up * heightAboveKeys + layout.Right * ExtraRight;
 
             // Local -Z toward the player, matching the original hand-placed
             // Canvas (identity rotation, camera looking down +Z at it from
