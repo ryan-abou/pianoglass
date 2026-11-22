@@ -31,6 +31,7 @@ project. Add a word the first time it comes up.
 - **manifest.json**: the project's shopping list of packages and which version of each to get. PianoGlass example: `Packages/manifest.json` says to use Meta XR SDK version 205.0.0.
 - **median**: the middle value once a list is put in order, so one wild value can't drag it the way it drags an average. PianoGlass example: a hand calibration touch is the median of the fingertip's frames while the key is held.
 - **merge**: bringing the commits from one branch into another. PianoGlass example: after a headset round passes, a feature branch is merged into `main`.
+- **merge conflict**: when two branches changed the same lines of a file, so git can't tell which version to keep and asks a person. PianoGlass example: two Batch J branches both edited the controls table in `docs/controls.md`, so one was merged into the other first to avoid one.
 - **.meta file**: a small file Unity keeps next to every asset, like a name tag that also holds its import settings. PianoGlass example: deleting `Assets/Readme.asset` also meant deleting `Assets/Readme.asset.meta`, or Unity would complain.
 - **occlusion**: a real thing hiding a virtual thing that is behind it. PianoGlass example: without it, a note slab draws on top of your hand even when your hand is in front.
 - **package**: a ready-made add-on that someone else wrote, so you don't have to. PianoGlass example: the Meta XR SDK is the package that lets the app talk to the Quest.
