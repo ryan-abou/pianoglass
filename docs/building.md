@@ -36,6 +36,16 @@ adb install -r Builds\PianoGlass.apk
 adb logcat -s PianoGlassMidi Unity
 ```
 
+Every build, release too, also writes its log to a file on the headset
+(`SessionLog`, #38): logcat only held the last 20 seconds of round 11. Normal log
+lines carry no stack trace (Player Settings, Stack Trace), so logcat holds more too.
+Each song that stops playing adds a `[Perf]` line: average frame rate, slow frames
+(over 20 ms) and the worst one. Pull the newest 10 files with:
+
+```powershell
+adb pull /sdcard/Android/data/com.ryanabourjeili.pianoglass/files/logs
+```
+
 ## The in-headset test checklist (development builds)
 
 Every post-build test checklist is also a file the headset shows on a Liquid Glass

@@ -237,8 +237,9 @@ rate reading); then sessions with the first testers; then a full visual overhaul
 the Quest 3 (the UI was made for the Quest 2's budget), with preview pictures Ryan
 approves before anything goes on the headset, and #10 Note color themes inside it.
 
-After a test round, pull `files/logs/` from the headset first (dev builds save their
-log there; a headset restart wipes most of logcat). Set the metronome latency from
+After a test round, pull `files/logs/` from the headset first (every build, release
+too since #38, saves its log there; a headset restart wipes most of logcat). Each song
+that stops playing logs a `[Perf]` frame rate line there. Set the metronome latency from
 Ryan's eyes-closed test (Twinkle at 50%, eyes closed, playing only by the click; the
 median press minus beat in real ms from the attempt files), not from phone videos. This
 is a deliberate test, not scores from normal play, so it fits the rule below.
