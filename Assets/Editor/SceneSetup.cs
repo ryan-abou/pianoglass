@@ -1265,8 +1265,6 @@ namespace PianoGlass.EditorTools
             so.FindProperty("calibration").objectReferenceValue = calibration;
             so.FindProperty("clock").objectReferenceValue = clock;
             so.ApplyModifiedProperties();
-            // chordNoteA / chordNoteB are left alone -- their defaults (21,
-            // 22) are correct and a hand-tuned override shouldn't be clobbered.
         }
 
         private static void SetPlayOnStart(SongClock clock, bool value)

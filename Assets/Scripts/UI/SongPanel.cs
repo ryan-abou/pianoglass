@@ -12,8 +12,7 @@ namespace PianoGlass.UI
     /// wait mode, memory fade, songs and settings on Liquid Glass at the left
     /// end of the keyboard, tipped back toward the player. Every button works
     /// with a fingertip poke (HandPokePointer) or the controller ray, so a song
-    /// can be run with the controllers put down, and every piano chord has a
-    /// matching button here.
+    /// can be run with the controllers put down.
     ///
     /// While a song plays only play/pause and restart can be pressed, so a hand
     /// near the panel can't change anything mid-song (the transport ignores
