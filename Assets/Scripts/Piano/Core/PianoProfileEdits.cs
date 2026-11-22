@@ -112,5 +112,38 @@ namespace PianoGlass.Piano
             PianoProfile p = store.ActiveProfile;
             if (p != null) p.lastVerifiedUtc = utcNow;
         }
+
+        /// <summary>Where the right Quest 3 controller's tip is, in its own
+        /// frame, metres: Ryan's pivot calibration (RMS 1.3 mm, 2026-11-14).
+        /// Every Quest 3 controller is the same shape, so a new install starts
+        /// here instead of at the tracked origin, which is centimetres away.</summary>
+        public static readonly Vector3 BuiltInTipOffsetMetres = new Vector3(-0.0175f, -0.0336f, 0.0286f);
+
+        /// <summary>The controller calibration bias a new install starts with:
+        /// the average of Ryan's last three on the Quest 3 (round 10,
+        /// 2026-11-21), up 15.7 mm and 10.2 mm toward the player, no sideways.
+        /// It counts as one calibration, so a tester's own nudges take over.</summary>
+        public static readonly Vector3 BuiltInControllerBiasMm = new Vector3(0f, 15.7f, 10.2f);
+
+        public const string BuiltInTipUtc = "built-in";
+
+        /// <summary>A store with no measured tip gets the built-in tip, and the
+        /// built-in bias if it has never learned one. A tester has no way to
+        /// measure the tip (it is a dev-only control). Returns false, and
+        /// changes nothing, when the tip is already there.</summary>
+        public static bool SeedControllerDefaults(PianoProfileStore store)
+        {
+            if (store == null || store.hasTipOffset) return false;
+            store.hasTipOffset = true;
+            store.tipOffsetController = BuiltInTipOffsetMetres;
+            store.tipOffsetRmsMm = 0f;
+            store.tipOffsetUtc = BuiltInTipUtc;
+            if (store.calibrationBiasMm == Vector3.zero && store.calibrationBiasSamples == 0)
+            {
+                store.calibrationBiasMm = BuiltInControllerBiasMm;
+                store.calibrationBiasSamples = 1;
+            }
+            return true;
+        }
     }
 }

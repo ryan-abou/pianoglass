@@ -186,5 +186,71 @@ namespace PianoGlass.Tests.EditMode
             Assert.AreEqual("none", store.ActiveProfile.lastCorrection);
             Assert.AreEqual(Vector3.zero, store.ActiveProfile.lastCorrectionMm);
         }
+
+        [Test]
+        public void ANewInstallGetsTheBuiltInTipAndBias()
+        {
+            var store = new PianoProfileStore();
+            Assert.IsTrue(PianoProfileEdits.SeedControllerDefaults(store));
+
+            Assert.IsTrue(store.hasTipOffset);
+            Assert.AreEqual(PianoProfileEdits.BuiltInTipOffsetMetres, store.tipOffsetController);
+            Assert.AreEqual(PianoProfileEdits.BuiltInTipUtc, store.tipOffsetUtc);
+            Assert.AreEqual(PianoProfileEdits.BuiltInControllerBiasMm, store.calibrationBiasMm);
+            Assert.AreEqual(1, store.calibrationBiasSamples, "counts as one calibration");
+            Assert.AreEqual(0f, store.calibrationBiasMm.x, "no sideways");
+        }
+
+        [Test]
+        public void AMeasuredTipIsNeverReplaced()
+        {
+            var tip = new Vector3(-0.02f, -0.03f, 0.03f);
+            var bias = new Vector3(0f, 14f, 12f);
+            var store = new PianoProfileStore
+            {
+                hasTipOffset = true, tipOffsetController = tip, tipOffsetUtc = "t0",
+                calibrationBiasMm = bias, calibrationBiasSamples = 3,
+            };
+
+            Assert.IsFalse(PianoProfileEdits.SeedControllerDefaults(store));
+            Assert.AreEqual(tip, store.tipOffsetController);
+            Assert.AreEqual(bias, store.calibrationBiasMm);
+            Assert.AreEqual(3, store.calibrationBiasSamples);
+        }
+
+        [Test]
+        public void ALearnedBiasStaysWhenOnlyTheTipIsMissing()
+        {
+            var bias = new Vector3(0f, 9f, 13f);
+            var store = new PianoProfileStore { calibrationBiasMm = bias, calibrationBiasSamples = 2 };
+
+            Assert.IsTrue(PianoProfileEdits.SeedControllerDefaults(store));
+            Assert.IsTrue(store.hasTipOffset);
+            Assert.AreEqual(bias, store.calibrationBiasMm);
+            Assert.AreEqual(2, store.calibrationBiasSamples);
+        }
+
+        [Test]
+        public void TheBuiltInTipSurvivesASaveAndLoad()
+        {
+            string path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"pg-seed-{Guid.NewGuid():N}.json");
+            try
+            {
+                var serializer = new PianoProfileSerializer(path);
+                var store = new PianoProfileStore();
+                PianoProfileEdits.SeedControllerDefaults(store);
+                Assert.IsTrue(serializer.Save(store, out string error), error);
+
+                ProfileLoadResult r = serializer.Load();
+                Assert.AreEqual(ProfileLoadStatus.Loaded, r.Status);
+                Assert.IsTrue(r.Store.hasTipOffset);
+                Assert.AreEqual(PianoProfileEdits.BuiltInControllerBiasMm, r.Store.calibrationBiasMm);
+                Assert.IsNull(r.Store.ActiveProfile, "no piano yet: launch still asks for a calibration");
+            }
+            finally
+            {
+                if (System.IO.File.Exists(path)) System.IO.File.Delete(path);
+            }
+        }
     }
 }
