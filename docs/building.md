@@ -18,6 +18,16 @@ The script exits with Unity's own exit code — 0 succeeded, 1 failed — and pr
 every `[PianoGlassBuild]` line from the log, which is the whole story without
 wading through Unity's tens of thousands of lines.
 
+Every build, release too, also writes its log to a file on the headset
+(`SessionLog`, #38): logcat only held the last 20 seconds of round 11. Normal log
+lines carry no stack trace (Player Settings, Stack Trace), so logcat holds more too.
+Each song that stops playing adds a `[Perf]` line: average frame rate, slow frames
+(over 20 ms) and the worst one. Pull the newest 10 files with:
+
+```powershell
+adb pull /sdcard/Android/data/com.ryanabourjeili.pianoglass/files/logs
+```
+
 **Do not invoke Unity.exe directly with `&`.** `Unity.exe` is a Windows GUI
 application, so PowerShell launches it and returns immediately without waiting.
 You get your prompt back in two seconds, an empty `$LASTEXITCODE`, and a log
@@ -34,16 +44,6 @@ Install and inspect:
 ```powershell
 adb install -r Builds\PianoGlass.apk
 adb logcat -s PianoGlassMidi Unity
-```
-
-Every build, release too, also writes its log to a file on the headset
-(`SessionLog`, #38): logcat only held the last 20 seconds of round 11. Normal log
-lines carry no stack trace (Player Settings, Stack Trace), so logcat holds more too.
-Each song that stops playing adds a `[Perf]` line: average frame rate, slow frames
-(over 20 ms) and the worst one. Pull the newest 10 files with:
-
-```powershell
-adb pull /sdcard/Android/data/com.ryanabourjeili.pianoglass/files/logs
 ```
 
 ## The in-headset test checklist (development builds)
