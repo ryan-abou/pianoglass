@@ -329,14 +329,6 @@ namespace PianoGlass.Tests.EditMode
             Suggestion s = SuggestionPicker.Pick(90, 80, AttemptRecord.BothHands, BarGrouping.Build(bars), false, false, AttemptRecord.Wait);
             Assert.AreEqual(SuggestionRule.WeakBars, s.Rule);
         }
-
-        [Test]
-        public void ATempoChordCarriesOnForWaitMode()
-        {
-            Assert.AreEqual(ChordAction.ToggleWait, TransportChord.OnNoteOn(TransportChord.D1, n => n == TransportChord.A0));
-            Assert.AreEqual(ChordAction.None, TransportChord.OnNoteOn(TransportChord.D1, n => false));
-        }
-
         // ---- The clock ------------------------------------------------------
 
         private SongClock _clock;

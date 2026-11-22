@@ -1,5 +1,4 @@
 using UnityEngine;
-using PianoGlass.Midi;
 using PianoGlass.Piano;
 using PianoGlass.Song;
 
@@ -13,27 +12,17 @@ namespace PianoGlass.Transport
     /// Deliberately Meta-free, like KeyboardCalibration: it compiles and runs
     /// in the editor with MidiEditorSimulator, no headset required.
     ///
-    /// The MIDI binding is the one that matters in practice -- while actually
-    /// playing, the controllers are on the floor. The two lowest keys of an
-    /// 88 (A0 + A#0 by default) held together restart from the top and play.
-    /// No song here uses that chord, and it can't be hit by accident.
+    /// Tempo (F26), 25-200% in 5% steps (TempoStep, pure), the metronome
+    /// (F27), wait mode (F22) and memory fade (F36) change only while the song
+    /// is stopped or paused, and are saved. A tempo change while paused
+    /// part-way keeps the song where it is and the attempt going; the attempt
+    /// then records the slowest tempo it was played at
+    /// (ScoringSession.LowestTempo, Ryan 2026-11-03). Turning wait mode on or
+    /// off while paused part-way starts a new attempt from there.
     ///
-    /// Tempo (F26) is on the same bottom key: hold A0 and press B0 for -5%,
-    /// C1 for +5%, 25-200% (TransportChord and TempoStep, both pure). Only
-    /// while the song is stopped or paused. A change while paused part-way
-    /// keeps the song where it is and the attempt going; the attempt then
-    /// records the slowest tempo it was played at (ScoringSession.LowestTempo,
-    /// Ryan 2026-11-03). The tempo is saved to PlayerPrefs and applied to
-    /// the clock on launch.
-    ///
-    /// Metronome (F27): hold A0 and press C#1 to turn it on or off, also
-    /// only while stopped or paused.
-    ///
-    /// Wait mode (F22): hold A0 and press D1, likewise, and saved. Turning it
-    /// on or off while paused part-way starts a new attempt from there.
-    ///
-    /// Memory fade (F36): hold A0 and press D#1, likewise, and saved. It only
-    /// shows inside a practice loop.
+    /// The song panel's buttons and the controllers call these. The A0 piano
+    /// chords that did the same were removed (#41, 2026-11-21): every one had
+    /// a button, and nobody new would ever find them.
     /// </summary>
     public class SongTransport : MonoBehaviour
     {
@@ -48,19 +37,6 @@ namespace PianoGlass.Transport
         [SerializeField] private KeyboardCalibration calibration;
         [SerializeField] private CurrentSong current;
 
-        [Header("MIDI restart chord")]
-        [Tooltip("Both of these held together restart the song from the top and " +
-                 "play. Defaults to the bottom two keys of an 88-key keyboard.")]
-        [SerializeField] private int chordNoteA = 21; // A0
-        [SerializeField] private int chordNoteB = 22; // A#0
-
-        [Header("Tempo chord (hold chordNoteA)")]
-        [SerializeField] private int slowerNote = TransportChord.B0;
-        [SerializeField] private int fasterNote = TransportChord.C1;
-        [SerializeField] private int metronomeNote = TransportChord.CSharp1;
-        [SerializeField] private int waitNote = TransportChord.D1;
-        [SerializeField] private int memoryFadeNote = TransportChord.DSharp1;
-
         [Header("Metronome")]
         [SerializeField] private Metronome metronome;
 
@@ -74,7 +50,6 @@ namespace PianoGlass.Transport
         /// <summary>The tempo the player chose, which auto-tempo in a loop
         /// leaves alone: leaving the loop goes back to it.</summary>
         private float _chosenTempo = 1f;
-        private bool _chordLatched;
 
         /// <summary>The song loaded.</summary>
         public SongData Song => current != null ? current.Song : null;
@@ -113,17 +88,11 @@ namespace PianoGlass.Transport
         private void OnEnable()
         {
             if (current != null) current.SongChanged += StopAtTop;
-            if (MidiInput.Instance == null) return;
-            MidiInput.Instance.NoteOn += OnNoteOn;
-            MidiInput.Instance.NoteOff += OnNoteOff;
         }
 
         private void OnDisable()
         {
             if (current != null) current.SongChanged -= StopAtTop;
-            if (MidiInput.Instance == null) return;
-            MidiInput.Instance.NoteOn -= OnNoteOn;
-            MidiInput.Instance.NoteOff -= OnNoteOff;
         }
 
         /// <summary>False while the keyboard's placement isn't trustworthy --
@@ -131,10 +100,6 @@ namespace PianoGlass.Transport
         /// no visible highway to control then, and calibration owns the
         /// controllers' buttons and the player's attention.</summary>
         private bool CanAcceptInput => calibration != null && calibration.IsPlacementValid;
-
-        /// <summary>One of the two keys of the MIDI restart chord. Scoring
-        /// leaves these out unless the song itself uses them.</summary>
-        public bool IsRestartChordNote(int note) => note == chordNoteA || note == chordNoteB;
 
         public void TogglePlayPause()
         {
@@ -264,49 +229,6 @@ namespace PianoGlass.Transport
             PlayerPrefs.SetInt(MemoryFadePrefsKey, clock.MemoryFadeOn ? 1 : 0);
             PlayerPrefs.Save();
             Debug.Log($"[Transport] memory fade {(clock.MemoryFadeOn ? "on" : "off")}");
-        }
-
-        // ------------------------------------------------------------------
-
-        private void OnNoteOn(int note, int velocity, double time)
-        {
-            if (MidiInput.Instance == null) return;
-
-            // Ignored entirely while mid-calibration -- not even latched --
-            // so finishing calibration with the chord still held requires a
-            // fresh press before it can fire.
-            if (!CanAcceptInput) return;
-
-            ChordAction action = TransportChord.OnNoteOn(note, MidiInput.Instance.IsHeld,
-                                                         chordNoteA, chordNoteB, slowerNote, fasterNote, metronomeNote, waitNote, memoryFadeNote);
-            switch (action)
-            {
-                case ChordAction.Restart:
-                    if (_chordLatched) return;
-                    _chordLatched = true; // fire once per press, not every frame it's held
-                    RestartAndPlay();
-                    break;
-                case ChordAction.Slower:
-                    StepTempo(-1);
-                    break;
-                case ChordAction.Faster:
-                    StepTempo(+1);
-                    break;
-                case ChordAction.ToggleMetronome:
-                    ToggleMetronome();
-                    break;
-                case ChordAction.ToggleWait:
-                    ToggleWaitMode();
-                    break;
-                case ChordAction.ToggleMemoryFade:
-                    ToggleMemoryFade();
-                    break;
-            }
-        }
-
-        private void OnNoteOff(int note, double time)
-        {
-            if (note == chordNoteA || note == chordNoteB) _chordLatched = false;
         }
     }
 }

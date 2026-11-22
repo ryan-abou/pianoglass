@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using NUnit.Framework;
 using PianoGlass.Song;
 
@@ -64,79 +62,6 @@ namespace PianoGlass.Tests.EditMode
             Assert.AreEqual("Tempo 100%", TempoStep.Label(1f));
             Assert.AreEqual("Tempo 85%", TempoStep.Label(0.85f));
             Assert.AreEqual("Tempo 200%", TempoStep.Label(2f));
-        }
-
-        // ------------------------------------------------------------------
-        // TransportChord
-        // ------------------------------------------------------------------
-
-        private const int A0 = 21, ASharp0 = 22, B0 = 23, C1 = 24, CSharp1 = 25;
-
-        private static Func<int, bool> Held(params int[] keys)
-        {
-            var set = new HashSet<int>(keys);
-            return set.Contains;
-        }
-
-        [Test]
-        public void AZeroAloneDoesNothing()
-        {
-            Assert.AreEqual(ChordAction.None, TransportChord.OnNoteOn(A0, Held(A0)));
-        }
-
-        [Test]
-        public void AZeroWithASharpZeroStillRestartsEitherOrder()
-        {
-            Assert.AreEqual(ChordAction.Restart, TransportChord.OnNoteOn(ASharp0, Held(A0, ASharp0)));
-            Assert.AreEqual(ChordAction.Restart, TransportChord.OnNoteOn(A0, Held(A0, ASharp0)));
-        }
-
-        [Test]
-        public void HoldAZeroPressBZeroIsSlower()
-        {
-            Assert.AreEqual(ChordAction.Slower, TransportChord.OnNoteOn(B0, Held(A0, B0)));
-        }
-
-        [Test]
-        public void HoldAZeroPressCOneIsFaster()
-        {
-            Assert.AreEqual(ChordAction.Faster, TransportChord.OnNoteOn(C1, Held(A0, C1)));
-        }
-
-        [Test]
-        public void StepKeysWithoutAZeroDoNothing()
-        {
-            Assert.AreEqual(ChordAction.None, TransportChord.OnNoteOn(B0, Held(B0)));
-            Assert.AreEqual(ChordAction.None, TransportChord.OnNoteOn(C1, Held(C1, ASharp0)));
-        }
-
-        [Test]
-        public void PressingAZeroWhileAStepKeyIsHeldDoesNotStep()
-        {
-            Assert.AreEqual(ChordAction.None, TransportChord.OnNoteOn(A0, Held(A0, B0)));
-            Assert.AreEqual(ChordAction.None, TransportChord.OnNoteOn(A0, Held(A0, C1)));
-        }
-
-        [Test]
-        public void HoldAZeroPressCSharpOneTogglesTheMetronome()
-        {
-            Assert.AreEqual(ChordAction.ToggleMetronome, TransportChord.OnNoteOn(CSharp1, Held(A0, CSharp1)));
-            Assert.AreEqual(ChordAction.None, TransportChord.OnNoteOn(CSharp1, Held(CSharp1)));
-            Assert.AreEqual(ChordAction.None, TransportChord.OnNoteOn(A0, Held(A0, CSharp1)));
-        }
-
-        [Test]
-        public void OtherKeysDoNothing()
-        {
-            Assert.AreEqual(ChordAction.None, TransportChord.OnNoteOn(60, Held(A0, 60)));
-        }
-
-        [Test]
-        public void ConfiguredRestartKeysAreHonoured()
-        {
-            // SongTransport's chordNoteA/B are serialized and may be retuned.
-            Assert.AreEqual(ChordAction.Restart,
-                TransportChord.OnNoteOn(30, Held(29, 30), hold: 29, restart: 30));
         }
     }
 }
