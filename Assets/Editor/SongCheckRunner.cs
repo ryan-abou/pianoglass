@@ -284,9 +284,9 @@ namespace PianoGlass.EditorTools
             if (_transport.WaitMode) _transport.ToggleWaitMode();
             _clock.TempoMultiplier = CheckTempo;
 
-            // 2. Pick Ode to Joy, Right.
-            _picker.PressHandForCheck(PracticeHand.Right);
+            // 2. Pick Ode to Joy, then Right (#39: the song first, then the hand).
             if (!Check(_picker.PressSongForCheck("Ode to Joy"), "2 pick", "no Ode to Joy row")) yield break;
+            if (!Check(_picker.PressHandForCheck(PracticeHand.Right), "2 pick", "no hand step")) yield break;
             yield return null;
             if (!Check(Logged("[Songs] picked 'Ode to Joy' right, 16 bars, 4/4, 120 BPM"), "2 pick", "no picked line")) yield break;
             if (!Check(!_picker.IsShowing, "2 pick", "the picker stayed open")) yield break;
@@ -330,8 +330,8 @@ namespace PianoGlass.EditorTools
             yield return null; // the card notices on its own next update
             yield return null;
             if (!Check(!_card.IsShowing, "5 minuet", "the card stayed up under the picker")) yield break;
-            _picker.PressHandForCheck(PracticeHand.Left);
             if (!Check(_picker.PressSongForCheck("Minuet"), "5 minuet", "no Minuet row")) yield break;
+            if (!Check(_picker.PressHandForCheck(PracticeHand.Left), "5 minuet", "no hand step")) yield break;
             yield return null;
             if (!Check(_current.Hand == PracticeHand.Left, "5 minuet", "not the left hand")) yield break;
             if (!Check(_current.Song.BeatsPerBar == 3 && _current.Song.BarCount == 32, "5 minuet",
@@ -350,8 +350,8 @@ namespace PianoGlass.EditorTools
             _card.PressSongsForCheck();
             yield return WaitFor(() => _picker.IsShowing, "5b both", "the picker to open from Songs");
             if (_failed != null) yield break;
-            _picker.PressHandForCheck(PracticeHand.Both);
             if (!Check(_picker.PressSongForCheck("Minuet"), "5b both", "no Minuet row")) yield break;
+            if (!Check(_picker.PressHandForCheck(PracticeHand.Both), "5b both", "no hand step")) yield break;
             yield return null;
             if (!Check(_current.Hand == PracticeHand.Both, "5b both", $"hand is {_current.Hand}")) yield break;
             yield return PlayThrough("5b both");
