@@ -3,7 +3,7 @@ using System.Collections.Generic;
 namespace PianoGlass.Scoring
 {
     public enum SuggestionRule { WeakBars, PlayInTime, FasterTempo, NextRank, AwayFromPerfect, OtherHand, Mastered, WeakHand }
-    public enum SuggestionAction { None, LoopBars, TryTempo, SwitchHand, NextSong }
+    public enum SuggestionAction { None, LoopBars, TryTempo, SwitchHand, NextSong, PlayInTime }
 
     /// <summary>The one message of the suggestion row and its optional button.</summary>
     public sealed class Suggestion
@@ -95,7 +95,10 @@ namespace PianoGlass.Scoring
                 return new Suggestion
                 {
                     Rule = SuggestionRule.PlayInTime,
-                    Message = "Ready to play in time? Hold A0, press D1",
+                    // Was "Hold A0, press D1": the piano shortcuts are gone (#41).
+                    Message = "Ready to play in time?",
+                    Action = SuggestionAction.PlayInTime,
+                    ButtonText = "Play in time",
                 };
 
             // b. Ready to go faster.

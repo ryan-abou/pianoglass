@@ -396,6 +396,9 @@ namespace PianoGlass.Scoring
                 case SuggestionAction.NextSong:
                     OnSongs();
                     break;
+                case SuggestionAction.PlayInTime:
+                    if (transport != null) transport.PlayInTime();
+                    break;
             }
         }
 

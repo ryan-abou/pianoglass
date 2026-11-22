@@ -260,8 +260,8 @@ point for the spike, not a substitute for looking at those frames.
 
 Steps 5–12 (and F14, plus two calibration fixes) are grouped into
 Batches A, B and C, each tested in one headset round; see "Batches" in
-`CLAUDE.md`. Tempo (step 5) is changed with a piano chord: hold A0 and press
-B0 (−5%) or C1 (+5%).
+`CLAUDE.md`. Tempo (step 5) was changed with a piano chord, hold A0 and press
+B0 (−5%) or C1 (+5%), until the chords were removed for song panel buttons (#41).
 
 5. **Tempo ±5% (F26).** **Done, merged 2026-11-03** (Batch A). 25–200%,
    saved in PlayerPrefs, always shown on the panel. A change while paused
