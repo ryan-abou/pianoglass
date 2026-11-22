@@ -135,9 +135,20 @@ namespace PianoGlass.EditorTools
             public const string PasswordFile = "keystore-password.txt";
             public const string Alias = "pianoglass";
 
+            // The raw values as ProjectSettings.asset stores them: setting
+            // keystoreName back to "" through PlayerSettings writes
+            // "{inproject}: " instead (round 11), so they go back this way.
+            private readonly SerializedObject _settings =
+                new SerializedObject(Unsupported.GetSerializedAssetInterfaceSingleton("PlayerSettings"));
             private readonly bool _useCustom = PlayerSettings.Android.useCustomKeystore;
-            private readonly string _keystoreName = PlayerSettings.Android.keystoreName;
-            private readonly string _aliasName = PlayerSettings.Android.keyaliasName;
+            private readonly string _keystoreName;
+            private readonly string _aliasName;
+
+            public SigningSettings()
+            {
+                _keystoreName = _settings.FindProperty("AndroidKeystoreName")?.stringValue;
+                _aliasName = _settings.FindProperty("AndroidKeyaliasName")?.stringValue;
+            }
 
             private static string Folder =>
                 Environment.GetEnvironmentVariable("PIANOGLASS_SIGNING_DIR") is string dir && dir.Length > 0
@@ -175,10 +186,14 @@ namespace PianoGlass.EditorTools
             public void Restore()
             {
                 PlayerSettings.Android.useCustomKeystore = _useCustom;
-                PlayerSettings.Android.keystoreName = _keystoreName;
-                PlayerSettings.Android.keyaliasName = _aliasName;
                 PlayerSettings.Android.keystorePass = "";
                 PlayerSettings.Android.keyaliasPass = "";
+                _settings.Update();
+                SerializedProperty keystore = _settings.FindProperty("AndroidKeystoreName");
+                SerializedProperty alias = _settings.FindProperty("AndroidKeyaliasName");
+                if (keystore != null && _keystoreName != null) keystore.stringValue = _keystoreName;
+                if (alias != null && _aliasName != null) alias.stringValue = _aliasName;
+                _settings.ApplyModifiedPropertiesWithoutUndo();
             }
         }
 
