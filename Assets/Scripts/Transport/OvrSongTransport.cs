@@ -5,7 +5,7 @@ namespace PianoGlass.Transport
     /// <summary>
     /// Controller bindings for song playback -- a spare, not the primary
     /// control. While actually playing piano the controllers are on the
-    /// floor, and the MIDI restart chord in SongTransport is what gets used;
+    /// floor, and the song panel's buttons are what get used;
     /// this is here for setup and for testing without touching the keyboard.
     ///
     ///   Right A     play / pause toggle -- except while anchored calibration

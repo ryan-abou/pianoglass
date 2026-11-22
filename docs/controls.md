@@ -12,38 +12,35 @@ play or poke.
 
 ### Today (2026-11-05)
 
-Controllers always name `OVRInput.Controller.LTouch` / `RTouch`. Piano
-chords are all built on the bottom key, A0, so that no song spends a note
-on them and none can be played by accident.
+Controllers always name `OVRInput.Controller.LTouch` / `RTouch`. The A0
+piano chords (restart, tempo, metronome, wait mode, memory fade) were removed
+on 2026-11-21 (#41): each had a song panel button, and nobody new would find
+them. Tempo, metronome, wait mode and memory fade are song panel buttons only.
 
-| Control | Controller (today) | Piano chord | Where | Notes |
-|---|---|---|---|---|
-| Capture the next calibration point | right trigger | — | `OvrCalibrationInput` | Two touches, lowest then highest key |
-| Start calibration over | B, or left trigger | — | `OvrCalibrationInput` | |
-| Nudge left/right, nearer/further | right stick | — | `OvrCalibrationInput` | Rigid shift. Made before confirming a fresh calibration, it is what the next one starts from |
-| Nudge up/down | left stick up/down | — | `OvrCalibrationInput` | Axis-locked against yaw |
-| Turn the keyboard (yaw) | left stick left/right | — | `OvrCalibrationInput` | ±10° |
-| Clear the nudge | right stick click | — | `OvrCalibrationInput` | A fresh calibration resets it to the steady offset learned from the last one |
-| Measure the controller tip | left menu button (again = cancel) | — | `ControllerTipCalibration` | Written to the profile root |
-| "Looks right" in Verifying | A | — | `OvrCalibrationInput` | Anchored mode; that A does not reach play/pause. Asked after launch, calibration, and 3 s or more away |
-| Middle C fix: start / cancel | right grip | — | `OvrCalibrationInput` | Anchored mode; then touch Middle C and pull the right trigger |
-| Play / pause | A | — | `OvrSongTransport` | |
-| Restart from the top and play | left Y | A0 + A♯0 | `OvrSongTransport`, `SongTransport` | The chord works whenever calibrated, playing or not. Also how a practice loop is left. Not while the left grip is held (that Y is recording mode's) |
-| Start a practice loop | right controller ray + right trigger on the results card's "Loop bars" button | — | `ResultsCard` → `PracticeLoop` | The button shows when a bar is under 75%: that bar, and a neighbour under 90% |
-| Choose bars to loop | right controller ray + right trigger on a bar pill | — | `ResultsCard`, `BarSelection` | One pill, then another for a range; the suggestion's button becomes "Loop bars 3–5". The same pill again, alone, clears it |
-| Press a results card button (Retry, Songs, More/Less info, the suggestion's button) | right controller ray + right trigger | — | `OvrUiPointer`, `GlassButton` | Stopgap until hand poke (Phase 4). The ray shows only while a button is pressable, or on a panel's glass; the trigger goes to calibration unless the ray is on a button or a panel |
-| Open the song picker | right controller ray + right trigger on the results card's Songs button | — | `ResultsCard` → `SongPicker` | The picker also opens by itself at launch, once the keys are placed |
-| Choose which hand to practice | right controller ray + right trigger on the picker's Left, Right or Both pill | — | `SongPicker` | Both: every note scored, each in its own hand's colour (#11). Songs marked hands unknown ignore it and play All notes |
-| Pick a song | right controller ray + right trigger on a picker row | — | `SongPicker` → `CurrentSong` | Loads it stopped at the top; press play as usual. Greyed rows can't be pressed |
-| Next or previous page of songs | right controller ray + right trigger on Prev or Next | — | `SongPicker` | Five songs a page. Only there when there are more than five |
-| Close the picker, keeping the current song | right controller ray + right trigger on Close | — | `SongPicker` | Playing a song also hides it |
-| Switch to the other hand and restart | right controller ray + right trigger on the results card's "Switch to left hand" | — | `ResultsCard` → `CurrentSong` | Offered after a perfect run at full speed. Not offered after All notes |
-| Tempo −5% / +5% | — | hold A0, press B0 / C1 | `SongTransport` | 25–200%, only while stopped or paused, saved |
-| Metronome on/off | — | hold A0, press C♯1 | `SongTransport` → `Metronome` | Only while stopped or paused, saved |
-| Wait mode on/off | — | hold A0, press D1 | `SongTransport` | Only while stopped or paused, saved. While paused part-way it starts a new attempt from there. A chord moves on only once all its keys are held down together (2026-11-15) |
-| Memory fade on/off | — | hold A0, press D♯1 | `SongTransport` | Only while stopped or paused, saved. Works on whole songs and in loops |
-| Display mode (cycle) | left X | — | `OvrKeyOverlayInput` | FullOverlay / Translucent / ActiveKeysOnly / EdgeMarkers, saved. Not while the left grip is held (that X is the checklist's) |
-| Passthrough on/off | left stick click | — | `OvrKeyOverlayInput` | A/B test tool |
+| Control | Controller (today) | Where | Notes |
+|---|---|---|---|
+| Capture the next calibration point | right trigger | `OvrCalibrationInput` | Two touches, lowest then highest key |
+| Start calibration over | B, or left trigger | `OvrCalibrationInput` | |
+| Nudge left/right, nearer/further | right stick | `OvrCalibrationInput` | Rigid shift. Made before confirming a fresh calibration, it is what the next one starts from |
+| Nudge up/down | left stick up/down | `OvrCalibrationInput` | Axis-locked against yaw |
+| Turn the keyboard (yaw) | left stick left/right | `OvrCalibrationInput` | ±10° |
+| Clear the nudge | right stick click | `OvrCalibrationInput` | A fresh calibration resets it to the steady offset learned from the last one |
+| Measure the controller tip | left menu button (again = cancel) | `ControllerTipCalibration` | Written to the profile root |
+| "Looks right" in Verifying | A | `OvrCalibrationInput` | Anchored mode; that A does not reach play/pause. Asked after launch, calibration, and 3 s or more away |
+| Middle C fix: start / cancel | right grip | `OvrCalibrationInput` | Anchored mode; then touch Middle C and pull the right trigger |
+| Play / pause | A | `OvrSongTransport` | |
+| Restart from the top and play | left Y | `OvrSongTransport`, `SongTransport` | Also how a practice loop is left; the song panel's Restart does the same. Not while the left grip is held (that Y is recording mode's) |
+| Start a practice loop | right controller ray + right trigger on the results card's "Loop bars" button | `ResultsCard` → `PracticeLoop` | The button shows when a bar is under 75%: that bar, and a neighbour under 90% |
+| Choose bars to loop | right controller ray + right trigger on a bar pill | `ResultsCard`, `BarSelection` | One pill, then another for a range; the suggestion's button becomes "Loop bars 3–5". The same pill again, alone, clears it |
+| Press a results card button (Retry, Songs, More/Less info, the suggestion's button) | right controller ray + right trigger | `OvrUiPointer`, `GlassButton` | Stopgap until hand poke (Phase 4). The ray shows only while a button is pressable, or on a panel's glass; the trigger goes to calibration unless the ray is on a button or a panel |
+| Open the song picker | right controller ray + right trigger on the results card's Songs button | `ResultsCard` → `SongPicker` | The picker also opens by itself at launch, once the keys are placed |
+| Pick a song | right controller ray + right trigger on a picker row | `SongPicker` → `CurrentSong` | Then the hand (next row), unless the song's hands are unknown: then it loads at once with All notes. Loads stopped at the top; press play as usual. Greyed rows can't be pressed. Songs from your own Songs folder have a "Your song" tag (#40) |
+| Choose which hand to practice | right controller ray + right trigger on Left, Right or Both in the picker's "Which hand?" step, after a song (#39) | `SongPicker` | The last choice is lit. Both: every note scored, each in its own hand's colour (#11). Back returns to the list |
+| Next or previous page of songs | right controller ray + right trigger on Prev or Next | `SongPicker` | Five songs a page. Only there when there are more than five |
+| Close the picker, keeping the current song | right controller ray + right trigger on Close | `SongPicker` | Playing a song also hides it |
+| Switch to the other hand and restart | right controller ray + right trigger on the results card's "Switch to left hand" | `ResultsCard` → `CurrentSong` | Offered after a perfect run at full speed. Not offered after All notes |
+| Display mode (cycle) | left X | `OvrKeyOverlayInput` | FullOverlay / Translucent / ActiveKeysOnly / EdgeMarkers, saved. Not while the left grip is held (that X is the checklist's) |
+| Passthrough on/off | left stick click | `OvrKeyOverlayInput` | A/B test tool |
 
 Development builds only (compiled out of release; `DevOverlayController`, 2026-11-14).
 The left grip is used by nothing else, and has to be held 0.3 s before X or Y count (a press made sooner is remembered),
@@ -109,7 +106,7 @@ asked for while waiting opens in front of you after the recenter.
 | Control | Without controllers | Where |
 |---|---|---|
 | Play / pause, restart | Song panel buttons (left end of the keyboard) | `SongPanel` |
-| Tempo −/+, metronome, wait mode, memory fade | Song panel buttons, only while stopped or paused, or the piano chords as before | `SongPanel` |
+| Tempo −/+, metronome, wait mode, memory fade | Song panel buttons, only while stopped or paused | `SongPanel` |
 | Songs, hand switch | Song panel "Songs", then poke the picker | `SongPanel`, `SongPicker` |
 | Settings | Song panel "Settings": shown in the song panel's place | `SettingsPanel` |
 | Calibrate | Settings "Calibrate", then pick up the right controller: touch the middle of the front edge of A0, then C8, with its tip and pull the trigger (about 1 mm; the sideways part of the learned offset is not kept, since it is only where along the edge the tip went). Backup with no controller: press and hold A0 and C8 at their front edges with one index finger (about 1 cm; the keys are levelled afterwards) | `OvrCalibrationInput`, `HandCalibration` |
@@ -153,9 +150,10 @@ values from `Assets/UI/GlassTokens.asset`):
 What stays off the menus, and why:
 - **The status panel goes or shrinks (Ryan, 2026-11-05).** It carries a loop's
   pass and how the last one went only until these menus can show that.
-- **The piano chords stay.** While playing, hands are on the keys, and a
-  chord is faster than reaching for a panel. Each chord gets a matching
-  button, so nothing is chord-only.
+- **The piano chords are gone (Ryan, 2026-11-21, #41).** They were kept
+  because hands are on the keys while playing, but four of the five only
+  worked while stopped or paused, when a button is as quick, and every one
+  had a button. Hidden controls are one more thing a new player can't find.
 - **Calibration by hand too (Ryan, 2026-11-14: everything without
   controllers).** Built as key presses, not fingertip touches: MIDI says which
   key and when, the fingertip says where (accurate along the keys, 328 presses).

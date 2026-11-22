@@ -10,9 +10,11 @@ using PianoGlass.Transport;
 namespace PianoGlass.UI
 {
     /// <summary>
-    /// The song list on Liquid Glass: a Left | Right switch, one row per song,
-    /// and five rows to a page. Songs from the player's own Songs folder
-    /// carry a "Your song" tag (#40). Shows at launch once the keys are placed, and
+    /// The song list on Liquid Glass: one row per song, five rows to a page.
+    /// Songs from the player's own Songs folder carry a "Your song" tag
+    /// (#40). Tapping a song asks which hand next, Left, Right or Both, with
+    /// the last choice lit (#39: picking the hand first was confusing); a song
+    /// whose hands are unknown skips that step and plays all notes. Shows at launch once the keys are placed, and
     /// from the results card's Songs button. It hides while a song plays, and
     /// steps aside for calibration instructions the same way the results card
     /// does. SceneSetup makes the Canvas and its wiring; the rest is built
@@ -64,7 +66,10 @@ namespace PianoGlass.UI
         private Color _primary, _secondary;
         private readonly RowView[] _rows = new RowView[SongLibrary.RowsPerPage];
         private GlassButton _leftHand, _rightHand, _bothHands, _previous, _next;
-        private TextMeshProUGUI _pageText;
+        private TextMeshProUGUI _pageText, _handSong;
+        private GameObject _listView, _handView;
+        /// <summary>The song tapped, waiting for its hand.</summary>
+        private SongRow _pending;
         private PracticeHand _hand = PracticeHand.Right;
         private int _page;
 
@@ -131,6 +136,7 @@ namespace PianoGlass.UI
         private void SetVisible(bool on)
         {
             _shown = on;
+            if (!on) ShowHandStep(null);
             if (_canvas != null) _canvas.enabled = on;
             // Glass quads are renderers of their own, not part of the Canvas.
             foreach (GlassPanel g in GetComponentsInChildren<GlassPanel>(true)) g.enabled = on;
@@ -209,13 +215,35 @@ namespace PianoGlass.UI
         {
             _hand = hand;
             FillSwitch();
+            SongRow row = _pending;
+            ShowHandStep(null);
+            if (row != null && current.Pick(row, hand)) Close();
         }
 
         private void OnRow(int slot)
         {
             int index = _page * SongLibrary.RowsPerPage + slot;
             if (index >= current.Library.Rows.Count) return;
-            if (current.Pick(current.Library.Rows[index], _hand)) Close();
+            SongRow row = current.Library.Rows[index];
+            if (!row.CanLoad) return;
+            if (!row.OffersHands)
+            {
+                if (current.Pick(row, PracticeHand.All)) Close();
+                return;
+            }
+            ShowHandStep(row);
+        }
+
+        /// <summary>The "which hand" step for <paramref name="row"/>, or the list (null).</summary>
+        private void ShowHandStep(SongRow row)
+        {
+            _pending = row;
+            if (_listView == null) return;
+            _listView.SetActive(row == null);
+            _handView.SetActive(row != null);
+            if (row == null) return;
+            _handSong.text = row.Title;
+            FillSwitch();
         }
 
         private void OnPage(int direction)
@@ -238,21 +266,11 @@ namespace PianoGlass.UI
             ((RectTransform)transform).sizeDelta = Size;
             if (TryGetComponent(out GlassPanel glass)) glass.SetSortingOrder(OrderPanel);
 
-            Transform root = transform;
+            _listView = View("List");
+            _handView = View("Hand");
+            Transform root = _listView.transform;
             Text(root, "Title", 26f, _primary, TextAlignmentOptions.TopLeft, new Vector2(Left, HeaderY + 17f), 200f, true)
                 .text = "Songs";
-
-            // Left | Right | Both, right-aligned (#11 added Both).
-            const float switchWidth = 92f, switchGap = 6f;
-            float x = Inner * 0.5f - switchWidth * 0.5f;
-            _bothHands = Pill(root, "Both", new Vector2(x, HeaderY),
-                              new Vector2(switchWidth, PillHeight), "Both", () => OnHand(PracticeHand.Both));
-            x -= switchWidth + switchGap;
-            _rightHand = Pill(root, "Right", new Vector2(x, HeaderY),
-                              new Vector2(switchWidth, PillHeight), "Right", () => OnHand(PracticeHand.Right));
-            x -= switchWidth + switchGap;
-            _leftHand = Pill(root, "Left", new Vector2(x, HeaderY),
-                             new Vector2(switchWidth, PillHeight), "Left", () => OnHand(PracticeHand.Left));
 
             for (int i = 0; i < _rows.Length; i++) _rows[i] = BuildRow(root, i);
 
@@ -265,6 +283,47 @@ namespace PianoGlass.UI
                              new Vector2(Left + pageWidth, FooterY + 11f), 96f);
             Pill(root, "Close", new Vector2(Inner * 0.5f - closeWidth * 0.5f, FooterY),
                  new Vector2(closeWidth, PillHeight), "Close", Close);
+
+            BuildHandStep(_handView.transform, pageWidth, closeWidth);
+            ShowHandStep(null);
+        }
+
+        private const float HandWidth = 148f, HandHeight = 130f, HandGap = 12f, HandY = 10f;
+
+        /// <summary>Left, Right and Both as big buttons, the chosen one in its
+        /// hand's colour (#11 added Both).</summary>
+        private void BuildHandStep(Transform root, float backWidth, float closeWidth)
+        {
+            Text(root, "Title", 26f, _primary, TextAlignmentOptions.TopLeft, new Vector2(Left, HeaderY + 17f), 300f, true)
+                .text = "Which hand?";
+            _handSong = Text(root, "Song", 20f, _secondary, TextAlignmentOptions.TopLeft,
+                             new Vector2(Left, HeaderY - 24f), Inner);
+            _handSong.overflowMode = TextOverflowModes.Ellipsis;
+
+            var size = new Vector2(HandWidth, HandHeight);
+            _leftHand = Pill(root, "Left", new Vector2(-HandWidth - HandGap, HandY), size, "Left",
+                             () => OnHand(PracticeHand.Left), 26f);
+            _rightHand = Pill(root, "Right", new Vector2(0f, HandY), size, "Right",
+                              () => OnHand(PracticeHand.Right), 26f);
+            _bothHands = Pill(root, "Both", new Vector2(HandWidth + HandGap, HandY), size, "Both",
+                              () => OnHand(PracticeHand.Both), 26f);
+
+            Pill(root, "Back", new Vector2(Left + backWidth * 0.5f, FooterY), new Vector2(backWidth, PillHeight), "Back",
+                 () => ShowHandStep(null));
+            Pill(root, "Close", new Vector2(Inner * 0.5f - closeWidth * 0.5f, FooterY),
+                 new Vector2(closeWidth, PillHeight), "Close", Close);
+        }
+
+        /// <summary>A full-size holder, so the list and the hand step swap as one.</summary>
+        private GameObject View(string name)
+        {
+            var go = new GameObject(name, typeof(RectTransform));
+            var rt = (RectTransform)go.transform;
+            rt.SetParent(transform, false);
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = rt.offsetMax = Vector2.zero;
+            return go;
         }
 
         private RowView BuildRow(Transform root, int slot)
@@ -293,12 +352,13 @@ namespace PianoGlass.UI
             return view;
         }
 
-        private GlassButton Pill(Transform parent, string name, Vector2 centre, Vector2 size, string label, Action onClick)
+        private GlassButton Pill(Transform parent, string name, Vector2 centre, Vector2 size, string label, Action onClick,
+                                 float fontSize = 18f)
         {
             GlassPanel glass = Glass(parent, name, GlassStyle.Pill, centre, size, PillDepth);
             glass.SetSortingOrder(OrderPill);
-            Text(glass.transform, "Label", 18f, _primary, TextAlignmentOptions.Center,
-                 new Vector2(-size.x * 0.5f, 12.6f), size.x, true).text = label;
+            Text(glass.transform, "Label", fontSize, _primary, TextAlignmentOptions.Center,
+                 new Vector2(-size.x * 0.5f, fontSize * 0.7f), size.x, true).text = label;
             return MakeButton(glass, ButtonFill, onClick);
         }
 
@@ -358,8 +418,13 @@ namespace PianoGlass.UI
             return list;
         }
 
-        public void PressHandForCheck(PracticeHand hand) =>
+        /// <summary>After a song's row: presses a hand. False if no hand was asked for.</summary>
+        public bool PressHandForCheck(PracticeHand hand)
+        {
+            if (_pending == null) return false;
             (hand == PracticeHand.Left ? _leftHand : hand == PracticeHand.Both ? _bothHands : _rightHand).Press();
+            return true;
+        }
 
         /// <summary>Goes to the song's page and presses its row. False if
         /// there is no such song or it can't be pressed.</summary>
