@@ -173,6 +173,41 @@ namespace PianoGlass.Transport
             }
         }
 
+        /// <summary>The output latency clicks are started early by.</summary>
+        public double OutputLatencySeconds => _schedule != null ? _schedule.OutputLatencySeconds : 0.0;
+
+        /// <summary>
+        /// The resume countdown's count-in (#44, round 13): a click this many
+        /// seconds from now for each number, then the song's next beat, at
+        /// <paramref name="nextBeatSongTime"/>, also clicked here, since the
+        /// song comes back in too close to it for the usual schedule to start
+        /// it on time. That beat is then marked done so it isn't clicked twice.
+        /// Only while the metronome is on.
+        /// </summary>
+        public void CountIn(System.Collections.Generic.IReadOnlyList<double> secondsFromNow, bool lastIsBarLine,
+                            double nextBeatSongTime)
+        {
+            if (!IsOn || _voices == null) return;
+            double dspNow = _dsp.Estimate(Time.realtimeSinceStartupAsDouble);
+            for (int i = 0; i < secondsFromNow.Count; i++)
+            {
+                bool accent = i == secondsFromNow.Count - 1 && lastIsBarLine;
+                AudioSource v = _voices[_nextVoice];
+                _nextVoice = (_nextVoice + 1) % Voices;
+                v.clip = accent ? _accent : _click;
+                v.volume = accent ? accentVolume : volume;
+                v.PlayScheduled(dspNow + secondsFromNow[i] - OutputLatencySeconds);
+            }
+            _schedule.MarkScheduledThrough(nextBeatSongTime);
+        }
+
+        /// <summary>A cancelled count-in: its clicks are taken back.</summary>
+        public void StopCountIn()
+        {
+            StopAll();
+            _schedule?.Reset();
+        }
+
         private void StopAll()
         {
             if (_voices == null) return;
