@@ -17,12 +17,16 @@ project. Add a word the first time it comes up.
 - **depth sensor**: a part of the headset that measures how far away things are, like a tape measure for the whole room at once. PianoGlass example: the Quest 3 has one, but PianoGlass doesn't use it to hide notes behind your hands.
 - **development build**: a build with extra debugging and test tools turned on, a bit slower. PianoGlass example: `.\build.ps1 -Development` turns on anchored calibration and the in-headset checklist, and runs about 69 to 72 fps.
 - **EditMode tests**: tests that run inside the Unity editor without pressing Play or using the headset. PianoGlass example: 727 of them run in about a minute while the editor window is closed.
+- **fork**: your own copy of someone else's GitHub repo, made with one button. PianoGlass example: anyone can fork `ryan-abou/pianoglass` to look at it, but with no license they can't legally reuse the code.
 - **frame rate**: how many pictures a second the headset draws. PianoGlass example: the Quest 3 should hold 72 a second; `VrApi FPS=` lines in logcat show the real number.
 - **gh**: GitHub's command-line tool, so GitHub jobs can be done from the terminal instead of the website. PianoGlass example: moving a card on the project board to Doing with `gh project item-edit`.
+- **GitHub release**: a page on the repo that holds a finished APK for people to download, labelled with a version number. PianoGlass example: the README's install steps point to it.
 - **hand tracking**: the headset's cameras following your hands and fingers, so you can use the app without holding controllers. PianoGlass example: with the controllers down, your index fingertip pokes the song panel's buttons and presses A0 and C8 to calibrate.
 - **importer**: editor code that tells Unity how to read a file type it doesn't understand on its own. PianoGlass example: the `.mid` importer turns each song file into an asset that ships inside the APK.
 - **issue**: a numbered to-do or bug report on GitHub, like a ticket. PianoGlass example: "#1 MIDI file loading" is an issue with a card on the project board.
 - **JSON**: a text format for saving data as labels and values, like a filled-in form. PianoGlass example: every attempt you play is saved on the headset as a `.json` file with your accuracy and timing.
+- **keystore**: a secret file that signs the APK, like a wax seal proving it came from you. PianoGlass example: an update only installs over the old app if both were signed with the same keystore.
+- **license**: a file in a repo that says what other people may do with the code. PianoGlass example: the repo has none, so the code is all rights reserved.
 - **logcat**: the headset's running diary of messages from every app. PianoGlass example: `adb logcat -s Unity` shows lines like `[AnchorFlow] verify error x/y/z mm`.
 - **manifest.json**: the project's shopping list of packages and which version of each to get. PianoGlass example: `Packages/manifest.json` says to use Meta XR SDK version 205.0.0.
 - **median**: the middle value once a list is put in order, so one wild value can't drag it the way it drags an average. PianoGlass example: a hand calibration touch is the median of the fingertip's frames while the key is held.
@@ -49,4 +53,5 @@ project. Add a word the first time it comes up.
 - **test**: a small piece of code that checks another piece of code gives the right answer. PianoGlass example: 727 tests check things like the scoring and calibration maths without opening the headset.
 - **tick**: the small step of time a MIDI file counts in, a slice of one beat. PianoGlass example: the Minuet file uses 480 ticks per beat.
 - **track**: one strand of a MIDI file, usually one staff of the sheet music. PianoGlass example: the Minuet file has a "Right Hand" track and a "Left Hand" track.
+- **version number**: a label like 0.1.0 that grows with each release (big change, new feature, bug fix). PianoGlass example: the app is 0.1.0 in Unity's Player settings.
 - **worktree**: a second folder holding another branch of the same repo, so two branches can be worked on at once. PianoGlass example: the controller fix was written in `wt-controller` while Unity ran tests on the stall fix in the main folder.
