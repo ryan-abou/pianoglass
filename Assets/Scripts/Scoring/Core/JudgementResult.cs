@@ -65,7 +65,9 @@ namespace PianoGlass.Scoring
         public int pressedPitch;
         public double pressTime;
         public int bar;
-        /// <summary>The note that was due instead; -1 for an extra press.</summary>
+        /// <summary>The note that was due instead; -1 for an extra press with
+        /// nothing due. A wait mode press of the right key more than half a
+        /// second early is extra, and names the note it was early for.</summary>
         public int expectedPitch = -1;
         public int expectedNoteIndex = -1;
         /// <summary>Real ms from the due note, positive = late; 0 for an extra press.</summary>
