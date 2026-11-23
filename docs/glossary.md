@@ -6,7 +6,9 @@ project. Add a word the first time it comes up.
 
 - **anchor**: a spot in the room the headset remembers, so the app can pin things to it, like a pushpin on a corkboard. PianoGlass example: the keyboard is saved relative to an anchor, so it comes back on the piano after a relaunch.
 - **APK**: the single app file that gets installed on the headset, like an installer on a PC. PianoGlass example: `Builds\PianoGlass.apk` (about 61 MB), put on the Quest with `adb install -r`.
+- **back-face culling**: the graphics chip skipping the back side of a surface, since you normally can't see it. PianoGlass example: the Meta button glow's top disappears when the controller is flipped over.
 - **batchmode**: running Unity with no window, from a command. PianoGlass example: the tests and `[SongCheck] PASS` both run this way while the editor is closed.
+- **billboard**: a flat picture that turns every frame to face your eyes, like a sunflower following the sun. PianoGlass example: the soft halo around the Meta button glow.
 - **branch**: a separate copy of the work where changes can be tried without touching the safe version. PianoGlass example: `drop-template-packages` holds the package removal until it passes on the headset, while `main` stays the version that works.
 - **build**: turning the Unity project into an app the headset can run. PianoGlass example: `.\build.ps1` makes the APK and takes about 6 to 12 minutes.
 - **calibration bias**: the steady extra shift the app adds after every fresh calibration, learned from how far you nudged the keys last time. PianoGlass example: on the Quest 3 it is about 14 mm toward you, because the touches always land that far from where your eye sees the keys.
@@ -14,6 +16,7 @@ project. Add a word the first time it comes up.
 - **compiled out**: code left out of a build completely, as if it was never written, using `#if`. PianoGlass example: the test checklist panel and recording mode are compiled out of release builds, so a study participant can never open them.
 - **controller profile**: a setting that tells the app which kind of controller to expect and what its buttons are called. PianoGlass example: the Oculus Touch profile is on, and the Touch Plus profile (the Quest 3's controllers) is off.
 - **coordinate space**: the starting point and directions that positions are measured from, like giving directions "from the front door" or "from the mailbox". PianoGlass example: the anchor and the headset's tracking each have their own, and mixing them up draws the keys in the wrong spot.
+- **depth buffer**: a hidden "how far away" number for every pixel, so nearer things hide farther ones. PianoGlass example: the real controller is only a camera picture, so it writes nothing there and can't hide the glow.
 - **depth sensor**: a part of the headset that measures how far away things are, like a tape measure for the whole room at once. PianoGlass example: the Quest 3 has one, but PianoGlass doesn't use it to hide notes behind your hands.
 - **development build**: a build with extra debugging and test tools turned on, a bit slower. PianoGlass example: `.\build.ps1 -Development` turns on anchored calibration and the in-headset checklist, and runs about 69 to 72 fps.
 - **EditMode tests**: tests that run inside the Unity editor without pressing Play or using the headset. PianoGlass example: 727 of them run in about a minute while the editor window is closed.
@@ -21,6 +24,7 @@ project. Add a word the first time it comes up.
 - **gh**: GitHub's command-line tool, so GitHub jobs can be done from the terminal instead of the website. PianoGlass example: moving a card on the project board to Doing with `gh project item-edit`.
 - **hand tracking**: the headset's cameras following your hands and fingers, so you can use the app without holding controllers. PianoGlass example: with the controllers down, your index fingertip pokes the song panel's buttons and presses A0 and C8 to calibrate.
 - **importer**: editor code that tells Unity how to read a file type it doesn't understand on its own. PianoGlass example: the `.mid` importer turns each song file into an asset that ships inside the APK.
+- **input focus**: whether the system is letting the app read the controllers right now. PianoGlass example: opening the Meta menu takes it away; holding the button to recenter didn't, in the round 13 logs.
 - **issue**: a numbered to-do or bug report on GitHub, like a ticket. PianoGlass example: "#1 MIDI file loading" is an issue with a card on the project board.
 - **JSON**: a text format for saving data as labels and values, like a filled-in form. PianoGlass example: every attempt you play is saved on the headset as a `.json` file with your accuracy and timing.
 - **logcat**: the headset's running diary of messages from every app. PianoGlass example: `adb logcat -s Unity` shows lines like `[AnchorFlow] verify error x/y/z mm`.
