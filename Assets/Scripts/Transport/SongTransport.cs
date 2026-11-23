@@ -66,6 +66,9 @@ namespace PianoGlass.Transport
         public static bool NoPiano { get; private set; }
 
         private readonly ResumeCountdown _countdown = new ResumeCountdown();
+        /// <summary>The count-in's glide back: from where it was paused to the beat.</summary>
+        private double _rewindFrom, _rewindTo;
+        private bool _rewinding;
         /// <summary>Played since the top: a stop now is a pause part-way.</summary>
         private bool _underWay;
 
@@ -73,6 +76,8 @@ namespace PianoGlass.Transport
 
         /// <summary>3, 2, 1 before a paused song goes on.</summary>
         public bool CountingDownToResume => _countdown.Running;
+        /// <summary>The count itself, for drawing its dots (ResumeCountdownView).</summary>
+        public ResumeCountdown Countdown => _countdown;
         /// <summary>3, 2 or 1 while counting down, else 0.</summary>
         public int CountdownNumber => _countdown.Number(Now);
 
@@ -123,8 +128,11 @@ namespace PianoGlass.Transport
 
         private void Update()
         {
+            if (_countdown.Running && _rewinding && clock != null) Glide();
             if (_countdown.Finished(Now) && clock != null)
             {
+                if (_rewinding) FinishGlide(); // done by now (it is under a beat); only a guard
+
                 clock.Play();
                 Debug.Log($"[Transport] resumed at t = {clock.SongTime:0.00}s after the countdown");
             }
@@ -132,34 +140,62 @@ namespace PianoGlass.Transport
 
         /// <summary>Only a song paused part-way counts down; from the top it
         /// has its lead-in already.
-        /// With the metronome on it is a count-in in the song's tempo, a click
-        /// a number, landing the song on its next beat (round 13).</summary>
+        /// With the metronome on it is a count-in in the song's tempo: the
+        /// song backs up to the start of the beat it was paused in, and every
+        /// beat of the count has its own click (round 15, ResumeCountdown).</summary>
         private void StartCountdown(string why)
         {
             SongData song = Song;
+            _rewinding = false;
             if (metronome != null && metronome.IsOn && song != null && song.TempoMap.HasBeats && clock.TempoMultiplier > 0f)
             {
-                TempoMap map = song.TempoMap;
                 double pausedAt = clock.SongTime;
-                long k = map.FirstBeatAtOrAfter(pausedAt);
-                BeatLine next = map.Beat(k);
-                double beat = map.Beat(k + 1).Time - next.Time;
-                (double step, double total) = ResumeCountdown.Plan(pausedAt, next.Time, beat, clock.TempoMultiplier);
+                ResumeCountdown.CountIn plan = ResumeCountdown.Plan(song.TempoMap, pausedAt, clock.TempoMultiplier);
                 double delay = metronome.OutputLatencySeconds;
-                _countdown.Start(Now, delay, step, total);
-                metronome.CountIn(new[] { delay, delay + step, delay + 2 * step, delay + 3 * step }, next.IsBarLine, next.Time);
-                Debug.Log($"[Transport] resume count-in ({why}) at t = {pausedAt:0.00}s: {step * 1000:0} ms a beat, " +
-                          $"back in on the beat at {next.Time:0.00}s");
+                _countdown.Start(Now, delay, plan.Step, plan.Beats);
+
+                // The highway glides back to the beat while the first beat shows.
+                _rewindFrom = pausedAt;
+                _rewindTo = plan.RewindTo;
+                _rewinding = _rewindTo < pausedAt - 1e-9;
+
+                // A click with every beat, and one more on the beat the song
+                // comes back in on: its own, the "play now".
+                var clicks = new double[plan.Beats + 1];
+                for (int i = 0; i < clicks.Length; i++) clicks[i] = delay + i * plan.Step;
+                metronome.CountIn(clicks, plan.OnBarLine, plan.RewindTo);
+                Debug.Log($"[Transport] resume count-in ({why}) at t = {pausedAt:0.00}s: {plan.Beats} beats of " +
+                          $"{plan.Step * 1000:0} ms ({plan.Seconds:0.00} s), back to the beat at {plan.RewindTo:0.00}s");
                 return;
             }
             _countdown.Start(Now);
             Debug.Log($"[Transport] resume countdown ({why}) at t = {clock.SongTime:0.00}s");
         }
 
+        /// <summary>The highway scrolling back to the beat: only drawn, so
+        /// nothing it passes on the way is judged or lit. At the end the song
+        /// itself backs up (round 15).</summary>
+        private void Glide()
+        {
+            double p = _countdown.GlideProgress(Now);
+            if (p >= 1.0) FinishGlide();
+            else clock.ShowAt(_rewindFrom + (_rewindTo - _rewindFrom) * p);
+        }
+
+        private void FinishGlide()
+        {
+            _rewinding = false;
+            clock.RewindForResume(_rewindTo);
+        }
+
         private void CancelCountdown(string why)
         {
             if (!_countdown.Running) return;
             _countdown.Cancel();
+            // Mid-glide: drawn where it really is again. After it, the song
+            // stays backed up at the beat, and the next resume starts there.
+            if (_rewinding && clock != null) clock.ShowAt(null);
+            _rewinding = false;
             if (metronome != null) metronome.StopCountIn();
             Debug.Log($"[Transport] resume countdown cancelled: {why}");
         }

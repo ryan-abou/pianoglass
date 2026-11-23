@@ -130,31 +130,7 @@ namespace PianoGlass.Tests.EditMode
             Assert.AreEqual(0, c.Number(13.1));
         }
 
-        [Test]
-        public void WithTheMetronomeEachNumberIsABeat()
-        {
-            // 120 BPM at 100%: half a second a beat. Paused 0.2 s before the next beat.
-            (double step, double total) = ResumeCountdown.Plan(10.3, 10.5, 0.5, 1.0);
-            Assert.AreEqual(0.5, step, 1e-9);
-            Assert.AreEqual(1.3, total, 1e-9, "three beats, less the 0.2 s still to go");
-
-            var c = new ResumeCountdown();
-            c.Start(0.0, 0.085, step, total);
-            Assert.AreEqual(3, c.Number(0.05), "3 shows through the click's latency");
-            Assert.AreEqual(3, c.Number(0.5));
-            Assert.AreEqual(2, c.Number(0.6));
-            Assert.AreEqual(1, c.Number(1.1));
-            Assert.IsFalse(c.Finished(1.38));
-            Assert.IsTrue(c.Finished(1.386), "the song plays 0.2 s before where a 4th beat would be");
-        }
-
-        [Test]
-        public void AHalfSpeedCountInIsSlower()
-        {
-            (double step, double total) = ResumeCountdown.Plan(4.0, 4.5, 0.5, 0.5);
-            Assert.AreEqual(1.0, step, 1e-9);
-            Assert.AreEqual(2.0, total, 1e-9);
-        }
+        // The metronome count-in has its own tests: CountInTests.
 
         [Test]
         public void CancellingStopsIt()
