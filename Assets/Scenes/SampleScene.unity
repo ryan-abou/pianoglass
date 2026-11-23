@@ -1544,6 +1544,7 @@ MonoBehaviour:
   controllerPrefab: {fileID: 112276, guid: d9809c5e8418bb047bf2c8ba1d1a2cec, type: 3}
   translucent: {fileID: 2100000, guid: 046695c57c8958e4d927a627540455e0, type: 2}
   touchPlusRightCap: {fileID: 4300000, guid: 72facb46d55127446aee3f2629e2d524, type: 2}
+  diagram: {fileID: 2800000, guid: f438ba8e06b05794789ee220b5e93911, type: 3}
 --- !u!4 &1076413426
 Transform:
   m_ObjectHideFlags: 0

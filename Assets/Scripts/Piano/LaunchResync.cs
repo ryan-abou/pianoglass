@@ -29,6 +29,9 @@ namespace PianoGlass.Piano
             "It's the round button under the thumbstick\n" +
             "<size=80%>Or look at your palm, then pinch and hold</size>";
 
+        /// <summary>The controller picture on the banner, canvas millimetres square.</summary>
+        public const float PictureMm = 140f;
+
         /// <summary>Show <see cref="PromptLine"/> now.</summary>
         public static bool WaitingForRecenter { get; private set; }
 
@@ -52,10 +55,23 @@ namespace PianoGlass.Piano
             go.AddComponent<LaunchResync>();
         }
 
-        private void Start() => _flow = FindAnyObjectByType<CalibrationFlowController>();
+        private void Start()
+        {
+            _flow = FindAnyObjectByType<CalibrationFlowController>();
+            // Logged only, next to our own head-jump check (round 15): does the
+            // SDK's event fire on a Meta button recenter on the Quest 3, and when?
+            // Round 3 saw it fire for the app's own call, which moves nothing,
+            // so it doesn't end the prompt by itself yet.
+            if (OVRManager.display != null) OVRManager.display.RecenteredPose += OnSystemRecentered;
+        }
+
+        private void OnSystemRecentered() =>
+            Debug.Log($"[LaunchResync] system recenter event" +
+                      (WaitingForRecenter ? $", {Time.realtimeSinceStartup - _askedAt:0.0} s after asking" : ""));
 
         private void OnDestroy()
         {
+            if (OVRManager.display != null) OVRManager.display.RecenteredPose -= OnSystemRecentered;
             if (_session != null) _session.Transitioned -= OnTransitioned;
             WaitingForRecenter = false;
             if (_view != null) Destroy(_view.gameObject);
@@ -92,7 +108,7 @@ namespace PianoGlass.Piano
             {
                 WaitingForRecenter = false;
                 if (_view != null) _view.Hide();
-                if (_hint != null) _hint.Hide();
+                if (_hint != null) _hint.Done(); // one clear buzz, then gone
                 Debug.Log($"[LaunchResync] recentered {Time.realtimeSinceStartup - _askedAt:0.0} s after asking: " +
                           "prompt cleared, the keys line up now");
             }
@@ -114,8 +130,13 @@ namespace PianoGlass.Piano
             WaitingForRecenter = true;
             _askedAt = Time.realtimeSinceStartup;
             if (_view == null)
+            {
                 _view = RecenterPromptView.Create(FindAnyObjectByType<PianoGlass.UI.SongPicker>(FindObjectsInactive.Include),
                                                   PromptLine);
+                // Where the button is, as a picture too (round 15).
+                var assets = FindAnyObjectByType<MetaButtonHintAssets>();
+                if (_view != null && assets != null) _view.AddPicture(assets.diagram, PictureMm);
+            }
             if (_view != null) _view.Show();
             if (_hint == null) _hint = MetaButtonHint.Create();
             if (_hint != null) _hint.Show();
