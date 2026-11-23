@@ -161,7 +161,7 @@ namespace PianoGlass.Scoring
             double window = NoteJudge.WindowSongSeconds(Windows.goodMs, tempo);
             if (PitchOnly)
             {
-                OnNoteOnWaiting(pitch, pressSongTime, window);
+                OnNoteOnWaiting(pitch, pressSongTime, window, tempo);
                 return;
             }
 
@@ -224,7 +224,7 @@ namespace PianoGlass.Scoring
             WrongNotePlayed?.Invoke(wrong);
         }
 
-        private void OnNoteOnWaiting(int pitch, double pressSongTime, double window)
+        private void OnNoteOnWaiting(int pitch, double pressSongTime, double window, double tempo)
         {
             double due = NextDueTime;
             if (double.IsPositiveInfinity(due)) return;
@@ -241,6 +241,10 @@ namespace PianoGlass.Scoring
 
             if (inChord)
             {
+                // Too early: not counted at all, so it can be played again
+                // when it comes (round 16: with memory fade it went in 5 s
+                // early, racing ahead of the song).
+                if (due - pressSongTime > WaitEarlySeconds * tempo + SameTimeSeconds) return;
                 _down.Add(pitch);
                 // Every key of the chord pressed since the last one, and still down.
                 foreach (int i in _scorable)
@@ -278,6 +282,11 @@ namespace PianoGlass.Scoring
 
         /// <summary>Notes this close together are one chord.</summary>
         private const double SameTimeSeconds = 1e-6;
+
+        /// <summary>Wait mode: how early, in real seconds, the awaited note
+        /// can be played before it reaches the keys. About when it is in
+        /// sight and close; any earlier is guessing ahead of the song.</summary>
+        public const double WaitEarlySeconds = 0.5;
 
         /// <summary>Song time of the earliest note not yet judged: where the
         /// clock holds in wait mode. +inf when every note is done.</summary>
