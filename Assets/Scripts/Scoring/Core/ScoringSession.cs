@@ -241,10 +241,26 @@ namespace PianoGlass.Scoring
 
             if (inChord)
             {
-                // Too early: not counted at all, so it can be played again
-                // when it comes (round 16: with memory fade it went in 5 s
-                // early, racing ahead of the song).
-                if (due - pressSongTime > WaitEarlySeconds * tempo + SameTimeSeconds) return;
+                // Too early: a wrong note, an extra press before it was due,
+                // and it still has to be played when it comes (round 16: with
+                // memory fade it went in 5 s early, racing ahead of the song).
+                if (due - pressSongTime > WaitEarlySeconds * tempo + SameTimeSeconds)
+                {
+                    SongNote early = Song.Notes[first];
+                    var tooEarly = new WrongNote
+                    {
+                        kind = WrongNote.Extra, pressedPitch = pitch, pressTime = pressSongTime,
+                        expectedPitch = early.Pitch, expectedNoteIndex = first, bar = Song.BarOf(early.StartTime),
+                        errorMs = NoteJudge.ErrorMs(pressSongTime, due, tempo),
+                    };
+                    ExtraCount++;
+                    _run = 0;
+                    tooEarly.hand = HandOf(first);
+                    _wrong.Add(tooEarly);
+                    LastWrongNote = tooEarly;
+                    WrongNotePlayed?.Invoke(tooEarly);
+                    return;
+                }
                 _down.Add(pitch);
                 // Every key of the chord pressed since the last one, and still down.
                 foreach (int i in _scorable)

@@ -105,12 +105,16 @@ namespace PianoGlass.Tests.EditMode
         {
             ScoringSession s = Wait(Melody());
             s.OnNoteOn(C4, -2.5, 1.0);  // long before it arrives: round 16, memory fade let this race ahead
-            Assert.AreEqual(0, s.Correct, "too early: not counted");
-            Assert.AreEqual(0, s.WrongNotes.Count, "and not wrong either: it is the right key");
+            Assert.AreEqual(0, s.Correct, "too early: not a hit");
+            Assert.AreEqual(1, s.WrongNotes.Count, "it is a wrong note (Ryan, round 16)");
+            Assert.AreEqual(1, s.ExtraCount, "an extra press, before it was due");
+            Assert.AreEqual(C4, s.LastWrongNote.expectedPitch, "naming the note it was early for");
+            Assert.AreEqual(-2500.0, s.LastWrongNote.errorMs, 1e-6);
             Assert.AreEqual(0.0, s.NextDueTime, 1e-9, "still waiting for it");
 
             s.OnNoteOn(C4, -0.4, 1.0);
             Assert.AreEqual(1, s.Correct, "0.4 s early is fine");
+            Assert.AreEqual(1, s.WrongNotes.Count);
         }
 
         [Test]
@@ -120,6 +124,7 @@ namespace PianoGlass.Tests.EditMode
             ScoringSession s = Wait(Melody());
             s.OnNoteOn(C4, -0.3, 0.5);
             Assert.AreEqual(0, s.Correct);
+            Assert.AreEqual(1, s.WrongNotes.Count, "0.6 real seconds early");
             s.OnNoteOn(C4, -0.2, 0.5);
             Assert.AreEqual(1, s.Correct);
         }
