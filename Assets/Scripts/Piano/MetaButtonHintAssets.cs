@@ -15,5 +15,8 @@ namespace PianoGlass.Piano
         public GameObject controllerPrefab;
         public Material translucent;
         public Mesh touchPlusRightCap;
+        /// <summary>The right controller from above with its Meta button lit,
+        /// for the recenter banner (round 15). Rendered by MetaButtonPreview.</summary>
+        public Texture2D diagram;
     }
 }

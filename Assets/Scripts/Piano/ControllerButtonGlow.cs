@@ -8,7 +8,11 @@ namespace PianoGlass.Piano
     /// controller model is lined up with the real one but not drawn, and only
     /// the button's own part of it glows and pulses, with a soft halo, right
     /// on top of the real button. (Round 13 had the whole model as a
-    /// see-through ghost; Ryan wanted just the button.)
+    /// see-through ghost; Ryan wanted just the button.) Round 15: the real
+    /// controller is only a camera picture, so it can't hide the glow when
+    /// the button faces away; the glow fades out by itself then
+    /// (<see cref="FacingFade"/>), and the halo is smaller and on the
+    /// button's top.
     ///
     /// Meta's models are one skinned mesh, with a bone for each button
     /// (right_b_button_oculus on the Quest 3's Touch Plus). The button's part
@@ -27,7 +31,15 @@ namespace PianoGlass.Piano
         public static readonly string[] MetaButtonBones = { "right_b_button_oculus", "b_button_oculus", "b_button03" };
 
         public static readonly Color Glow = new Color(0.45f, 0.88f, 1f, 1f);
-        private const float HaloMetres = 0.034f, PulseHz = 1.1f;
+        /// <summary>Round 15: was 3.4 cm, three times the button, and a big
+        /// soft glow with no edge looked like light from behind the controller.</summary>
+        private const float HaloMetres = 0.022f;
+        public const float PulseHz = 1.1f;
+
+        /// <summary>The glow is full while the button faces the eyes within
+        /// this many degrees, and gone past the second: nothing real blocks
+        /// it, so turned away it would show through the controller (round 14).</summary>
+        public const float FullFacingDegrees = 60f, GoneFacingDegrees = 85f;
         /// <summary>A triangle belongs to the button when all three corners
         /// follow its bone at least this much.</summary>
         private const float ButtonWeight = 0.5f;
@@ -107,6 +119,10 @@ namespace PianoGlass.Piano
         /// <summary>Where the button is in the model mesh's own space, and that space.</summary>
         private Vector3 _capCentre;
         private Transform _capSpace;
+        /// <summary>Which way the button's top faces, and how far its top is
+        /// above <see cref="_capCentre"/>, in the same space. Zero: unknown.</summary>
+        private Vector3 _capNormal;
+        private float _capLift;
 
         private void Build(SkinnedMeshRenderer source, int bone, Material translucent, Mesh cap)
         {
@@ -146,7 +162,38 @@ namespace PianoGlass.Piano
             _cap.sharedMaterial = _capMaterial;
             _capCentre = cap.bounds.center;
             _capSpace = source.transform;
+            if (cap.isReadable) (_capNormal, _capLift) = Facing(cap, _capCentre);
         }
+
+        /// <summary>The way the button's top faces (its triangles' normals,
+        /// by area: the top outweighs the sides, which mostly cancel) and the
+        /// height of its top above <paramref name="centre"/> along that way.</summary>
+        public static (Vector3 normal, float lift) Facing(Mesh cap, Vector3 centre)
+        {
+            Vector3[] v = cap.vertices;
+            Vector3[] n = cap.normals;
+            int[] t = cap.GetTriangles(0);
+            Vector3 sum = Vector3.zero;
+            for (int i = 0; i + 2 < t.Length; i += 3)
+            {
+                float area = Vector3.Cross(v[t[i + 1]] - v[t[i]], v[t[i + 2]] - v[t[i]]).magnitude * 0.5f;
+                Vector3 normal = n != null && n.Length == v.Length
+                    ? n[t[i]] + n[t[i + 1]] + n[t[i + 2]]
+                    : Vector3.Cross(v[t[i + 1]] - v[t[i]], v[t[i + 2]] - v[t[i]]);
+                sum += normal.normalized * area;
+            }
+            if (sum.sqrMagnitude < 1e-12f) return (Vector3.zero, 0f);
+            Vector3 up = sum.normalized;
+            float lift = 0f;
+            foreach (int i in t) lift = Mathf.Max(lift, Vector3.Dot(v[i] - centre, up));
+            return (up, lift);
+        }
+
+        /// <summary>How much glow shows when the button's top is this
+        /// cosine away from pointing at the eyes: 1 facing them, 0 turned away.</summary>
+        public static float FacingFade(float cosine) =>
+            Mathf.InverseLerp(Mathf.Cos(GoneFacingDegrees * Mathf.Deg2Rad),
+                              Mathf.Cos(FullFacingDegrees * Mathf.Deg2Rad), cosine);
 
         private void BuildHalo(Material translucent)
         {
@@ -191,18 +238,32 @@ namespace PianoGlass.Piano
         public void Pulse(float time)
         {
             float k = 0.5f + 0.5f * Mathf.Sin(time * PulseHz * Mathf.PI * 2f);
-            Color cap = Color.Lerp(Glow, Color.white, 0.35f * k);
-            cap.a = Mathf.Lerp(0.75f, 1f, k);
-            _capMaterial.SetColor(BaseColorId, cap);
-            Color halo = Glow;
-            halo.a = Mathf.Lerp(0.30f, 0.65f, k);
-            _haloMaterial.SetColor(BaseColorId, halo);
 
-            if (_bone == null) return;
-            Vector3 centre = _capSpace != null ? _capSpace.TransformPoint(_capCentre) : _bone.position;
+            Vector3 centre = _capSpace != null ? _capSpace.TransformPoint(_capCentre)
+                           : _bone != null ? _bone.position : transform.position;
             Camera eye = Camera.main;
             Vector3 toEye = eye != null ? (eye.transform.position - centre).normalized : Vector3.up;
-            _halo.SetPositionAndRotation(centre + toEye * 0.002f, Quaternion.LookRotation(-toEye, Vector3.up));
+
+            // Turned away, it fades out: there is no controller in front of it to hide it.
+            float face = 1f;
+            Vector3 top = centre;
+            if (_capSpace != null && _capNormal != Vector3.zero)
+            {
+                Vector3 up = _capSpace.TransformDirection(_capNormal).normalized;
+                face = FacingFade(Vector3.Dot(up, toEye));
+                top = centre + _capSpace.TransformVector(_capNormal * _capLift);
+            }
+
+            // More solid than before (round 15): a see-through glow read as behind the plastic.
+            Color cap = Color.Lerp(Glow, Color.white, 0.35f * k);
+            cap.a = Mathf.Lerp(0.85f, 1f, k) * face;
+            _capMaterial.SetColor(BaseColorId, cap);
+            Color halo = Glow;
+            halo.a = Mathf.Lerp(0.25f, 0.5f, k) * face;
+            _haloMaterial.SetColor(BaseColorId, halo);
+
+            // On the button's top, not in the middle of it.
+            _halo.SetPositionAndRotation(top + toEye * 0.002f, Quaternion.LookRotation(-toEye, Vector3.up));
         }
 
         private void OnDestroy()
@@ -235,7 +296,7 @@ namespace PianoGlass.Piano
                 float dx = (x + 0.5f) / size * 2f - 1f, dy = (y + 0.5f) / size * 2f - 1f;
                 float d = Mathf.Sqrt(dx * dx + dy * dy);
                 float a = Mathf.Clamp01(1f - d);
-                pixels[y * size + x] = new Color(1f, 1f, 1f, a * a);
+                pixels[y * size + x] = new Color(1f, 1f, 1f, a * a * a); // tighter than a * a
             }
             _radial.SetPixels(pixels);
             _radial.Apply();

@@ -1174,6 +1174,8 @@ namespace PianoGlass.EditorTools
         private const string ControllerPrefabPath = "Packages/com.meta.xr.sdk.core/Prefabs/OVRControllerPrefab.prefab";
         private const string TouchPlusRightPath = "Packages/com.meta.xr.sdk.core/Meshes/MetaQuestTouchPlus/MetaQuestTouchPlus_Right.fbx";
         private const string TouchPlusCapPath = "Assets/Meshes/MetaButtonCap_TouchPlusRight.asset";
+        /// <summary>From MetaButtonPreview.RenderDiagram.</summary>
+        private const string MetaButtonDiagramPath = "Assets/UI/MetaButtonDiagram.png";
 
         /// <summary>
         /// The Meta button highlight (#42): cuts the Meta button's part out of
@@ -1220,6 +1222,9 @@ namespace PianoGlass.EditorTools
             so.FindProperty("controllerPrefab").objectReferenceValue = prefab;
             so.FindProperty("translucent").objectReferenceValue = translucent;
             so.FindProperty("touchPlusRightCap").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Mesh>(TouchPlusCapPath);
+            var diagram = AssetDatabase.LoadAssetAtPath<Texture2D>(MetaButtonDiagramPath);
+            if (diagram == null) Debug.LogWarning($"[SceneSetup] no {MetaButtonDiagramPath}: run MetaButtonPreview.RenderDiagram. The banner has no picture.");
+            so.FindProperty("diagram").objectReferenceValue = diagram;
             so.ApplyModifiedProperties();
 
             EditorSceneManager.MarkSceneDirty(scene);

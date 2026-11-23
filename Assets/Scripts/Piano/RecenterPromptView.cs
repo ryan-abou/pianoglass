@@ -42,7 +42,7 @@ namespace PianoGlass.Piano
 
             var go = new GameObject(nameof(RecenterPromptView), typeof(RectTransform));
             go.SetActive(false);
-            DontDestroyOnLoad(go);
+            if (Application.isPlaying) DontDestroyOnLoad(go); // not in the editor preview
             var canvas = go.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.WorldSpace;
             canvas.sortingOrder = 50; // over the other glass when they overlap
@@ -114,6 +114,37 @@ namespace PianoGlass.Piano
             // Upright and facing the eyes; a canvas is read from behind its +Z.
             Vector3 away = transform.position - _head.position;
             if (away.sqrMagnitude > 1e-6f) transform.rotation = Quaternion.LookRotation(away.normalized, Vector3.up);
+        }
+
+        /// <summary>Space kept around the picture, canvas millimetres.</summary>
+        private const float PictureMargin = 16f;
+
+        /// <summary>
+        /// A picture on the left of the words, <paramref name="sizeMm"/>
+        /// square: the right controller with its Meta button lit (#42,
+        /// round 15), for someone who doesn't know where the button is. The
+        /// banner gets that much wider, so the words keep their room.
+        /// </summary>
+        public void AddPicture(Texture picture, float sizeMm)
+        {
+            if (picture == null) return;
+            var rect = (RectTransform)transform;
+            float room = sizeMm + PictureMargin;
+            rect.sizeDelta += new Vector2(room, 0f);
+
+            Transform words = transform.Find("Text");
+            if (words is RectTransform w) w.offsetMin = new Vector2(room, w.offsetMin.y);
+
+            var go = new GameObject("Picture", typeof(RectTransform));
+            var rt = (RectTransform)go.transform;
+            rt.SetParent(transform, false);
+            rt.anchorMin = rt.anchorMax = new Vector2(0f, 0.5f);
+            rt.pivot = new Vector2(0f, 0.5f);
+            rt.sizeDelta = new Vector2(sizeMm, sizeMm);
+            rt.anchoredPosition = new Vector2(PictureMargin * 1.5f, 0f);
+            var image = go.AddComponent<UnityEngine.UI.RawImage>();
+            image.texture = picture;
+            image.raycastTarget = false;
         }
     }
 }
