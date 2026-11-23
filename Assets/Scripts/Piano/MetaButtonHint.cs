@@ -112,8 +112,9 @@ namespace PianoGlass.Piano
 
         /// <summary>Round 15: on the Quest 3 the glow showed about one button
         /// width too far toward the tip and one too far left of the real
-        /// button (Ryan). Moved back by that much, along the controller's face.</summary>
-        private const float NudgeTowardHandleWidths = 1f, NudgeRightWidths = 1f;
+        /// button (Ryan). Moved back by that much, along the controller's face.
+        /// Round 16: a full width each way overshot; half is about right (Ryan).</summary>
+        private const float NudgeTowardHandleWidths = 0.5f, NudgeRightWidths = 0.5f;
 
         private void Nudge()
         {
