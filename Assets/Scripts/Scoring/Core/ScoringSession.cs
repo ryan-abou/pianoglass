@@ -98,6 +98,26 @@ namespace PianoGlass.Scoring
         /// come one at a time.</summary>
         public Func<int, bool> IsHeld { get; set; }
 
+        /// <summary>Where the song was paused before a resume count-in backed
+        /// it up to the start of the beat (round 15). The notes before this
+        /// were already judged; played again, they aren't judged again, and
+        /// pressing one isn't a wrong note either.</summary>
+        public double ReplayUntil { get; set; } = double.NegativeInfinity;
+
+        /// <summary>A press of a note already judged before the back-up,
+        /// within the GOOD window of it: not scored at all.</summary>
+        private bool IsReplayPress(int pitch, double pressSongTime, double window)
+        {
+            if (pressSongTime > ReplayUntil + window) return false;
+            foreach (int i in _scorable)
+            {
+                SongNote n = Song.Notes[i];
+                if (n.StartTime >= ReplayUntil) break; // in start order
+                if (_judged[i] && n.Pitch == pitch && Math.Abs(pressSongTime - n.StartTime) <= window) return true;
+            }
+            return false;
+        }
+
         /// <param name="isPlayable">Whether a pitch is on the player's
         /// keyboard; null means every pitch is.</param>
         /// <param name="scoreNotesFrom">Song time before which notes are not
@@ -138,12 +158,12 @@ namespace PianoGlass.Scoring
         public void OnNoteOn(int pitch, double pressSongTime, double tempo)
         {
             NoteTempo(tempo);
+            double window = NoteJudge.WindowSongSeconds(Windows.goodMs, tempo);
             if (PitchOnly)
             {
-                OnNoteOnWaiting(pitch, pressSongTime);
+                OnNoteOnWaiting(pitch, pressSongTime, window);
                 return;
             }
-            double window = NoteJudge.WindowSongSeconds(Windows.goodMs, tempo);
 
             int match = -1;
             int nearestOther = -1;
@@ -179,6 +199,7 @@ namespace PianoGlass.Scoring
                                            pressSongTime, error, j));
                 return;
             }
+            if (IsReplayPress(pitch, pressSongTime, window)) return;
 
             var wrong = new WrongNote { pressedPitch = pitch, pressTime = pressSongTime };
             if (nearestOther >= 0)
@@ -203,7 +224,7 @@ namespace PianoGlass.Scoring
             WrongNotePlayed?.Invoke(wrong);
         }
 
-        private void OnNoteOnWaiting(int pitch, double pressSongTime)
+        private void OnNoteOnWaiting(int pitch, double pressSongTime, double window)
         {
             double due = NextDueTime;
             if (double.IsPositiveInfinity(due)) return;
@@ -239,6 +260,7 @@ namespace PianoGlass.Scoring
                 _down.Clear();
                 return;
             }
+            if (IsReplayPress(pitch, pressSongTime, window)) return;
 
             SongNote awaited = Song.Notes[first];
             var wrong = new WrongNote

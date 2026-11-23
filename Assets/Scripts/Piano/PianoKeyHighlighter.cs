@@ -149,6 +149,8 @@ namespace PianoGlass.Piano
         private readonly Dictionary<int, Renderer> _renderers = new Dictionary<int, Renderer>();
         /// <summary>Pitch to seconds until its soonest due note.</summary>
         private readonly Dictionary<int, double> _dueSoon = new Dictionary<int, double>();
+        /// <summary>Pitch to the hand of that soonest note: the colour it fades in with.</summary>
+        private readonly Dictionary<int, NoteHand> _dueHand = new Dictionary<int, NoteHand>();
         /// <summary>Keys pulsing coral, and when the wrong press happened (realtime).</summary>
         private readonly Dictionary<int, float> _wrongAt = new Dictionary<int, float>();
         /// <summary>Wrong keys already released, and when (realtime): fading out.</summary>
@@ -243,7 +245,10 @@ namespace PianoGlass.Piano
                 Debug.Log($"[Highlighter] keys {(waiting ? "hidden until the launch recenter" : "shown: recentered")}");
             }
             if (_renderers.Count == 0 || !PlacementValid) return;
-            if (clock != null && current != null && (displayMode == DisplayMode.ActiveKeysOnly || displayMode == DisplayMode.EdgeMarkers))
+            // Not while the highway glides back before a resume count-in:
+            // the notes it passes on the way must not light anything (round 15).
+            if (clock != null && current != null && !clock.IsGliding &&
+                (displayMode == DisplayMode.ActiveKeysOnly || displayMode == DisplayMode.EdgeMarkers))
                 UpdateDueKeys();
             UpdateWrongPulses();
             UpdatePlayAlong();
@@ -303,7 +308,8 @@ namespace PianoGlass.Piano
             double from = clock.Loop?.NotesFrom ?? double.NegativeInfinity;
             double until = clock.Loop?.NotesUntil ?? double.PositiveInfinity;
             ActiveNoteSelector.CollectDueSoon(current.Song.Notes, clock.DisplaySongTime, activeKeyLookaheadSeconds,
-                                              _dueSoon, from, until, current.Hand);
+                                              _dueSoon, from, until, current.Hand, _dueHand);
+            NotePalette palette = NotePalette.Active;
 
             foreach (var kv in _renderers)
             {
@@ -324,16 +330,20 @@ namespace PianoGlass.Piano
                 renderer.enabled = relevant;
                 if (!relevant) continue;
 
-                Color idle = PianoKeyLayout.IsBlackKey(note) ? idleBlackKey : idleWhiteKey;
+                // In its hand's colour, the same one it lights in while the
+                // note sounds (UpdatePlayAlong): no green on the way in (round 14).
+                Color hue = palette != null && _dueHand.TryGetValue(note, out NoteHand noteHand)
+                    ? palette.SolidColor(current.Hand, noteHand)
+                    : PianoKeyLayout.IsBlackKey(note) ? idleBlackKey : idleWhiteKey;
                 if ((opacity >= 1f && fade >= 1f) || translucentMaterial == null)
                 {
                     renderer.sharedMaterial = MaterialForMode;
-                    SetColor(note, idle);
+                    SetColor(note, hue);
                 }
                 else
                 {
                     renderer.sharedMaterial = translucentMaterial;
-                    FadeOut(note, idle, ModeAlpha * opacity * fade);
+                    FadeOut(note, hue, ModeAlpha * opacity * fade);
                 }
             }
         }

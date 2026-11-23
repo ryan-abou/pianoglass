@@ -41,7 +41,9 @@ namespace PianoGlass.Transport
         [Range(0f, 1f)] [SerializeField] private float accentVolume = 0.9f;
 
         private const string PrefsKey = "PianoGlass.Metronome";
-        private const int Voices = 8;
+        // A count-in queues 9 clicks at 160 BPM and 17 at 320 (a fast song
+        // at 200%), on top of the song's own: voices to spare.
+        private const int Voices = 24;
 
         public bool IsOn { get; private set; }
 
@@ -53,7 +55,7 @@ namespace PianoGlass.Transport
         private AudioClip _click, _accent;
         private bool _wasPlaying;
         private double _lastSongTime = double.NegativeInfinity;
-        private int _lastWraps;
+        private int _lastWraps, _lastRewinds;
         private bool _wasHolding;
 
         private void Awake()
@@ -125,8 +127,12 @@ namespace PianoGlass.Transport
             // out belong to a timeline that no longer exists.
             bool wrapped = clock.Wraps != _lastWraps;
             _lastWraps = clock.Wraps;
+            // The back-up before a resume count-in: its clicks are already
+            // scheduled for the new timeline, so they stay (round 15).
+            bool rewound = clock.ResumeRewinds != _lastRewinds;
+            _lastRewinds = clock.ResumeRewinds;
             bool jumpedBack = songTime < _lastSongTime - 1e-6;
-            if ((_wasPlaying && !playing) || (jumpedBack && !wrapped))
+            if ((_wasPlaying && !playing) || (jumpedBack && !wrapped && !rewound))
             {
                 StopAll();
                 _schedule.Reset();
