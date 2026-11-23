@@ -87,7 +87,12 @@ namespace PianoGlass.Piano
 
         [SerializeField] private Color idleWhiteKey = new Color(0.55f, 0.60f, 0.50f, 1f);
         [SerializeField] private Color idleBlackKey = new Color(0.16f, 0.18f, 0.14f, 1f);
-        [SerializeField] private Color pressedKey = new Color(0.66f, 0.78f, 0.49f, 1f);
+        /// <summary>A press with no note of the song near it: plain white,
+        /// not a colour of its own (round 15: the green press colour clashed
+        /// with the hand colours, and would with any colour theme).</summary>
+        private static readonly Color PressedNoNote = new Color(0.86f, 0.88f, 0.92f, 1f);
+        /// <summary>How far from a note, in song seconds, a press still takes its colour.</summary>
+        private const double PressNoteSeconds = 0.6;
 
         [Tooltip("Height of the key slab, in metres. Thin enough to sit on the real key.")]
         [SerializeField] private float slabThickness = 0.004f;
@@ -276,9 +281,13 @@ namespace PianoGlass.Piano
             {
                 double t = clock.DisplaySongTime;
                 NotePalette palette = NotePalette.Active;
+                LoopRange? loop = clock.Loop;
                 foreach (SongNote n in current.Song.Notes)
                 {
                     if (n.StartTime > t || n.EndTime <= t || !n.BelongsTo(current.Hand)) continue;
+                    // In a practice loop, only its own bars: the empty bar
+                    // counting into it lit the bar before's notes (round 15).
+                    if (loop.HasValue && !loop.Value.Holds(n.StartTime)) continue;
                     if (MidiInput.Instance != null && MidiInput.Instance.IsHeld(n.Pitch)) continue;
                     if (_wrongAt.ContainsKey(n.Pitch)) continue;
                     _playAlong[n.Pitch] = palette != null ? palette.SolidColor(current.Hand, n.Hand) : Color.white;
@@ -571,7 +580,28 @@ namespace PianoGlass.Piano
             // Velocity brightens the flash a little — free feedback on touch,
             // and a hint of the dynamics scoring you can add later.
             float t = Mathf.InverseLerp(20f, 110f, velocity);
-            SetColor(note, Color.Lerp(pressedKey * 0.7f, pressedKey, t), forceVisible: true);
+            Color pressed = PressColor(note);
+            SetColor(note, Color.Lerp(pressed * 0.7f, Color.Lerp(pressed, Color.white, 0.2f), t), forceVisible: true);
+        }
+
+        /// <summary>The colour a pressed key flashes: the hand colour of the
+        /// song's nearest note on that key, or plain white with none near.
+        /// No green (round 15).</summary>
+        private Color PressColor(int pitch)
+        {
+            NotePalette palette = NotePalette.Active;
+            if (palette == null || clock == null || current == null || current.Song == null) return PressedNoNote;
+            double now = clock.DisplaySongTime, best = PressNoteSeconds;
+            Color color = PressedNoNote;
+            foreach (SongNote n in current.Song.Notes)
+            {
+                if (n.Pitch != pitch || !n.BelongsTo(current.Hand)) continue;
+                double gap = now < n.StartTime ? n.StartTime - now : now > n.EndTime ? now - n.EndTime : 0.0;
+                if (gap > best) continue;
+                best = gap;
+                color = palette.SolidColor(current.Hand, n.Hand);
+            }
+            return color;
         }
 
         private void OnNoteOff(int note, double time)
