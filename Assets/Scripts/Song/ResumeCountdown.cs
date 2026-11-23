@@ -14,7 +14,8 @@ namespace PianoGlass.Song
     /// With the metronome it is a count-in (round 15, Ryan's design): the
     /// song backs up to the start of the beat it was paused in (never
     /// forward, so no note is skipped), and the count is a whole number of
-    /// beats before that beat, at least 3 beats and at least 3 seconds.
+    /// beats before that beat, at least 3 beats and at least 2.5 seconds
+    /// (round 16: was 3; a setting for it later).
     /// Every beat shows one thing with its own click: a dot filling in for
     /// the early beats, then 3, 2, 1. The 1 ends exactly when the song plays,
     /// on its beat, and that beat's own click is the "play now". Over 5
@@ -26,7 +27,7 @@ namespace PianoGlass.Song
     {
         public const int From = 3;
         public const double PlainStepSeconds = 1.0;
-        public const double MinSeconds = 3.0, MaxSeconds = 5.0;
+        public const double MinSeconds = 2.5, MaxSeconds = 5.0;
         /// <summary>The glide back is this long, or a beat if that is shorter.</summary>
         public const double MaxGlideSeconds = 0.4;
 
@@ -146,7 +147,7 @@ namespace PianoGlass.Song
         }
 
         /// <summary>How many beats a count-in at <paramref name="step"/> real
-        /// seconds a beat has: at least 3, and at least 3 seconds.</summary>
+        /// seconds a beat has: at least 3, and at least 2.5 seconds.</summary>
         public static int BeatsFor(double step)
         {
             if (step <= 0.0) return From;

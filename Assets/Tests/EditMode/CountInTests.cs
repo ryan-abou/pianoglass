@@ -10,7 +10,7 @@ namespace PianoGlass.Tests.EditMode
     /// <summary>
     /// The resume count-in with the metronome on (round 15, Ryan's design):
     /// back to the start of the beat it was paused in, a whole number of
-    /// beats, 3 to 5 seconds, every dot or number one beat with its own
+    /// beats, 2.5 to 5 seconds (3 until round 16), every dot or number one beat with its own
     /// click on the beat grid, the 1 ending exactly when the song plays,
     /// and nothing judged twice.
     /// </summary>
@@ -48,10 +48,10 @@ namespace PianoGlass.Tests.EditMode
             Assert.LessOrEqual(plan.RewindTo, pausedAt, at);
             Assert.AreEqual(map.Beat(k).IsBarLine, plan.OnBarLine, at);
 
-            // A whole number of beats, at least 3, and 3 to 5 seconds.
+            // A whole number of beats, at least 3, and 2.5 to 5 seconds.
             Assert.AreEqual(beat, plan.Step, Eps, at);
             Assert.GreaterOrEqual(plan.Beats, ResumeCountdown.From, at);
-            Assert.GreaterOrEqual(plan.Seconds, 3.0 - Eps, at + ": at least 3 seconds");
+            Assert.GreaterOrEqual(plan.Seconds, 2.5 - Eps, at + ": at least 2.5 seconds");
             Assert.LessOrEqual(plan.Seconds, 5.0 + Eps, at + ": no more than 5 seconds");
             Assert.AreEqual(plan.Beats * plan.Step, plan.Seconds, Eps);
 
@@ -96,12 +96,12 @@ namespace PianoGlass.Tests.EditMode
         }
 
         [Test]
-        public void ThreeBeatsAtSixtyAndBelowFiveAtNinety()
+        public void HowManyBeats()
         {
             Assert.AreEqual(3, ResumeCountdown.BeatsFor(1.0), "60 BPM: 3, 2, 1, no dots");
-            Assert.AreEqual(5, ResumeCountdown.BeatsFor(60.0 / 90.0), "90 BPM: two dots, 3.33 s");
-            Assert.AreEqual(6, ResumeCountdown.BeatsFor(0.5), "120 BPM: 3 s exactly");
-            Assert.AreEqual(8, ResumeCountdown.BeatsFor(0.375), "160 BPM: 3 s exactly");
+            Assert.AreEqual(4, ResumeCountdown.BeatsFor(60.0 / 90.0), "90 BPM: one dot, 2.67 s");
+            Assert.AreEqual(5, ResumeCountdown.BeatsFor(0.5), "120 BPM: 2.5 s exactly");
+            Assert.AreEqual(7, ResumeCountdown.BeatsFor(0.375), "160 BPM: 2.63 s");
             Assert.AreEqual(3, ResumeCountdown.BeatsFor(60.0 / 36.0), "36 BPM: 3 beats is 5 s");
             Assert.AreEqual(3, ResumeCountdown.BeatsFor(2.5), "under 36 BPM it stays 3, 2, 1");
         }
