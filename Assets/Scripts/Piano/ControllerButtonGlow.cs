@@ -168,6 +168,25 @@ namespace PianoGlass.Piano
         /// <summary>The way the button's top faces (its triangles' normals,
         /// by area: the top outweighs the sides, which mostly cancel) and the
         /// height of its top above <paramref name="centre"/> along that way.</summary>
+        /// <summary>The button's face, in world space now: which way its top
+        /// faces, which way along the face is toward the controller's tip,
+        /// which way is right as you look down at it, and its width.
+        /// False if the button's shape isn't known (halo only).</summary>
+        public bool TryButtonFrame(out Vector3 up, out Vector3 tip, out Vector3 right, out float width)
+        {
+            up = tip = right = Vector3.zero;
+            width = 0f;
+            if (_capSpace == null || _capNormal == Vector3.zero || _cap == null) return false;
+            up = _capSpace.TransformDirection(_capNormal).normalized;
+            // The model's forward is its tip (the diagram is drawn tip up).
+            tip = Vector3.ProjectOnPlane(transform.forward, up).normalized;
+            // As the diagram camera sees it: LookRotation(-up, tip) has this on its right.
+            right = Vector3.Cross(up, tip);
+            Vector3 size = _cap.sharedMesh.bounds.size;
+            width = Mathf.Max(size.x, Mathf.Max(size.y, size.z)) * Mathf.Abs(_capSpace.lossyScale.x);
+            return tip != Vector3.zero;
+        }
+
         public static (Vector3 normal, float lift) Facing(Mesh cap, Vector3 centre)
         {
             Vector3[] v = cap.vertices;
