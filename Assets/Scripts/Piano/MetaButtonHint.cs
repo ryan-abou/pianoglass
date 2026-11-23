@@ -14,19 +14,27 @@ namespace PianoGlass.Piano
     /// picks the model for the headset and lines it up with the real
     /// controller, so the glow is on the real button, not at a guessed spot
     /// (round 12: the first version, a ring at a guessed offset, was about
-    /// 1.5 cm off). The controller also buzzes every couple of seconds.
+    /// 1.5 cm off). The controller ticks faintly with each brightening of the
+    /// glow, and buzzes once, harder, when the recenter happens (round 15;
+    /// it has one motor, so it is the whole controller, not the button).
     ///
     /// LaunchResync shows and hides it with the banner. Logs as "[MetaButton]".
     /// </summary>
     public sealed class MetaButtonHint : MonoBehaviour
     {
-        private const float BuzzEverySeconds = 2f, BuzzSeconds = 0.12f, BuzzStrength = 0.35f;
+        /// <summary>A tick with each glow peak: faint, but there (round 15; was
+        /// 0.35 for 0.12 s every 2 s). Ryan says on the headset if it's too faint.</summary>
+        private const float TickStrength = 0.2f, TickSeconds = 0.06f;
+        /// <summary>The recenter happened: one clear buzz.</summary>
+        private const float DoneStrength = 0.7f, DoneSeconds = 0.2f;
 
         private MetaButtonHintAssets _assets;
         private GameObject _model;
         private ControllerButtonGlow _glow;
-        private float _nextBuzz, _buzzEnd;
-        private bool _buzzing;
+        private float _buzzEnd;
+        private bool _buzzing, _done;
+        /// <summary>The last glow peak ticked, counted from launch.</summary>
+        private long _lastPeak;
 
         /// <summary>Built hidden. Null without a camera rig or the assets SceneSetup wires.</summary>
         public static MetaButtonHint Create()
@@ -51,7 +59,9 @@ namespace PianoGlass.Piano
         public void Show()
         {
             gameObject.SetActive(true);
-            _nextBuzz = Time.unscaledTime + 0.5f;
+            _done = false;
+            _lastPeak = Peak(Time.unscaledTime);
+            if (_model != null) _model.SetActive(true);
             if (_model == null)
             {
                 _model = Instantiate(_assets.controllerPrefab, transform, false);
@@ -67,6 +77,16 @@ namespace PianoGlass.Piano
         {
             StopBuzz();
             gameObject.SetActive(false);
+        }
+
+        /// <summary>The recenter happened: the glow goes at once, one clear
+        /// buzz, then it is hidden.</summary>
+        public void Done()
+        {
+            if (!gameObject.activeSelf) return;
+            if (_model != null) _model.SetActive(false);
+            _done = true;
+            Buzz(DoneStrength, DoneSeconds);
         }
 
         /// <summary>Tries again until OVRControllerHelper has switched the right
@@ -95,16 +115,37 @@ namespace PianoGlass.Piano
 
         private void Update()
         {
+            float now = Time.unscaledTime;
+            if (_buzzing && now >= _buzzEnd)
+            {
+                StopBuzz();
+                if (_done)
+                {
+                    Hide();
+                    return;
+                }
+            }
+            if (_done) return;
+
+            // A faint tick each time the glow is brightest.
+            long peak = Peak(now);
+            if (peak == _lastPeak) return;
+            _lastPeak = peak;
             bool tracked = OVRInput.IsControllerConnected(OVRInput.Controller.RTouch) &&
                            OVRInput.GetControllerPositionTracked(OVRInput.Controller.RTouch);
-            if (_buzzing && Time.unscaledTime >= _buzzEnd) StopBuzz();
-            if (tracked && Time.unscaledTime >= _nextBuzz)
-            {
-                OVRInput.SetControllerVibration(0.5f, BuzzStrength, OVRInput.Controller.RTouch);
-                _buzzing = true;
-                _buzzEnd = Time.unscaledTime + BuzzSeconds;
-                _nextBuzz = Time.unscaledTime + BuzzEverySeconds;
-            }
+            if (tracked && _glow != null) Buzz(TickStrength, TickSeconds);
+        }
+
+        /// <summary>How many glow peaks there have been by <paramref name="time"/>
+        /// (ControllerButtonGlow.Pulse is brightest a quarter of the way through each).</summary>
+        private static long Peak(float time) =>
+            (long)System.Math.Floor(time * ControllerButtonGlow.PulseHz - 0.25);
+
+        private void Buzz(float strength, float seconds)
+        {
+            OVRInput.SetControllerVibration(0.5f, strength, OVRInput.Controller.RTouch);
+            _buzzing = true;
+            _buzzEnd = Time.unscaledTime + seconds;
         }
 
         private void StopBuzz()
