@@ -23,10 +23,11 @@ namespace PianoGlass.Piano
         /// <summary>Both ways to recenter: the Meta button on the right
         /// controller, said where it is (#42), or, with hands, looking at a
         /// palm and pinching and holding (#5). A glow and a buzz on the
-        /// controller point at the button too (MetaButtonHint).</summary>
+        /// controller point at the button too (MetaButtonHint), and the
+        /// banner's picture shows it, so the words don't describe it any more
+        /// (round 16).</summary>
         public const string PromptLine =
             "Hold the Meta button on your right controller\n" +
-            "It's the round button under the thumbstick\n" +
             "<size=80%>Or look at your palm, then pinch and hold</size>";
 
         /// <summary>The controller picture on the banner, canvas millimetres square.</summary>
