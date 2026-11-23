@@ -55,6 +55,24 @@ namespace PianoGlass.Song
         /// wrap apart.</summary>
         public int Wraps { get; private set; }
 
+        /// <summary>How many times the song has backed up to the start of a
+        /// beat for a resume count-in (round 15). Like <see cref="Wraps"/>, it
+        /// tells ScoreKeeper a backwards jump is not a restart: the attempt
+        /// goes on, and notes already judged stay judged.</summary>
+        public int ResumeRewinds { get; private set; }
+
+        /// <summary>Where the song was paused before it last backed up for a
+        /// resume: notes before this were already played once.</summary>
+        public double ReplayUntil { get; private set; } = double.NegativeInfinity;
+
+        /// <summary>While set, what the highway and the keys draw instead of
+        /// the song time: the glide back before a resume count-in. Judging
+        /// never reads it. Cleared by any seek, loop or restart.</summary>
+        public double? Glide { get; private set; }
+
+        /// <summary>Drawn somewhere other than <see cref="SongTime"/> right now.</summary>
+        public bool IsGliding => Glide.HasValue;
+
         /// <summary>Which time through the loop this is, from 1; 0 with no loop.</summary>
         public int LoopPass => Loop.HasValue ? Wraps - _wrapsAtLoopStart + 1 : 0;
 
@@ -116,7 +134,8 @@ namespace PianoGlass.Song
         /// Equal to SongTime while paused, because a paused song does not
         /// move between render and display.</summary>
         public double DisplaySongTime =>
-            IsPlaying
+            Glide.HasValue ? Glide.Value
+            : IsPlaying
                 ? System.Math.Max(SongTime, System.Math.Min(SongTime + _displayLatency * tempoMultiplier, HoldAt))
                 : SongTime;
 
@@ -183,23 +202,49 @@ namespace PianoGlass.Song
         /// Play state is left as it was.</summary>
         public void StartLoop(LoopRange loop)
         {
+            Glide = null;
             Loop = loop;
             _loopFade = new MemoryFade();
             _wrapsAtLoopStart = Wraps;
             SongTime = loop.WrapTo;
         }
 
-        public void Play() => IsPlaying = true;
+        public void Play()
+        {
+            Glide = null;
+            IsPlaying = true;
+        }
         public void Pause() => IsPlaying = false;
 
         /// <summary>Jump to an absolute song time, e.g. restarting from a bar.</summary>
-        public void Seek(double seconds) => SongTime = seconds;
+        public void Seek(double seconds)
+        {
+            Glide = null;
+            SongTime = seconds;
+        }
+
+        /// <summary>Draw the song at this time without moving it (the glide
+        /// back); null to draw it where it is again.</summary>
+        public void ShowAt(double? songTime) => Glide = songTime;
+
+        /// <summary>Back up to <paramref name="beat"/> before a resume
+        /// count-in: like a seek, but the attempt goes on (see
+        /// <see cref="ResumeRewinds"/>). Never forward.</summary>
+        public void RewindForResume(double beat)
+        {
+            Glide = null;
+            if (beat >= SongTime) return;
+            ReplayUntil = System.Math.Max(ReplayUntil, SongTime);
+            SongTime = beat;
+            ResumeRewinds++;
+        }
 
         /// <summary>Back to the top -- which is -leadInSeconds, not 0, so a
         /// restart gets the same silent countdown the first play did. Ends
         /// any practice loop. Play state is left as it was.</summary>
         public void Restart()
         {
+            Glide = null;
             Loop = null;
             _loopFade = null;
             SongFade?.ClearHelp();

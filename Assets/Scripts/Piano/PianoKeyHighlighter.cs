@@ -245,7 +245,10 @@ namespace PianoGlass.Piano
                 Debug.Log($"[Highlighter] keys {(waiting ? "hidden until the launch recenter" : "shown: recentered")}");
             }
             if (_renderers.Count == 0 || !PlacementValid) return;
-            if (clock != null && current != null && (displayMode == DisplayMode.ActiveKeysOnly || displayMode == DisplayMode.EdgeMarkers))
+            // Not while the highway glides back before a resume count-in:
+            // the notes it passes on the way must not light anything (round 15).
+            if (clock != null && current != null && !clock.IsGliding &&
+                (displayMode == DisplayMode.ActiveKeysOnly || displayMode == DisplayMode.EdgeMarkers))
                 UpdateDueKeys();
             UpdateWrongPulses();
             UpdatePlayAlong();
