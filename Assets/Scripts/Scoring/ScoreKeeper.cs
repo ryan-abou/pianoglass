@@ -105,7 +105,7 @@ namespace PianoGlass.Scoring
         private SongData _song;
         private readonly List<(int pitch, double realtime)> _pending = new List<(int, double)>();
         private double _lastSongTime = double.NegativeInfinity;
-        private int _lastWraps;
+        private int _lastWraps, _lastRewinds;
         private string _startedUtc;
         private bool _metronomeUsed;
         private string _path;
@@ -203,8 +203,16 @@ namespace PianoGlass.Scoring
                 _lastSongTime = songTime;
             }
 
-            // Restart (or any seek backwards): the attempt so far is over.
-            if (songTime < _lastSongTime - 1e-6)
+            // The back-up before a resume count-in (round 15): the same
+            // attempt goes on, and what was judged before the pause stays
+            // judged. The notes played again are not scored a second time.
+            bool rewound = clock.ResumeRewinds != _lastRewinds;
+            _lastRewinds = clock.ResumeRewinds;
+            if (rewound && Session != null && !AttemptSaved)
+                Session.ReplayUntil = clock.ReplayUntil;
+
+            // Restart (or any other seek backwards): the attempt so far is over.
+            if (songTime < _lastSongTime - 1e-6 && !rewound)
             {
                 if (Session != null && !AttemptSaved && Session.JudgedCount + Session.WrongNotes.Count > 0)
                     Save(AttemptRecord.Abandoned);
