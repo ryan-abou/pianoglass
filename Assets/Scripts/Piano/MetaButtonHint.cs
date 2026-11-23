@@ -107,6 +107,23 @@ namespace PianoGlass.Piano
                 }
             }
             Debug.Log($"[MetaButton] glowing {Time.unscaledTime - started:0.0} s after the prompt");
+            Nudge();
+        }
+
+        /// <summary>Round 15: on the Quest 3 the glow showed about one button
+        /// width too far toward the tip and one too far left of the real
+        /// button (Ryan). Moved back by that much, along the controller's face.</summary>
+        private const float NudgeTowardHandleWidths = 1f, NudgeRightWidths = 1f;
+
+        private void Nudge()
+        {
+            transform.localPosition = Vector3.zero;
+            if (_glow == null || transform.parent == null ||
+                !_glow.TryButtonFrame(out Vector3 _, out Vector3 tip, out Vector3 right, out float width)) return;
+            Vector3 world = (-tip * NudgeTowardHandleWidths + right * NudgeRightWidths) * width;
+            transform.localPosition = transform.parent.InverseTransformVector(world);
+            Debug.Log($"[MetaButton] nudged {NudgeTowardHandleWidths * width * 1000f:0} mm toward the handle and " +
+                      $"{NudgeRightWidths * width * 1000f:0} mm right (a button is {width * 1000f:0} mm)");
         }
 
         private const float RetrySeconds = 0.1f, GiveUpSeconds = 30f;
